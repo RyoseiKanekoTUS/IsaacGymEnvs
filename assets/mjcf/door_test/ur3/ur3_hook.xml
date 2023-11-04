@@ -1,6 +1,6 @@
 <mujoco model="ur3">
     <!-- <compiler angle="radian" meshdir="../../robot/meshes_ur3_m/" strippath="false"/> -->
-    <compiler angle="radian" meshdir="../../robot/model-ur3/" strippath="false"/>
+    <compiler angle="radian" meshdir="./meshes/" strippath="false"/>
     <asset> 
         <mesh name="base" file="base.stl" />
         <mesh name="shoulder" file="shoulder.stl"/>

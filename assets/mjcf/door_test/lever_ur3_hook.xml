@@ -44,7 +44,7 @@
 			<geom rgba="0.57 0.14 0.68 1.0" type="mesh"/>
 		</default>
 		<default class="door_knob">
-			<geom condim="4" rgba="0.32 0.69 0.78 1.0" type="mesh"/>
+			<geom condim="4" rgba="0.52 0.29 0.28 1.0" type="mesh"/>
 		</default>
 		<default class="robot">
 			<joint damping="0.1"/>

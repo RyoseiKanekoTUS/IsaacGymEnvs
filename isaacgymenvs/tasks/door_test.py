@@ -103,7 +103,7 @@ class DoorTest(VecTask):
         plane_params.dynamic_friction = self.plane_dynamic_friction
         self.gym.add_ground(self.sim, plane_params)
 
-    def _create_envs(self, num_envs, spacing, num_per_row):
+    def _create_envs(self, num_envs, spacing, num_per_row): # 環境をspacingおきに生成するための関数
         lower = gymapi.Vec3(-spacing, -spacing, 0.0)
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
@@ -118,6 +118,31 @@ class DoorTest(VecTask):
         asset_file = os.path.basename(asset_path)
 
         asset_options = gymapi.AssetOptions()
+
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
+        asset_options.angular_damping = 0.0
+        
+        door_test_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
+        self.num_dof = self.gym.get_asset_dof_count(door_test_asset)
+        self.num_bodies = self.gym.get_asset_rigid_body_count(door_test_asset)
+
+        actuator_props = self.gym.get_asset_actuator_properties(door_test_asset)
+        motor_efforts = [prop.motor_effort for prop in actuator_props]
+        self.joint_gears = to_torch(motor_efforts, device=self.device)
+
+        start_pose = gymapi.Transform()
+        start_pose.p = gymapi.Vec3(*get_axis_params(0.44, self.up_axis_idx)) # これは意味がわからん
+
+        self.start_rotation = torch.tensor([start_pose.r.x, start_pose.r.y, start_pose.r.z, start_pose.r.w], device=self.device)
+
+        self.torso_index = 0
+        self.num_bodies = self.gym.get_asset_rigid_body_count(door_test_asset) # door_test_asset内のrigidの数を数えている？
+        self.num_
+
+
+
+
+
 
 
 

@@ -10,7 +10,8 @@ from isaacgym import gymutil
 from isaacgym.gymtorch import *
 
 from isaacgymenvs.utils.torch_jit_utils import *
-from .base.vec_task import VecTask
+# from .base.vec_task import VecTask
+from base.vec_task import VecTask
 
 import torch
 
@@ -88,6 +89,7 @@ class DoorTest(VecTask):
         self.prev_potentials = self.potentials.clone()
 
     def test_1(self):
+        
 
         print(self.action_space)
 
@@ -143,13 +145,28 @@ class DoorTest(VecTask):
 
         self.torso_index = 0
         self.num_bodies = self.gym.get_asset_rigid_body_count(door_test_asset) # door_test_asset内のrigidの数を数えている？
-        self.num_
+        print('---------------------------------------\n',self.num_bodies,'\n----------------------------------------')
+        body_names = [self.gym.get_asset_rigid_body_name(door_test_asset, i) for i in range(self.num_bodies)]
+        print('-0--------------------------------------\n',body_names,'\n---------------------------------------')
+        extremity_names = [s for s in body_names if "robot" in s]
+        self.extremities_index = torch.zeros(len(extremity_names), dtype=torch.long, device=self.device)
+        # ↑ ur3の部品だけを抜き出してる？
+        ur3_handle = self.gym.create_actor()
+    
+        for i in range(self.num_envs):
+
+            env_ptr = self.gym.create_env(self.sim, lower, upper, num_per_row)
+
+        # doorgym の環境がゴミすぎてもしかしたらまじで無理かもしれない
+        # FrankaCabinetみたいにROSのURDFとか使って書いてしまうほうが楽かもな
+        # まずはGazeboにドア環境を作らねばそこから勉強しよう
+
 
 
 if __name__ == '__main__':
 
     DT = DoorTest()
-    DT.test_1()
+    DT._create_envs(10, 10, 5)
 
 
 

@@ -34,6 +34,8 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from omegaconf import DictConfig, OmegaConf
 
+# HYDRA_FULL_ERROR=1
+
 
 def preprocess_train_config(cfg, config_dict):
     """

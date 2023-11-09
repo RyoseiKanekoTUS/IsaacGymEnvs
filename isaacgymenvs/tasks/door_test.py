@@ -2,7 +2,7 @@
 
 import numpy as np
 import os
-import torch
+# import torch
 
 from isaacgym import gymtorch
 from isaacgym import gymapi
@@ -11,6 +11,8 @@ from isaacgym.gymtorch import *
 
 from isaacgymenvs.utils.torch_jit_utils import *
 from .base.vec_task import VecTask
+
+import torch
 
 
 class DoorTest(VecTask):
@@ -85,6 +87,10 @@ class DoorTest(VecTask):
         self.potentials = to_torch([-1000./self.dt], device=self.device).repeat(self.num_envs)
         self.prev_potentials = self.potentials.clone()
 
+    def test_1(self):
+
+        print(self.action_space)
+
     def create_sim(self):
         self.up_axis_idx = 2 # index of up axis: Y=1, Z=2
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
@@ -138,6 +144,13 @@ class DoorTest(VecTask):
         self.torso_index = 0
         self.num_bodies = self.gym.get_asset_rigid_body_count(door_test_asset) # door_test_asset内のrigidの数を数えている？
         self.num_
+
+
+if __name__ == '__main__':
+
+    DT = DoorTest()
+    DT.test_1()
+
 
 
 

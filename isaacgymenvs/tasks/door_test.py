@@ -116,47 +116,63 @@ class DoorTest(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        asset_file = 'mjcf/door_test/lever_ur3_hook.xml'
+        ur3_asset_file = "urdf/door_test/ur3.urdf"
+        door_asset_file = 'urdf/door_test/door_1.urdf'
 
         if "asset" in self.cfg["env"]:
-            asset_file = self.cfg["env"]["asset"].get("assetFileName", asset_file)
+            asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.cfg["env"]["asset"].get("assetRoot", asset_root))
+            ur3_asset_file = self.cfg["env"]["asset"].get("assetFileNameUr3", ur3_asset_file)
+            door_asset_file = self.cfg["env"]["asset"].get("assetFileNameDoor", door_asset_file)
         
-        asset_path = os.path.join(asset_root, asset_file)
-        asset_root = os.path.dirname(asset_path)
-        asset_file = os.path.basename(asset_path)
-
+        # load ur3 asset
         asset_options = gymapi.AssetOptions()
 
+        asset_options.flip_visual_attachments = True
+        asset_options.fix_base_link = True
+        asset_options.collapse_fixed_joints = True
+        asset_options.disable_gravity = True
+        asset_options.thickness = 0.001
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
+        asset_options.use_mesh_materials = True
+        ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
+
+        # load door asset
+        asset_options.flip_visual_attachments = False
+        asset_options.collapse_fixed_joints = True
+        asset_options.disable_gravity = False
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
-        asset_options.angular_damping = 0.0
-        
-        door_test_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
-        self.num_dof = self.gym.get_asset_dof_count(door_test_asset)
-        self.num_bodies = self.gym.get_asset_rigid_body_count(door_test_asset)
+        asset_options.armature = 0.005
+        door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        actuator_props = self.gym.get_asset_actuator_properties(door_test_asset)
-        motor_efforts = [prop.motor_effort for prop in actuator_props]
-        self.joint_gears = to_torch(motor_efforts, device=self.device)
+        ur3_dof_stiffness = to_torch([400, 400, 400, 400, 400, 400, 400], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([80, 80, 80, 80, 80, 80, 80], dtype=torch.float, device=self.device)
 
-        start_pose = gymapi.Transform()
-        start_pose.p = gymapi.Vec3(*get_axis_params(0.44, self.up_axis_idx)) # これは意味がわからん
+        self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
+        self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
+        self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_asset)
+        self.num_door_dofs = self.gym.get_asset_dof_count(door_asset)
+        print('----------------------------------------------- num props ----------------------------------------')
+        print("num franka bodies: ", self.num_ur3_bodies)
+        print("num franka dofs: ", self.num_ur3_dofs)
+        print("num cabinet bodies: ", self.num_door_bodies)
+        print("num cabinet dofs: ", self.num_door_dofs)
+        print('----------------------------------------------- num props ----------------------------------------')
 
-        self.start_rotation = torch.tensor([start_pose.r.x, start_pose.r.y, start_pose.r.z, start_pose.r.w], device=self.device)
+        ur3_dof_props = self.gym.get_asset_dof_properties(ur3_asset)
+        self.ur3_dof_lower_limits = []
+        self.ur3_dof_upper_limits = []
 
-        self.torso_index = 0
-        self.num_bodies = self.gym.get_asset_rigid_body_count(door_test_asset) # door_test_asset内のrigidの数を数えている？
-        print('---------------------------------------\n',self.num_bodies,'\n----------------------------------------')
-        body_names = [self.gym.get_asset_rigid_body_name(door_test_asset, i) for i in range(self.num_bodies)]
-        print('-0--------------------------------------\n',body_names,'\n---------------------------------------')
-        extremity_names = [s for s in body_names if "robot" in s]
-        self.extremities_index = torch.zeros(len(extremity_names), dtype=torch.long, device=self.device)
-        # ↑ ur3の部品だけを抜き出してる？
-        ur3_handle = self.gym.create_actor()
-    
-        for i in range(self.num_envs):
+        for i in range(self.num_franka_dofs):
+            ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            if self.physics_engine == gymapi.SIM_PHYSX:
+                ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
+                ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+            else:
+                ur3_dof_props['stiffness'][i] = 7000.0
+                ur3_dof_props['damping'][i] = 50.0
 
-            env_ptr = self.gym.create_env(self.sim, lower, upper, num_per_row)
-
+            self.franka_dof_lower_limits.append(ur3_dof_props['lower'][i])
+            self.franka_dof_upper_limits.append(ur3_dof_props['upper'][i])
         # doorgym の環境がゴミすぎてもしかしたらまじで無理かもしれない
         # FrankaCabinetみたいにROSのURDFとか使って書いてしまうほうが楽かもな
         # まずはGazeboにドア環境を作らねばそこから勉強しよう

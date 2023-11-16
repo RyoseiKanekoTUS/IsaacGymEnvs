@@ -173,6 +173,10 @@ class DoorTest(VecTask):
 
             self.franka_dof_lower_limits.append(ur3_dof_props['lower'][i])
             self.franka_dof_upper_limits.append(ur3_dof_props['upper'][i])
+
+            # franka_cabinet の191行目まで移した！！！！！！！！！！！！
+
+        
         # doorgym の環境がゴミすぎてもしかしたらまじで無理かもしれない
         # FrankaCabinetみたいにROSのURDFとか使って書いてしまうほうが楽かもな
         # まずはGazeboにドア環境を作らねばそこから勉強しよう

@@ -152,10 +152,10 @@ class DoorTest(VecTask):
         self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_asset)
         self.num_door_dofs = self.gym.get_asset_dof_count(door_asset)
         print('----------------------------------------------- num props ----------------------------------------')
-        print("num franka bodies: ", self.num_ur3_bodies)
-        print("num franka dofs: ", self.num_ur3_dofs)
-        print("num cabinet bodies: ", self.num_door_bodies)
-        print("num cabinet dofs: ", self.num_door_dofs)
+        print("num ur3 bodies: ", self.num_ur3_bodies)
+        print("num ur3 dofs: ", self.num_ur3_dofs)
+        print("num door bodies: ", self.num_door_bodies)
+        print("num door dofs: ", self.num_door_dofs)
         print('----------------------------------------------- num props ----------------------------------------')
 
         ur3_dof_props = self.gym.get_asset_dof_properties(ur3_asset)
@@ -171,13 +171,22 @@ class DoorTest(VecTask):
                 ur3_dof_props['stiffness'][i] = 7000.0
                 ur3_dof_props['damping'][i] = 50.0
 
-            self.franka_dof_lower_limits.append(ur3_dof_props['lower'][i])
-            self.franka_dof_upper_limits.append(ur3_dof_props['upper'][i])
+            self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
+            self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
 
-            # franka_cabinet の191行目まで移した！！！！！！！！！！！！
+        self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
+        self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
+        self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
+        self.ur3_dof_speed_scales[[7, 8]] = 0.1 # can't understand the meaning
+
+        ur3_dof_props['effort'][4] = 200
+        ur3_dof_props['effort'][5] = 200
+
+        door_dof_props = self.gym.get_asset_dof_properties(door_asset)
+        for i in range(self.num_door_dofs):
+            door_dof_props['damping'][i] = 10.0
 
         
-        # doorgym の環境がゴミすぎてもしかしたらまじで無理かもしれない
         # FrankaCabinetみたいにROSのURDFとか使って書いてしまうほうが楽かもな
         # まずはGazeboにドア環境を作らねばそこから勉強しよう
 

@@ -16,7 +16,7 @@
     <link name = 'door_frame'>
         <visual>
             <geometry>
-                <mesh filename = 'package://door_opener/urdf/meshes/frame.dae'/>
+                <mesh filename = './meshes/frame.dae'/>
             </geometry>
             <origin xyz = '0 0 0' rpy = '0 0 0'/>
             <color rgba = '0.5 0.5 0.5 1.0'/>
@@ -58,14 +58,14 @@
     <link name = 'door'>
         <visual>
             <geometry>
-                <mesh filename = 'package://door_opener/urdf/meshes/door.dae'/>
+                <mesh filename = './meshes/door.dae'/>
             </geometry>
             <origin xyz = '-0.068 0 0' rpy = '3.14159 0 1.57'/>
             <color rgba = '0.5 0.5 0.5 1.0'/>
         </visual>
         <collision name="door_collision">
             <geometry>
-                <mesh filename = 'package://door_opener/urdf/meshes/door.dae'/>
+                <mesh filename = './meshes/door.dae'/>
             </geometry>
             <origin xyz='-0.068 0 0' rpy = '3.14159 0 1.57'/>
         </collision>
@@ -87,21 +87,21 @@
     <link name = 'door_handles'>
         <visual>
             <geometry>
-                <mesh filename = 'package://door_opener/urdf/meshes/door_handle.dae'/>
+                <mesh filename = './meshes/door_handle.dae'/>
             </geometry>
             <origin xyz = '0 0 0' rpy = '-1.57 3.141592 1.57'/>
             <color rgba = '0.5 0.5 0.5 1.0'/>
         </visual>
         <visual>
             <geometry>
-                <mesh filename = 'package://door_opener/urdf/meshes/door_handle.dae'/>
+                <mesh filename = './meshes/door_handle.dae'/>
             </geometry>
             <origin xyz = '0.045 0 0' rpy = '-1.57 0 -1.57'/>
             <color rgba = '0.5 0.5 0.5 1.0'/>
         </visual>
         <collision name="door_handles_collision">
             <geometry>
-                <mesh filename="package://door_opener/urdf/meshes/door_handle.dae"/>
+                <mesh filename="./meshes/door_handle.dae"/>
             </geometry>
             <origin xyz = '0.045 0 0' rpy = '-1.57 0 -1.57'/>
         </collision>

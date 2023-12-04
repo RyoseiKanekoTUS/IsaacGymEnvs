@@ -11,21 +11,31 @@ env:
   clipActions: 1.0
   clipObservations: 5.0
 
-  numProps: 16
+  startPositionNoise: 0.0
+  startRotationNoise: 0.0
+
+  numProps: 0
   aggregateMode: 3
 
-
+  actionScale: 7.5
+  dofVelocityScale: 0.1
+  distRewardScale: 2.0
+  rotRewardScale: 0.5
+  aroundHandleRewardScale: 0.25
+  openRewardScale: 7.5
+  fingerDistRewardScale: 5.0
+  actionPenaltyScale: 0.01
   # reward params
-  reward_dist: 1.0
-  reward_log_dist: 1.0
-  reward_door: 50
-  reward_doorknob: 25
-  reward_ctrl: 1.0
+  # reward_dist: 1.0
+  # reward_log_dist: 1.0
+  # reward_door: 50
+  # reward_doorknob: 25
+  # reward_ctrl: 1.0
 
-  plane:
-    staticFriction: 1.0
-    dynamicFriction: 1.0
-    restitution: 0.0
+  # plane:
+  #   staticFriction: 1.0
+  #   dynamicFriction: 1.0
+  #   restitution: 0.0
   
   asset:
     assetRoot: "../../assets"

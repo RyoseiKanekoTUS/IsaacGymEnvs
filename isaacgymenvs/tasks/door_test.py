@@ -61,7 +61,7 @@ class DoorTest(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.ur3_default_dof_pos = to_torch([1.157, -1.066, -0.155, -2.239, -1.841, 1.003], device=self.device)
+        self.ur3_default_dof_pos = to_torch([0, -1.57, 0, -1.57, 0, 0], device=self.device)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]
         self.ur3_dof_pos = self.ur3_dof_state[..., 0]

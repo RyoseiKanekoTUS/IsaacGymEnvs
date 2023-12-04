@@ -5,14 +5,14 @@
   <material name="Front"><color rgba="0.4 0.4 0.4 1.0"/></material>
 
 
-  <!--
+  
   <link name="world"/>
   <joint name="world_to_sektion" type="fixed">
     <origin xyz="0.85 0 0.38" rpy="0 0 3.14159"/>
     <parent link="world"/>
     <child link="sektion"/>
   </joint>
-  -->
+ 
 
   <link name="sektion">
     <!--inertial>

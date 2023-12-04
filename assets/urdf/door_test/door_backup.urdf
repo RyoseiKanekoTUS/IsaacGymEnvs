@@ -26,19 +26,19 @@
             <geometry>
                 <box size = '0.05029 0.06858 2.10820'/>
             </geometry>
-            <origin xyz = '0.5 0 0' rpy = '0 0 0'/>
+            <origin xyz = '-0.025145 0.95631 1.0541' rpy = '0 0 0'/>
         </collision>
         <collision name="collision_2">
             <geometry>
                 <box size = '0.05029 0.06858 2.10820'/>
             </geometry>
-            <origin xyz="0.5 0 0" rpy="0 0 0"/>
+            <origin xyz="-0.025145 0.95631 1.0541" rpy="0 0 0"/>
         </collision>
         <collision name="collision_3">
             <geometry>
                 <box size = '0.05029 0.92964 0.07366'/>
             </geometry>
-            <origin xyz="0.5 0 0" rpy="0 0 0"/>
+            <origin xyz="-0.0251450 0.46482 2.07137" rpy="0 0 0"/>
         </collision>
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>

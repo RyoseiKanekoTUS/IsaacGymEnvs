@@ -107,7 +107,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://franka_description/meshes/collision/link5.obj"/>
+        <mesh filename="package://franka_description/meshes/collision/link5.obj" scale="1.0 1.0 1.0" />
       </geometry>
     </collision>
   </link>

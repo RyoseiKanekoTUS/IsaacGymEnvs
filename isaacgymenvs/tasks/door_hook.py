@@ -175,7 +175,7 @@ class DoorHook(VecTask):
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
         self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
         self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
-        self.ur3_dof_speed_scales[[4, 5]] = 0.1 # これなんだかわかってないけど，自由度に合わせることでどうにかなる
+        self.ur3_dof_speed_scales[[0, 1]] = 0.1 # これなんだかわかってないけど，自由度に合わせることでどうにかなる
 
         ur3_dof_props['effort'][4] = 200
         ur3_dof_props['effort'][5] = 200

@@ -1,5 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="hook_test">
+    <link name = 'base_link'/>
     <link name="ee_base"/>
     <joint name="ee_x" type="prismatic">
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -8,6 +9,7 @@
         <axis xyz="1 0 0"/>
         <limit effort="1000.0" lower="-0.5" upper="0.5" velocity="0.1"/>
     </joint>
+    <!-- <link name = 'empty_link_1'/> -->
     <joint name="ee_y" type="prismatic">
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="ee_base"/>
@@ -15,6 +17,7 @@
         <axis xyz="0 1 0"/>
         <limit effort="1000.0" lower="-0.5" upper="0.5" velocity="0.1"/>
     </joint>
+    <!-- <link name = 'empty_link_2'/> -->
     <joint name="ee_z" type="prismatic">
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="ee_base"/>
@@ -22,6 +25,7 @@
         <axis xyz="0 0 1"/>
         <limit effort="1000.0" lower="-0.5" upper="0.5" velocity="0.1"/>
     </joint>
+    <!-- <link name = 'empty_link_3'/> -->
     <joint name="ee_rx" type="revolute">
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="ee_base"/>
@@ -29,6 +33,7 @@
         <axis xyz="1 0 0"/>
         <limit effort="1000.0" lower="-0.5" upper="0.5" velocity="0.1"/>
     </joint>
+    <!-- <link name = 'empty_link_4'/> -->
     <joint name="ee_ry" type="revolute">
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="ee_base"/>
@@ -36,6 +41,7 @@
         <axis xyz="0 1 0"/>
         <limit effort="1000.0" lower="-0.5" upper="0.5" velocity="0.1"/>
     </joint>
+    <!-- <link name = 'empty_link_5'/> -->
     <joint name="ee_rz" type="revolute">
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="ee_base"/>

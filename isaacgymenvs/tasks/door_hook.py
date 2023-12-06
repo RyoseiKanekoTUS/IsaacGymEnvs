@@ -16,7 +16,7 @@ from .base.vec_task import VecTask
 import torch
 
 
-class DoorGripper(VecTask):
+class DoorHook(VecTask):
 
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
@@ -43,11 +43,11 @@ class DoorGripper(VecTask):
         self.up_axis = "z"
         self.up_axis_idx = 2
 
-        self.distX_offset = 50 # 0.04 default
+        self.distX_offset = 0.04 # 0.04 default
         self.dt = 1/60.
 
-        self.cfg["env"]["numObservations"] = 21
-        self.cfg["env"]["numActions"] = 8
+        self.cfg["env"]["numObservations"] = 19
+        self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
 
@@ -61,7 +61,7 @@ class DoorGripper(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.ur3_default_dof_pos = to_torch([0, -1.57, 0, -1.57, 0, 0, 0, 0 ], device=self.device)
+        self.ur3_default_dof_pos = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]
         self.ur3_dof_pos = self.ur3_dof_state[..., 0]
@@ -111,7 +111,7 @@ class DoorGripper(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        ur3_asset_file = "urdf/door_test/ur3_hand.urdf"
+        ur3_asset_file = "urdf/door_test/hook_test.urdf"
         door_asset_file = 'urdf/door_test/door_1.urdf'
 
         if "asset" in self.cfg["env"]:
@@ -140,8 +140,8 @@ class DoorGripper(VecTask):
         asset_options.armature = 0.005
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        ur3_dof_stiffness = to_torch([400, 400, 400, 400, 400, 400, 200, 200], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([80, 80, 80, 80, 80, 80, 50, 50], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([400, 400, 400, 400, 400, 400], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([80, 80, 80, 80, 80, 80], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -245,7 +245,7 @@ class DoorGripper(VecTask):
             self.ur3s.append(ur3_actor)
             self.doors.append(door_actor)
 
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "wrist_3_link")
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door")
         self.lfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_leftfinger")
         self.rfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_rightfinger")
@@ -254,7 +254,7 @@ class DoorGripper(VecTask):
         self.init_data()
 
     def init_data(self): # まだ直しきってないのでここでエラーが出ても何も怖くない
-        hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "wrist_3_link")
+        hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "hook")
         lfinger = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ur3_leftfinger")
         rfinger = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ur3_rightfinger")
 

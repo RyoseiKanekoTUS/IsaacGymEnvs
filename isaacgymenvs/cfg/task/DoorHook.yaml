@@ -1,6 +1,6 @@
-# DoorEnv for gripper 
+# DoorEnv for hook
 
-name: DoorGripper
+name: DoorHook
 
 physics_engine: ${..physics_engine}
 
@@ -41,7 +41,7 @@ env:
   
   asset:
     assetRoot: "../../assets"
-    assetFileNameUr3: "urdf/door_test/ur3.urdf"
+    assetFileNameUr3: "urdf/door_test/hook_test.urdf"
     assetFileNameDoor: "urdf/door_test/door_1.urdf"
 
   enableCameraSensors: False

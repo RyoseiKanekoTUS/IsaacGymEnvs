@@ -66,12 +66,12 @@
     <link name="hook">
         <visual>
             <geometry>
-                <mesh filename="./meshes/ur3/collision/hook.obj"/>
+                <mesh filename="./meshes/ur3/collision/hook4door.obj"/>
             </geometry>
         </visual>
         <collision>
             <geometry>
-                <mesh filename="./meshes/ur3/collision/hook.obj"/>
+                <mesh filename="./meshes/ur3/collision/hook4door.obj"/>
             </geometry>
         </collision>
     </link>

@@ -1,4 +1,4 @@
-# this is test file for dooropening and works
+# this is test file for dooropening and works but uncompleted
 
 import numpy as np
 import os
@@ -46,7 +46,7 @@ class DoorHook(VecTask):
         self.distX_offset = 0.04 # 0.04 default
         self.dt = 1/60.
 
-        self.cfg["env"]["numObservations"] = 19
+        self.cfg["env"]["numObservations"] = 17
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -162,7 +162,7 @@ class DoorHook(VecTask):
         for i in range(self.num_ur3_dofs):
             ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
             if self.physics_engine == gymapi.SIM_PHYSX:
-                print(f'############### feed back ####################\n{ur3_dof_props}')
+                # print(f'############### feed back ####################\n{ur3_dof_props}')
                 ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
                 ur3_dof_props['damping'][i] = ur3_dof_damping[i]
             else:

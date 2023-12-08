@@ -10,7 +10,7 @@
         
     <joint name = 'base_joint' type = 'fixed'>
         <parent link = 'base_link'/>
-        <origin xyz = '0.0 -0.5 -0.4'/>
+        <origin xyz = '0.0 -0.5 -0.4' rpy='0 0 3.14'/>
         <child link = 'door_frame'/>
     </joint>
 
@@ -112,6 +112,12 @@
                 <mesh filename="./meshes/door_handle.dae"/>
             </geometry>
             <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>
+        </collision>
+        <collision name="door_handles_collision">
+            <geometry>
+                <mesh filename="./meshes/door_handle.dae"/>
+            </geometry>
+            <origin xyz = '0.045 0 0' rpy = '0 0 -1.57'/>
         </collision>
         <inertial>
             <origin xyz="0.0 0.0 0.0" rpy="3.14159 0 1.57"/>

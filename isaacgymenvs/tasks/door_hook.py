@@ -273,9 +273,9 @@ class DoorHook(VecTask):
                 print(d_img.shape)
                 reshape_rgb_img = cv2.resize(rgb_img, (640,480))
                 print(reshape_rgb_img.shape)
-                cv2.imshow('result', reshape_rgb_img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                # cv2.imshow('result', reshape_rgb_img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
                 np.savetxt(f'.test_data/d_img_{i}.csv', d_img, delimiter=',')
             else:
                 pass

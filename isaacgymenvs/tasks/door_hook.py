@@ -203,7 +203,14 @@ class DoorHook(VecTask):
         num_door_shapes = self.gym.get_asset_rigid_shape_count(door_asset)
 
         max_agg_bodies = num_ur3_bodies + num_door_bodies
-        max_agg_shapes = num_ur3_shapes + num_door_shapes 
+        max_agg_shapes = num_ur3_shapes + num_door_shapes
+
+        # depth camera settings
+        camera_props = gymapi.CameraProperties()
+        camera_props.width = 640
+        camera_props.height = 480
+        camera_props.enable_tensors = True
+        # camera_handle = self.gym.create_camera_sensor(env, camera_props)
 
         print('#############################################################################################################')
         print(f'num_ur3_bodies : {num_ur3_bodies}, num_ur3_shapes : {num_ur3_shapes}, \nnum_door_bodies : {num_door_bodies}, num_door_shapes : {num_door_shapes}')
@@ -212,6 +219,7 @@ class DoorHook(VecTask):
         self.ur3s = []
         self.doors = []
         self.envs = []
+        self.d_imgs = []
         
         for i in range(self.num_envs):
             # create env instance
@@ -244,10 +252,25 @@ class DoorHook(VecTask):
             if self.aggregate_mode > 0:
                 self.gym.end_aggregate(env_ptr)
 
+            camera_handle = self.gym.create_camera_sensor(env_ptr, camera_props)
+            camera_tf = gymapi.Transform()
+            camera_tf.p = (1.0,1.0,1.0)
+            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(45.0))
+            camera_mnt = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
+            self.gym.attach_camera_to_body(camera_handle, env_ptr, camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+            
+            d_img = self.gym.get_camera_image(self.sim, env_ptr, camera_handle, gymapi.IMAGE_DEPTH)
             self.envs.append(env_ptr)
             self.ur3s.append(ur3_actor)
             self.doors.append(door_actor)
+            self.d_imgs.append(d_img)
+            # debug ###############################################
+            if i ==  33:
+                print(d_img.shape)
+            else:
+                pass
 
+        # handle の定義をしている これは in range num_envs のループ外にある
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door")
         self.lfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_leftfinger")

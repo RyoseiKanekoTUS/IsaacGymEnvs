@@ -20,7 +20,7 @@
                 <mesh filename = './meshes/frame.dae'/>
             </geometry>
             <origin xyz = '0.5 0 0' rpy = '1.57 0 0'/>
-            <color rgba = '0.5 0.5 0.5 1.0'/>
+            <!-- <color rgba = '0.5 0.5 0.5 1.0'/> -->
         </visual>
         <!-- <collision name = "door frame_collision">
             <geometry>

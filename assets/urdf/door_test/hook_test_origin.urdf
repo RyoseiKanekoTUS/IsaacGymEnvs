@@ -80,14 +80,14 @@
     <link name="hook">
         <visual>
             <geometry>
-                <mesh filename="./meshes/ur3/collision/hook4door_2_asm.obj">
+                <mesh filename="./meshes/ur3/collision/hook4door.obj">
                 <!-- <resolution>10000</resolution> -->
                 </mesh>
             </geometry>
         </visual>
         <collision>
             <geometry>
-                <mesh filename="./meshes/ur3/collision/hook4door_2_asm.obj"/>
+                <mesh filename="./meshes/ur3/collision/hook4door.obj"/>
             </geometry>
             <origin rpy="1.57 0 0" xyz="0 0 0"/>
         </collision>

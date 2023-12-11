@@ -30,3 +30,6 @@ runs/
 outputs/
 *.hydra*
 /isaacgymenvs/wandb
+
+.test_data
+

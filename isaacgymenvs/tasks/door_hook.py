@@ -254,8 +254,8 @@ class DoorHook(VecTask):
 
             camera_handle = self.gym.create_camera_sensor(env_ptr, camera_props)
             camera_tf = gymapi.Transform()
-            camera_tf.p = (1.0,1.0,1.0)
-            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(45.0))
+            camera_tf.p = gymapi.Vec3(0,0,0)
+            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(-45))
             camera_mnt = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
             self.gym.attach_camera_to_body(camera_handle, env_ptr, camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
             
@@ -266,7 +266,17 @@ class DoorHook(VecTask):
             self.d_imgs.append(d_img)
             # debug ###############################################
             if i ==  33:
+                rgb_img = self.gym.get_camera_image(self.sim, env_ptr, camera_handle, gymapi.IMAGE_COLOR)
+                # np.reshape(rgb_img)
+                import cv2
+                print(rgb_img.shape)
                 print(d_img.shape)
+                reshape_rgb_img = cv2.resize(rgb_img, (640,480))
+                print(reshape_rgb_img.shape)
+                cv2.imshow('result', reshape_rgb_img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                np.savetxt(f'.test_data/d_img_{i}.csv', d_img, delimiter=',')
             else:
                 pass
 

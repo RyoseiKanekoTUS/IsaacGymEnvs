@@ -1,5 +1,9 @@
 # this is test file for dooropening and works but uncompleted
 
+
+
+
+######gomigomigmo
 import numpy as np
 import os
 # import torch

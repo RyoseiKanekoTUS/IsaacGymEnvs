@@ -59,7 +59,7 @@ headless: False
 
 # set default task and default training config based on task
 defaults:
-  - task: FrankaCabinet
+  - task: DoorHook
   - train: ${task}PPO
   - pbt: no_pbt
   - override hydra/job_logging: disabled

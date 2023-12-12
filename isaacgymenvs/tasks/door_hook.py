@@ -85,6 +85,8 @@ class DoorHook(VecTask):
 
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
 
+        self.camera_props = None
+
     def test_1(self):
         
 
@@ -206,11 +208,11 @@ class DoorHook(VecTask):
         max_agg_shapes = num_ur3_shapes + num_door_shapes
 
         # depth camera settings
-        camera_props = gymapi.CameraProperties()
-        camera_props.width = 640
-        camera_props.height = 480
-        camera_props.enable_tensors = True
-        # camera_handle = self.gym.create_camera_sensor(env, camera_props)
+        self.camera_props = gymapi.CameraProperties()
+        self.camera_props.width = 640
+        self.camera_props.height = 480
+        # self.camera_props.enable_tensors = True
+        # camera_handle = self.gym.create_camera_sensor(env, self.camera_props)
 
         print('#############################################################################################################')
         print(f'num_ur3_bodies : {num_ur3_bodies}, num_ur3_shapes : {num_ur3_shapes}, \nnum_door_bodies : {num_door_bodies}, num_door_shapes : {num_door_shapes}')
@@ -219,6 +221,7 @@ class DoorHook(VecTask):
         self.ur3s = []
         self.doors = []
         self.envs = []
+        self.camera_handles = []
         self.d_imgs = []
         
         for i in range(self.num_envs):
@@ -252,33 +255,40 @@ class DoorHook(VecTask):
             if self.aggregate_mode > 0:
                 self.gym.end_aggregate(env_ptr)
 
-            camera_handle = self.gym.create_camera_sensor(env_ptr, camera_props)
-            camera_tf = gymapi.Transform()
-            camera_tf.p = gymapi.Vec3(0,0,0)
-            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(-45))
-            camera_mnt = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
-            self.gym.attach_camera_to_body(camera_handle, env_ptr, camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+            # self.gym.attach_camera_to_body(self.camera_handles[i], self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
             
-            d_img = self.gym.get_camera_image(self.sim, env_ptr, camera_handle, gymapi.IMAGE_DEPTH)
+            # d_img = self.gym.get_camera_image(self.sim, env_ptr, camera_handle, gymapi.IMAGE_DEPTH)
             self.envs.append(env_ptr)
             self.ur3s.append(ur3_actor)
             self.doors.append(door_actor)
-            self.d_imgs.append(d_img)
+
+            # self.gym.attach_camera_to_body(self.camera_handles[i], self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+            camera_handle = self.gym.create_camera_sensor(self.envs[i], self.camera_props)
+            self.camera_handles.append(camera_handle)
+            camera_tf = gymapi.Transform()
+            camera_tf.p = gymapi.Vec3(0.2, 0.2, 0.2)
+            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(180))
+            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
+            self.gym.attach_camera_to_body(self.camera_handles[i], self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+
+
+            self.gym.attach_camera_to_body(self.camera_handles[i], self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+            # self.d_imgs.append(d_img)
             # debug ###############################################
-            if i ==  33:
-                rgb_img = self.gym.get_camera_image(self.sim, env_ptr, camera_handle, gymapi.IMAGE_COLOR)
-                # np.reshape(rgb_img)
-                import cv2
-                print(rgb_img.shape)
-                print(d_img.shape)
-                reshape_rgb_img = cv2.resize(rgb_img, (640,480))
-                print(reshape_rgb_img.shape)
-                # cv2.imshow('result', reshape_rgb_img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                np.savetxt(f'.test_data/d_img_{i}.csv', d_img, delimiter=',')
-            else:
-                pass
+            # if i ==  33:
+            #     rgb_img = self.gym.get_camera_image(self.sim, env_ptr, camera_handle, gymapi.IMAGE_COLOR)
+            #     # np.reshape(rgb_img)
+            #     import cv2
+            #     print(rgb_img.shape)
+            #     print(d_img.shape)
+            #     reshape_rgb_img = cv2.resize(rgb_img, (640,480))
+            #     print(reshape_rgb_img.shape)
+            #     # cv2.imshow('result', reshape_rgb_img)
+            #     # cv2.waitKey(0)
+            #     # cv2.destroyAllWindows()
+            #     np.savetxt(f'.test_data/d_img_{i}.csv', d_img, delimiter=',')
+            # else:
+            #     pass
 
         # handle の定義をしている これは in range num_envs のループ外にある
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
@@ -336,6 +346,19 @@ class DoorHook(VecTask):
         self.ur3_rfinger_rot = torch.zeros_like(self.ur3_local_grasp_rot)
 
     def compute_reward(self, actions):
+        self.gym.render_all_camera_sensors(self.sim)
+        d_img = self.gym.get_camera_image(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_DEPTH)
+        np.savetxt("./.test_data/d_img.csv",d_img, delimiter=',')
+        rgb_img = self.gym.get_camera_image(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_COLOR)
+        rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+        # rgb_img = rgb_img.fromarray
+
+        import cv2
+        print(rgb_img.shape)
+        cv2.imshow('result', rgb_img)
+        cv2.waitKey(1)
+        # cv2.destroyAllWindows()
+
         self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
             self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos,
             self.ur3_grasp_pos, self.door_grasp_pos, self.ur3_grasp_rot, self.door_grasp_rot,
@@ -344,8 +367,20 @@ class DoorHook(VecTask):
             self.num_envs, self.dist_reward_scale, self.rot_reward_scale, self.around_handle_reward_scale, self.open_reward_scale,
             self.finger_dist_reward_scale, self.action_penalty_scale, self.distX_offset, self.max_episode_length
         )
+
         
     def compute_observations(self):
+        self.gym.render_all_camera_sensors(self.sim)
+        d_img = self.gym.get_camera_image(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_DEPTH)
+        np.savetxt("./.test_data/d_img.csv",d_img, delimiter=',')
+        rgb_img = self.gym.get_camera_image(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_COLOR)
+        rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+        # rgb_img = rgb_img.fromarray
+
+        import cv2
+        print(rgb_img.shape)
+        cv2.imshow('result', rgb_img)
+        cv2.waitKey(1)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)

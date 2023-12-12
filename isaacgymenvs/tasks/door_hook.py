@@ -338,9 +338,9 @@ class DoorHook(VecTask):
     def compute_observations(self):
 
         import cv2
-    
+        
         self.gym.render_all_camera_sensors(self.sim)
-        for j in [1,4]:
+        for j in [1, 50, 100]:
             d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)

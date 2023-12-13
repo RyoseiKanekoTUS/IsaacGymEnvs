@@ -63,35 +63,29 @@ class DoorHook(VecTask):
 
         # create some wrapper tensors for different slices
         self.ur3_default_dof_pos = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
-        self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
-        print(self.dof_state.shape)
+        self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
+        print(self.dof_state.shape) 
         test = self.dof_state.view(self.num_envs, -1 ,2)
         print(test.shape) # 8になってるから，ur3とドアのdof_stateが一緒に格納されている
-        self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]
+        self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
         print(self.ur3_dof_state.shape)
         self.ur3_dof_pos = self.ur3_dof_state[..., 0]
         self.ur3_dof_vel = self.ur3_dof_state[..., 1]
-        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:]
+        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         print(self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_vel = self.door_dof_state[..., 1]
 
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
         self.num_bodies = self.rigid_body_states.shape[1]
-
+        print(self.num_bodies)
         self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(self.num_envs, -1, 13)
-
-        if self.num_props > 0:
-            self.prop_states = self.root_state_tensor[:, 2:]
 
         self.num_dofs = self.gym.get_sim_dof_count(self.sim) // self.num_envs
         self.ur3_dof_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
 
         self.global_indices = torch.arange(self.num_envs * (2 + self.num_props), dtype=torch.int32, device=self.device).view(self.num_envs, -1)
-
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
-
-        self.camera_props = None
 
     
     def create_sim(self):
@@ -209,11 +203,11 @@ class DoorHook(VecTask):
         max_agg_bodies = num_ur3_bodies + num_door_bodies
         max_agg_shapes = num_ur3_shapes + num_door_shapes
 
-        # depth camera settings
+        # camera settings
         self.camera_props = gymapi.CameraProperties()
         self.camera_props.width = 640
         self.camera_props.height = 480
-        # self.camera_props.enable_tensors = True
+        self.camera_props.enable_tensors = True
         # camera_handle = self.gym.create_camera_sensor(env, self.camera_props)
 
         print('#############################################################################################################')
@@ -340,16 +334,16 @@ class DoorHook(VecTask):
         
     def compute_observations(self):
 
-        import cv2
+        # import cv2
         
-        self.gym.render_all_camera_sensors(self.sim)
-        for j in [1]:
-            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
-            rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
-            rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-            cv2.imshow(f'rgb{j}', rgb_img)
-            cv2.waitKey(1)
+        # self.gym.render_all_camera_sensors(self.sim)
+        # for j in [1]:
+        #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+        #     # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+        #     rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
+        #     rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+        #     cv2.imshow(f'rgb{j}', rgb_img)
+        #     cv2.waitKey(1)
 
         # print(rgb_img.shape)
         # cv2.imshow('result', rgb_img)

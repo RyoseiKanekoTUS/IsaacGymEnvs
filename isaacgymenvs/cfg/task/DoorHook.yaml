@@ -51,7 +51,7 @@ sim:
   substeps: 1
   up_axis: "z"
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
-  gravity: [0.0, 0.0, 0.0]
+  gravity: [0.0, 0.0, -9.81]
   physx:
     num_threads: ${....num_threads}
     solver_type: ${....solver_type}

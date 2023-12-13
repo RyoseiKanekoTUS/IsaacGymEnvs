@@ -45,7 +45,7 @@ class DoorHook(VecTask):
         self.up_axis_idx = 2
 
         self.distX_offset = 0.04 # 0.04 default
-        self.dt = 1/60.
+        self.dt = cfg["sim"]["dt"]
 
         self.cfg["env"]["numObservations"] = 17
         self.cfg["env"]["numActions"] = 6
@@ -64,10 +64,15 @@ class DoorHook(VecTask):
         # create some wrapper tensors for different slices
         self.ur3_default_dof_pos = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
+        print(self.dof_state.shape)
+        test = self.dof_state.view(self.num_envs, -1 ,2)
+        print(test.shape) # 8になってるから，ur3とドアのdof_stateが一緒に格納されている
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]
+        print(self.ur3_dof_state.shape)
         self.ur3_dof_pos = self.ur3_dof_state[..., 0]
         self.ur3_dof_vel = self.ur3_dof_state[..., 1]
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:]
+        print(self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_vel = self.door_dof_state[..., 1]
 
@@ -88,11 +93,7 @@ class DoorHook(VecTask):
 
         self.camera_props = None
 
-    def test_1(self):
-        
-
-        print(self.action_space)
-
+    
     def create_sim(self):
         self.up_axis_idx = 2 # index of up axis: Y=1, Z=2
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
@@ -247,7 +248,7 @@ class DoorHook(VecTask):
             dy = np.random.rand() - 0.5
             door_pose.p.y += self.start_position_noise * dy
             door_pose.p.z += self.start_position_noise * dz
-            door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 2, 0)
+            door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 1, 0)
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
 
             if self.aggregate_mode == 1:
@@ -549,8 +550,8 @@ def compute_grasp_transforms(hand_rot, hand_pos, ur3_local_grasp_rot, ur3_local_
 
 if __name__ == '__main__':
 
-    DT = DoorTest()
-    DT._create_envs(10, 10, 5)
+    DT = DoorHook()
+    # DT._create_envs(10, 10, 5)
 
 
 

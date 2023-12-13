@@ -10,7 +10,8 @@
         
     <joint name = 'base_joint' type = 'fixed'>
         <parent link = 'base_link'/>
-        <origin xyz = '0.0 -0.5 -0.4' rpy='0 0 3.14'/>
+        <origin xyz = '0 0.5 -0.4' rpy='0 0 3.14'/>
+        <!-- if move y : the door will slide -->
         <child link = 'door_frame'/>
     </joint>
 

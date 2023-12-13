@@ -264,13 +264,14 @@ class DoorHook(VecTask):
             camera_handle = self.gym.create_camera_sensor(self.envs[i], self.camera_props)
             self.camera_handles.append(camera_handle)
             camera_tf = gymapi.Transform()
-            camera_tf.p = gymapi.Vec3(0.2, 0.2, 0.2)
-            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(180))
+            camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
+            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(0))
             camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
             self.gym.attach_camera_to_body(self.camera_handles[i], self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
 
         # handle の定義をしている これは in range num_envs のループ外にある
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
+        print(self.hand_handle)
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door")
         self.lfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_leftfinger")
         self.rfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_rightfinger")
@@ -341,7 +342,7 @@ class DoorHook(VecTask):
         import cv2
         
         self.gym.render_all_camera_sensors(self.sim)
-        for j in [1, 50, 100]:
+        for j in [1]:
             d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)

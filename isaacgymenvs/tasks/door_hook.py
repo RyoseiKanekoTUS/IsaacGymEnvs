@@ -335,12 +335,6 @@ class DoorHook(VecTask):
         hend_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
         hend_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
 
-
-        self.ur3_grasp_rot[:], self.ur3_grasp_pos[:], self.door_grasp_rot[:], self.door_grasp_pos[:] = \
-            compute_grasp_transforms(hand_rot, hand_pos, self.ur3_local_grasp_rot, self.ur3_local_grasp_pos,
-                                     door_rot, door_pos, self.door_local_grasp_rot, self.door_local_grasp_pos
-                                     )
-
         dof_pos_scaled = (2.0 * (self.ur3_dof_pos - self.ur3_dof_lower_limits)
                           / (self.ur3_dof_upper_limits - self.ur3_dof_lower_limits) - 1.0)
         to_target = self.door_grasp_pos - self.ur3_grasp_pos

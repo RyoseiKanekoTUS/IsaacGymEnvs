@@ -311,6 +311,8 @@ class DoorHook(VecTask):
         
         self.gym.render_all_camera_sensors(self.sim)
         self.d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
+        self.d_imgs = [np.where(np.isinf(d_img), 0, d_img) for d_img in self.d_imgs]
+        # -inf : -np.inf
         # import cv2
         # for j in [1,511]:
         #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
@@ -325,10 +327,10 @@ class DoorHook(VecTask):
         # cv2.waitKey(1)
 
 
-        hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3]
-        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7]
-        hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10]
-        hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13]
+        hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
+        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
+        hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
+        hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
 
         door_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]

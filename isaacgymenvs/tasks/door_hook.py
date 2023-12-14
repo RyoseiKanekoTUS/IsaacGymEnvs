@@ -338,6 +338,13 @@ class DoorHook(VecTask):
         
         self.gym.render_all_camera_sensors(self.sim)
         self.d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
+        # -inf は -np.infの型
+        print(self.d_imgs[0].dtype)
+        d_inf_test = self.d_imgs[0][2][2]
+        print(d_inf_test.dtype)
+        if d_inf_test == -np.inf:
+                d_inf_test = 10
+        print(d_inf_test)
         # import cv2
         # for j in [1,511]:
         #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)

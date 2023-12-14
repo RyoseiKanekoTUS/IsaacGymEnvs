@@ -178,7 +178,7 @@ class DoorHook(VecTask):
         self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
         self.ur3_dof_speed_scales[[0, 1]] = 0.1 # これなんだかわかってないけど，自由度に合わせることでどうにかなる
 
-        ur3_dof_props['effort'][4] = 200
+        # ur3_dof_props['effort'][4] = 200
         ur3_dof_props['effort'][5] = 200
 
         # set door dof properties
@@ -188,11 +188,11 @@ class DoorHook(VecTask):
 
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 0.0)
+        ur3_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.5) # urdf上の初期位置と関係
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
-        door_start_pose.p = gymapi.Vec3(*get_axis_params(0.4, self.up_axis_idx))
+        door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
 
         # compute aggregate size
         num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
@@ -207,7 +207,11 @@ class DoorHook(VecTask):
         self.camera_props = gymapi.CameraProperties()
         self.camera_props.width = 640
         self.camera_props.height = 480
-        self.camera_props.enable_tensors = True
+        camera_tf = gymapi.Transform()
+        camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
+        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(0))
+        # camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
+        # self.camera_props.enable_tensors = True
         # camera_handle = self.gym.create_camera_sensor(env, self.camera_props)
 
         print('#############################################################################################################')
@@ -218,7 +222,8 @@ class DoorHook(VecTask):
         self.doors = []
         self.envs = []
         self.camera_handles = []
-        self.d_imgs = []
+        self.d_imgs =[]
+        
         
         for i in range(self.num_envs):
             # create env instance
@@ -229,7 +234,8 @@ class DoorHook(VecTask):
             if self.aggregate_mode >= 3:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "ur3", i, 0, 0)
+            # create robot hand actor name as "robot_hand"
+            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "robot_hand", i, 0, 0)
                                                                                            #↑1から0に変えたらself collision OK！
             self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
 
@@ -258,16 +264,12 @@ class DoorHook(VecTask):
 
             camera_handle = self.gym.create_camera_sensor(self.envs[i], self.camera_props)
             self.camera_handles.append(camera_handle)
-            camera_tf = gymapi.Transform()
-            camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
-            camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(0))
             camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
-            self.gym.attach_camera_to_body(self.camera_handles[i], self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+            self.gym.attach_camera_to_body(camera_handle, self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
 
         # handle の定義をしている これは in range num_envs のループ外にある
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook")
-        print(self.hand_handle)
-        self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door")
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "ee_rz_link")
+        self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
         self.lfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_leftfinger")
         self.rfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_rightfinger")
         # self.default_prop_states = to_torch(self.default_prop_states, device=self.device, dtype=torch.float).view(self.num_envs, self.num_props, 13)
@@ -333,11 +335,11 @@ class DoorHook(VecTask):
 
         
     def compute_observations(self):
-
-        # import cv2
         
-        # self.gym.render_all_camera_sensors(self.sim)
-        # for j in [1]:
+        self.gym.render_all_camera_sensors(self.sim)
+        self.d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
+        # import cv2
+        # for j in [1,511]:
         #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
         #     # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
         #     rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
@@ -414,7 +416,7 @@ class DoorHook(VecTask):
         self.compute_reward(self.actions)
 
         # debug viz
-        if self.viewer and self.debug_viz:
+        if self.debug_viz:
             self.gym.clear_lines(self.viewer)
             self.gym.refresh_rigid_body_state_tensor(self.sim)
 

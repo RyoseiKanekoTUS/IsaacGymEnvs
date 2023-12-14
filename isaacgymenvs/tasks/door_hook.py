@@ -276,7 +276,7 @@ class DoorHook(VecTask):
         
         self.init_data()
 
-    def init_data(self): # まだ直しきってないのでここでエラーが出ても何も怖くない
+    def init_data(self): # NOT SURE
         # ur3 information
         hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ee_rz_link")
         hand_pose = self.gym.get_rigid_transform(self.envs[0], hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
@@ -291,7 +291,7 @@ class DoorHook(VecTask):
         print(door_hinge)
         
         
-    def compute_reward(self, actions):
+    def compute_reward(self, actions): # NOT DEFINED YET
 
         self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
             self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos,
@@ -301,8 +301,19 @@ class DoorHook(VecTask):
             self.finger_dist_reward_scale, self.action_penalty_scale, self.distX_offset, self.max_episode_length
         )
 
+    def debug_camera_imgs(self):
         
-    def compute_observations(self):
+        import cv2
+        for j in [0,511]:
+            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            # -inf : -np.inf
+            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+            rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
+            rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+            cv2.imshow(f'rgb{j}', rgb_img)
+            cv2.waitKey(1)
+
+    def compute_observations(self):  # NOW DEFINING
         
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -310,32 +321,21 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.gym.render_all_camera_sensors(self.sim)
-        self.d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
-        self.d_imgs = [np.where(np.isinf(d_img), 0, d_img) for d_img in self.d_imgs]
-        # -inf : -np.inf
-        # import cv2
-        # for j in [1,511]:
-        #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-        #     # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
-        #     rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
-        #     rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-        #     cv2.imshow(f'rgb{j}', rgb_img)
-        #     cv2.waitKey(1)
-
-        # print(rgb_img.shape)
-        # cv2.imshow('result', rgb_img)
-        # cv2.waitKey(1)
-
+        d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
+        self.d_imgs = [np.where(np.isinf(d_img), 0, d_img) for d_img in d_imgs]
+        
+        
+        # self.debug_camera_imgs()
 
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
         hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
         hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
         hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
-
+        # door state dont need
         door_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]
-        hend_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
-        hend_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
+        door_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
+        door_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
 
         dof_pos_scaled = (2.0 * (self.ur3_dof_pos - self.ur3_dof_lower_limits)
                           / (self.ur3_dof_upper_limits - self.ur3_dof_lower_limits) - 1.0)
@@ -344,6 +344,8 @@ class DoorHook(VecTask):
                                   self.door_dof_pos[:, 0].unsqueeze(-1), self.door_dof_vel[:, 0].unsqueeze(-1)), dim=-1)
                                   #                    ↑適当に3からに変更してある  ##############↑
 
+            # zantei
+        self.obs_buf = torch.cat((self.d_imgs, hand_pos, hand_rot, hand_vel_pos, hand_vel_rot))
         return self.obs_buf    
         
     def reset_idx(self, env_ids):

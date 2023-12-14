@@ -340,11 +340,11 @@ class DoorHook(VecTask):
         dof_pos_scaled = (2.0 * (self.ur3_dof_pos - self.ur3_dof_lower_limits)
                           / (self.ur3_dof_upper_limits - self.ur3_dof_lower_limits) - 1.0)
         to_target = self.door_grasp_pos - self.ur3_grasp_pos
-        self.obs_buf = torch.cat((dof_pos_scaled, self.ur3_dof_vel * self.dof_vel_scale, to_target,
-                                  self.door_dof_pos[:, 0].unsqueeze(-1), self.door_dof_vel[:, 0].unsqueeze(-1)), dim=-1)
+        # self.obs_buf = torch.cat((dof_pos_scaled, self.ur3_dof_vel * self.dof_vel_scale, to_target,
+        #                           self.door_dof_pos[:, 0].unsqueeze(-1), self.door_dof_vel[:, 0].unsqueeze(-1)), dim=-1)
                                   #                    ↑適当に3からに変更してある  ##############↑
 
-            # zantei
+            # 暫定のobsefcation space
         self.obs_buf = torch.cat((self.d_imgs, hand_pos, hand_rot, hand_vel_pos, hand_vel_rot))
         return self.obs_buf    
         

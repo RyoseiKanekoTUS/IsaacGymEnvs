@@ -176,7 +176,7 @@ class DoorHook(VecTask):
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
         self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
         self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
-        self.ur3_dof_speed_scales[[0, 1]] = 0.1 # これなんだかわかってないけど，自由度に合わせることでどうにかなる
+        # self.ur3_dof_speed_scales[[0, 1]] = 0.1 # これなんだかわかってないけど，自由度に合わせることでどうにかなる
 
         # ur3_dof_props['effort'][4] = 200
         ur3_dof_props['effort'][5] = 200
@@ -188,7 +188,7 @@ class DoorHook(VecTask):
 
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.5) # urdf上の初期位置と関係
+        ur3_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0) # urdf上の初期位置と関係
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -270,64 +270,32 @@ class DoorHook(VecTask):
         # handle の定義をしている これは in range num_envs のループ外にある
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "ee_rz_link")
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
-        self.lfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_leftfinger")
-        self.rfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_rightfinger")
+        # self.lfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_leftfinger")
+        # self.rfinger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_rightfinger")
         # self.default_prop_states = to_torch(self.default_prop_states, device=self.device, dtype=torch.float).view(self.num_envs, self.num_props, 13)
         
         self.init_data()
 
     def init_data(self): # まだ直しきってないのでここでエラーが出ても何も怖くない
-        hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "hook")
-        lfinger = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ur3_leftfinger")
-        rfinger = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ur3_rightfinger")
-
-        hand_pose = self.gym.get_rigid_transform(self.envs[0], hand)
-        lfinger_pose = self.gym.get_rigid_transform(self.envs[0], lfinger)
-        rfinger_pose = self.gym.get_rigid_transform(self.envs[0], rfinger)
-        
-        finger_pose = gymapi.Transform()
-        finger_pose.p = (lfinger_pose.p + rfinger_pose.p) * 0.5
-        finger_pose.r = lfinger_pose.r
-        
+        # ur3 information
+        hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ee_rz_link")
+        hand_pose = self.gym.get_rigid_transform(self.envs[0], hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
         hand_pose_inv = hand_pose.inverse()
-        grasp_pose_axis = 1
-        ur3_local_grasp_pose = hand_pose_inv * finger_pose
-        ur3_local_grasp_pose.p += gymapi.Vec3(*get_axis_params(0.04, grasp_pose_axis))
-        self.ur3_local_grasp_pos = to_torch([ur3_local_grasp_pose.p.x, ur3_local_grasp_pose.p.y,
-                                                ur3_local_grasp_pose.p.z], device=self.device).repeat((self.num_envs, 1))
-        self.ur3_local_grasp_rot = to_torch([ur3_local_grasp_pose.r.x, ur3_local_grasp_pose.r.y,
-                                                ur3_local_grasp_pose.r.z, ur3_local_grasp_pose.r.w], device=self.device).repeat((self.num_envs, 1))
+        print(hand_pose_inv.p, hand_pose_inv.r) # debug
 
-        door_local_grasp_pose = gymapi.Transform()
-        door_local_grasp_pose.p = gymapi.Vec3(*get_axis_params(0.01, grasp_pose_axis, 0.3))
-        door_local_grasp_pose.r = gymapi.Quat(0, 0, 0, 1)
-        self.door_local_grasp_pos = to_torch([door_local_grasp_pose.p.x, door_local_grasp_pose.p.y,
-                                                door_local_grasp_pose.p.z], device=self.device).repeat((self.num_envs, 1))
-        self.door_local_grasp_rot = to_torch([door_local_grasp_pose.r.x, door_local_grasp_pose.r.y,
-                                                door_local_grasp_pose.r.z, door_local_grasp_pose.r.w], device=self.device).repeat((self.num_envs, 1))
-
-        self.gripper_forward_axis = to_torch([0, 0, 1], device=self.device).repeat((self.num_envs, 1))
-        self.door_inward_axis = to_torch([-1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.gripper_up_axis = to_torch([0, 1, 0], device=self.device).repeat((self.num_envs, 1))
-        self.door_up_axis = to_torch([0, 0, 1], device=self.device).repeat((self.num_envs, 1))
-
-        self.ur3_grasp_pos = torch.zeros_like(self.ur3_local_grasp_pos)
-        self.ur3_grasp_rot = torch.zeros_like(self.ur3_local_grasp_rot)
-        self.ur3_grasp_rot[..., -1] = 1  # xyzw
-        self.door_grasp_pos = torch.zeros_like(self.door_local_grasp_pos)
-        self.door_grasp_rot = torch.zeros_like(self.door_local_grasp_rot)
-        self.door_grasp_rot[..., -1] = 1
-        self.ur3_lfinger_pos = torch.zeros_like(self.ur3_local_grasp_pos)
-        self.ur3_rfinger_pos = torch.zeros_like(self.ur3_local_grasp_pos)
-        self.ur3_lfinger_rot = torch.zeros_like(self.ur3_local_grasp_rot)
-        self.ur3_rfinger_rot = torch.zeros_like(self.ur3_local_grasp_rot)
-
+        # door information
+        door_handle = self.gym.find_actor_rigid_body_handle(self.envs[0], self.doors[0], "door_handles")
+        # もしかしたら↑self.hand_handleと置き換えられるかもしれん
+        print(door_handle)
+        door_hinge = self.gym.find_actor_dof_handle(self.envs[0], self.doors[0], "door_hinge")
+        print(door_hinge)
+        
+        
     def compute_reward(self, actions):
 
         self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
             self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos,
             self.ur3_grasp_pos, self.door_grasp_pos, self.ur3_grasp_rot, self.door_grasp_rot,
-            self.ur3_lfinger_pos, self.ur3_rfinger_pos,
             self.gripper_forward_axis, self.door_inward_axis, self.gripper_up_axis, self.door_up_axis,
             self.num_envs, self.dist_reward_scale, self.rot_reward_scale, self.around_handle_reward_scale, self.open_reward_scale,
             self.finger_dist_reward_scale, self.action_penalty_scale, self.distX_offset, self.max_episode_length
@@ -335,6 +303,11 @@ class DoorHook(VecTask):
 
         
     def compute_observations(self):
+        
+
+        self.gym.refresh_actor_root_state_tensor(self.sim)
+        self.gym.refresh_dof_state_tensor(self.sim)
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.gym.render_all_camera_sensors(self.sim)
         self.d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
@@ -351,24 +324,22 @@ class DoorHook(VecTask):
         # cv2.imshow('result', rgb_img)
         # cv2.waitKey(1)
 
-        self.gym.refresh_actor_root_state_tensor(self.sim)
-        self.gym.refresh_dof_state_tensor(self.sim)
-        self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3]
         hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7]
+        hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10]
+        hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13]
+
         door_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]
+        hend_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
+        hend_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
+
 
         self.ur3_grasp_rot[:], self.ur3_grasp_pos[:], self.door_grasp_rot[:], self.door_grasp_pos[:] = \
             compute_grasp_transforms(hand_rot, hand_pos, self.ur3_local_grasp_rot, self.ur3_local_grasp_pos,
                                      door_rot, door_pos, self.door_local_grasp_rot, self.door_local_grasp_pos
                                      )
-
-        self.ur3_lfinger_pos = self.rigid_body_states[:, self.lfinger_handle][:, 0:3]
-        self.ur3_rfinger_pos = self.rigid_body_states[:, self.rfinger_handle][:, 0:3]
-        self.ur3_lfinger_rot = self.rigid_body_states[:, self.lfinger_handle][:, 3:7]
-        self.ur3_rfinger_rot = self.rigid_body_states[:, self.rfinger_handle][:, 3:7]
 
         dof_pos_scaled = (2.0 * (self.ur3_dof_pos - self.ur3_dof_lower_limits)
                           / (self.ur3_dof_upper_limits - self.ur3_dof_lower_limits) - 1.0)
@@ -466,12 +437,11 @@ class DoorHook(VecTask):
 def compute_ur3_reward(
     reset_buf, progress_buf, actions, door_dof_pos,
     ur3_grasp_pos, door_grasp_pos, ur3_grasp_rot, door_grasp_rot,
-    ur3_lfinger_pos, ur3_rfinger_pos,
     gripper_forward_axis, door_inward_axis, gripper_up_axis, door_up_axis,
     num_envs, dist_reward_scale, rot_reward_scale, around_handle_reward_scale, open_reward_scale,
     finger_dist_reward_scale, action_penalty_scale, distX_offset, max_episode_length
 ):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
 
     # distance from hand to the door
     d = torch.norm(ur3_grasp_pos - door_grasp_pos, p=2, dim=-1)

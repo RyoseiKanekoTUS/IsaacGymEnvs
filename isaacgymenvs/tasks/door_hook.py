@@ -43,7 +43,7 @@ class DoorHook(VecTask):
         self.distX_offset = 0.04 # 0.04 default
         self.dt = cfg["sim"]["dt"]
 
-        self.cfg["env"]["numObservations"] = 17
+        self.cfg["env"]["numObservations"] = 12
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -125,7 +125,7 @@ class DoorHook(VecTask):
         asset_options.convex_decomposition_from_submeshes = True
         asset_options.disable_gravity = True
         asset_options.thickness = 0.001
-        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_VEL
         asset_options.use_mesh_materials = True
         ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
 
@@ -206,8 +206,8 @@ class DoorHook(VecTask):
         camera_tf = gymapi.Transform()
         camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
         camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(0))
-        # camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
-        self.camera_props.enable_tensors = True
+
+        # self.camera_props.enable_tensors = True # when Vram larger
         # camera_handle = self.gym.create_camera_sensor(env, self.camera_props)
 
         print('#############################################################################################################')
@@ -308,15 +308,17 @@ class DoorHook(VecTask):
 
     def compute_observations(self):  # NOW DEFINING
         
-
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
-        self.gym.render_all_camera_sensors(self.sim)
-        d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
-        self.d_imgs = [np.where(np.isinf(d_img), 0, d_img) for d_img in d_imgs]
-        # もしかしたらto_torch関数的なものを噛ませてやらないとだめかもしれない
+        # self.gym.render_all_camera_sensors(self.sim)
+        ##########################################################################################################################################################################
+        # d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH).reshape(480*640, 1) for env, camera_handle in zip(self.envs, self.camera_handles)]
+        # self.d_imgs = [np.where(np.isinf(d_img), 0, d_img) for d_img in d_imgs]
+        # tensor_d_imgs = torch.tensor([np.squeeze(array) for array in self.d_imgs], device=self.device)
+        ##########################################################################################################################################################################
+        # print(tensor_d_imgs.shape)
         
         # self.debug_camera_imgs()
         # ur3 rigid body states
@@ -339,16 +341,18 @@ class DoorHook(VecTask):
 
         # door dof states [hinge handle] ang to obs_buf
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
-        print(self.door_dof_state.shape)
+        print('self.door_dof_state :',self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
+        # print('self.door_dof_pos :', self.door_dof_pos.shape)
         self.door_dof_vel = self.door_dof_state[..., 1] 
 
         door_hinge_ang = self.door_dof_pos[:,0] # 0 : hinge, 1 : handle
+        print('doof_hinge_ang :', door_hinge_ang[0])
         door_hinge_vel = self.door_dof_vel[:,0]
         door_handle_ang = self.door_dof_pos[:,1]
         door_handle_vel = self.door_dof_vel[:,1]
-        print('############################ debug demensions #########################################')
-        print(self.ur3_dof_pos.shape, self.ur3_dof_vel.shape, door_hinge_ang.shape, door_handle_ang.shape)
+        print('############################ debug dimensions #########################################')
+        # print(self.ur3_dof_pos.shape, self.ur3_dof_vel.shape, door_hinge_ang.shape, door_handle_ang.shape)
 
         # dof_pos_scaled = (2.0 * (self.ur3_dof_pos - self.ur3_dof_lower_limits)
         #                   / (self.ur3_dof_upper_limits - self.ur3_dof_lower_limits) - 1.0)
@@ -358,8 +362,8 @@ class DoorHook(VecTask):
                                   #                    ↑適当に3からに変更してある  ##############↑
 
         # 暫定のobsefcation space
-        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.d_imgs))
-        print(self.obs_buf.shape)
+        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel), dim = -1)
+        print('is this the final print?', self.obs_buf.shape)
 
         return self.obs_buf    
         
@@ -380,14 +384,14 @@ class DoorHook(VecTask):
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
         
-    def pre_physics_step(self, actions): #正直これどこで使われているかわからない
+    def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor() を使ってやらないといけないらしい
         self.actions = actions.clone().to(self.device)
-        # targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.ur3_dof_speed_scales * self.dt * self.actions * self.action_scale
-        # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
-            # targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
+        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.ur3_dof_speed_scales * self.dt * self.actions * self.action_scale
+        self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
+            targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
         env_ids_int32 = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
-        # self.gym.set_dof_position_target_tensor(self.sim,
-                                                # gymtorch.unwrap_tensor(self.ur3_dof_targets))    
+        self.gym.set_dof_position_target_tensor(self.sim,
+                                                gymtorch.unwrap_tensor(self.ur3_dof_targets))    
     
     def post_physics_step(self):
         self.progress_buf += 1
@@ -459,7 +463,8 @@ def compute_ur3_reward(
     # door has been opened out
     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  # 絶対値になんてしなくても2乗すれば＋になるという天才的アイデア
 
-    rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty
+    # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # action penalty 有り
+    rewards = open_reward_scale * open_reward # action penalty 無し
 
     # bonus for opening door properly
     # rewards = torch.where(door_dof_pos[:, 0] > 0.01, rewards + 0.5, rewards)

@@ -127,7 +127,7 @@ class DoorTest(VecTask):
         asset_options.collapse_fixed_joints = True
         asset_options.disable_gravity = True
         asset_options.thickness = 0.001
-        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_VEL
         asset_options.use_mesh_materials = True
         ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
 
@@ -217,7 +217,7 @@ class DoorTest(VecTask):
             if self.aggregate_mode >= 3:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "ur3", i, 1, 0)
+            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "ur3", i, 0, 0)
             self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
 
             if self.aggregate_mode == 2:

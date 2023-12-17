@@ -462,7 +462,7 @@ def compute_ur3_reward(
 
     # door has been opened out
     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  # 絶対値になんてしなくても2乗すれば＋になるという天才的アイデア
-
+    # もしかしたら，Nvidiaのやつもそうだけど，ドアの開閉は角度制限してやったほうが良い気がしている
     # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # action penalty 有り
     rewards = open_reward_scale * open_reward # action penalty 無し
 

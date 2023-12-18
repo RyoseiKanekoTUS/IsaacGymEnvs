@@ -194,7 +194,7 @@ class DoorHook(VecTask):
 
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.0, -0.5, 0.5) 
+        ur3_start_pose.p = gymapi.Vec3(0.0, -0.2, 1.0) 
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -331,7 +331,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
@@ -388,10 +388,19 @@ class DoorHook(VecTask):
             self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
         self.ur3_dof_pos[env_ids, :] = pos
         self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
-        # self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos
+        self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos
 
         # reset door
         self.door_dof_state[env_ids, :] = torch.zeros_like(self.door_dof_state[env_ids])
+
+        multi_env_ids_int32 = self.global_indices[env_ids, :2].flatten()
+        self.gym.set_dof_position_target_tensor_indexed(self.sim,
+                                                        gymtorch.unwrap_tensor(self.ur3_dof_targets),
+                                                        gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
+
+        self.gym.set_dof_state_tensor_indexed(self.sim,
+                                              gymtorch.unwrap_tensor(self.dof_state),
+                                              gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
 
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
@@ -476,6 +485,7 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  
     # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # if action penalty needed
     rewards = open_reward_scale * open_reward # no action penalty 
+    print(rewards[0,...])
 
     reset_buf = torch.where(door_dof_pos[:, 0] > 1.57, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

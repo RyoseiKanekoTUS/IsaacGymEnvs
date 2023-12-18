@@ -5,9 +5,9 @@ name: DoorHook
 physics_engine: ${..physics_engine}
 
 env:
-  numEnvs: ${resolve_default:512,${...num_envs}}
+  numEnvs: ${resolve_default:2560,${...num_envs}}
   envSpacing: 1.5
-  episodeLength: 500
+  episodeLength: 600
   enableDebugVis: False
 
   clipActions: 1.0

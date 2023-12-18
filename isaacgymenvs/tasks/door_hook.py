@@ -43,7 +43,13 @@ class DoorHook(VecTask):
         self.distX_offset = 0.04 # 0.04 default
         self.dt = cfg["sim"]["dt"]
 
-        self.cfg["env"]["numObservations"] = 12
+        #set camera properties
+        self.camera_props = gymapi.CameraProperties()
+        self.camera_props.width = 64
+        self.camera_props.height = 48
+
+        # set observation space and action space
+        self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -56,6 +62,8 @@ class DoorHook(VecTask):
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
+
+        
 
         # create some wrapper tensors for different slices
         self.ur3_default_dof_pos = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
@@ -125,7 +133,7 @@ class DoorHook(VecTask):
         asset_options.convex_decomposition_from_submeshes = True
         asset_options.disable_gravity = True
         asset_options.thickness = 0.001
-        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_VEL
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
         asset_options.use_mesh_materials = True
         ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
 
@@ -200,14 +208,15 @@ class DoorHook(VecTask):
         max_agg_shapes = num_ur3_shapes + num_door_shapes
 
         # camera settings
-        self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 640
-        self.camera_props.height = 480
+        # self.camera_props = gymapi.CameraProperties()
+        # self.camera_props.width = 64
+        # self.camera_props.height = 48
         camera_tf = gymapi.Transform()
         camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
         camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,0,1), np.radians(0))
+        # self.d_imgs = 
 
-        # self.camera_props.enable_tensors = True # when Vram larger
+        self.camera_props.enable_tensors = True # when Vram larger
         # camera_handle = self.gym.create_camera_sensor(env, self.camera_props)
 
         print('#############################################################################################################')
@@ -218,7 +227,6 @@ class DoorHook(VecTask):
         self.doors = []
         self.envs = []
         self.camera_handles = []
-        self.d_imgs =[]
         
         
         for i in range(self.num_envs):
@@ -297,29 +305,60 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        for j in [0,511]:
-            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+        for j in [0]:
+            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # -inf : -np.inf
-            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow(f'rgb{j}', rgb_img)
             cv2.waitKey(1)
 
+    def d_img_process(self):
+
+        self.gym.render_all_camera_sensors(self.sim)
+        self.gym.start_access_image_tensors(self.sim)
+
+        d_imgs = [gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height*self.camera_props.width, 1) 
+                  for env, camera_handle in zip(self.envs, self.camera_handles)]
+        # print(d_imgs[0].shape)
+        self.d_imgs = torch.cat([torch.tensor(d_img).view(1, -1).to(self.device) for d_img in d_imgs], dim=0)
+        self.d_imgs[torch.isinf(self.d_imgs)] = 0
+        # print(self.d_imgs.shape)
+
+        self.gym.end_access_image_tensors(self.sim)
+        print(self.d_imgs[4][4])
+
+
+
+        
     def compute_observations(self):  # NOW DEFINING
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
-        # self.gym.render_all_camera_sensors(self.sim)
-        ##########################################################################################################################################################################
-        # d_imgs = [self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH).reshape(480*640, 1) for env, camera_handle in zip(self.envs, self.camera_handles)]
-        # self.d_imgs = [np.where(np.isinf(d_img), 0, d_img) for d_img in d_imgs]
-        # tensor_d_imgs = torch.tensor([np.squeeze(array) for array in self.d_imgs], device=self.device)
-        ##########################################################################################################################################################################
-        # print(tensor_d_imgs.shape)
+        self.d_img_process()
+        self.debug_camera_imgs()
+        # self.d_imgsを配列ではなく最初からtensorにするのが望ましいかもしれん
+        # どうせstateってテンソルでしょ？？
+
+        #########################################################################################################################################################################
+        # .view(d_img_h*d_img_w, 1)
+        # d_imgs = [self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH) for env, camera_handle in zip(self.envs, self.camera_handles)]
+
         
+        # for j in d_imgs:
+        #     d_imgs_i = 
+        #     print(d_imgs_i.shape)
+        # d_imgs[torch.isinf(d_imgs)] = 0
+        # d_imgs = self.gym.get_camera_image_gpu_tensor(self.sim, self.envs[0], self.camera_handles[0], gymapi.IMAGE_DEPTH)
+        # print(d_imgs[0].shape)
+        # tensor_d_imgs = torch.tensor([np.squeeze(array) for array in self.d_imgs], device=self.device)
+        
+        #########################################################################################################################################################################
+        # print(tensor_d_imgs.shape)
+        # print(tensor_d_imgs.device)
         # self.debug_camera_imgs()
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
@@ -360,10 +399,10 @@ class DoorHook(VecTask):
         # self.obs_buf = torch.cat((dof_pos_scaled, self.ur3_dof_vel * self.dof_vel_scale, to_target,
         #                           self.door_dof_pos[:, 0].unsqueeze(-1), self.door_dof_vel[:, 0].unsqueeze(-1)), dim=-1)
                                   #                    ↑適当に3からに変更してある  ##############↑
-
+        print(self.ur3_dof_pos.shape, self.ur3_dof_vel.shape, self.d_imgs.shape)
         # 暫定のobsefcation space
-        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel), dim = -1)
-        print('is this the final print?', self.obs_buf.shape)
+        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.d_imgs), dim = -1)
+        print('observation space size print:', self.obs_buf.shape)
 
         return self.obs_buf    
         

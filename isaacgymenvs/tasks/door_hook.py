@@ -45,8 +45,8 @@ class DoorHook(VecTask):
 
         #set camera properties
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 64
-        self.camera_props.height = 48
+        self.camera_props.width = 128
+        self.camera_props.height = 96
 
         self.camera_props.enable_tensors = True # If False, doesnt work d_img process
 
@@ -321,7 +321,7 @@ class DoorHook(VecTask):
         # print(self.d_imgs.shape)
 
         self.gym.end_access_image_tensors(self.sim)
-        print(self.d_imgs[4][4])
+        # print(self.d_imgs[4][4])
 
         
     def compute_observations(self):  # NOW DEFINING
@@ -485,7 +485,7 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  
     # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # if action penalty needed
     rewards = open_reward_scale * open_reward # no action penalty 
-    print(rewards[0,...])
+    # print(rewards[0,...])
 
     reset_buf = torch.where(door_dof_pos[:, 0] > 1.57, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

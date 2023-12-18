@@ -321,9 +321,7 @@ class DoorHook(VecTask):
         # print(self.d_imgs.shape)
 
         self.gym.end_access_image_tensors(self.sim)
-        print(self.d_imgs[4][4])
-
-
+        print(self.d_imgs[4][4]
 
         
     def compute_observations(self):  # NOW DEFINING

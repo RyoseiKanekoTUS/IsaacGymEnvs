@@ -14,7 +14,8 @@
             "cwd": "${fileDirname}",
             "args": [
                 // "task=Closet"
-                "task=DoorHook"
+                "task=DoorHook",
+                "num_envs=512"
                 // "task=cabinet"
                 // "task=FrankaCubeStack"
             ]

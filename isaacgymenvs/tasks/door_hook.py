@@ -335,7 +335,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
@@ -501,8 +501,8 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     handle_reward = door_dof_pos[:,1] * door_dof_pos[:,1]
 
-    # rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale + action_penalty_scale * action_penalty # if action penalty needed
-    rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale # no action penalty
+    rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale + action_penalty_scale * action_penalty # if action penalty needed
+    # rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale # no action penalty
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     reset_buf = torch.where(door_dof_pos[:, 0] > 1.04, torch.ones_like(reset_buf), reset_buf)

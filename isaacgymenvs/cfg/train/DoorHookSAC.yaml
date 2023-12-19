@@ -1,17 +1,16 @@
-# DoorTest for ur3 with hook
-
+# DoorTest for ur3 with Hook SAC
 
 params:
   seed: ${...seed}
   algo:
-    name: a2c_continuous
+    name: sac
 
   model:
-    name: continuous_a2c_logstd
+    name: soft_actor_critic
 
   network:
-    name: actor_critic
-    separate: False
+    name: soft_actor_critic
+    separate: True
 
     space:
       continuous:
@@ -42,13 +41,13 @@ params:
     full_experiment_name: ${.name}
     env_name: rlgpu
     multi_gpu: ${....multi_gpu}
-    ppo: True
+    # ppo: True
     mixed_precision: False
     normalize_input: True
     normalize_value: True
     num_actors: ${....task.env.numEnvs}
     reward_shaper:
-      scale_value: 0.01
+      scale_value: 1.0
     normalize_advantage: True
     gamma: 0.99
     tau: 0.95

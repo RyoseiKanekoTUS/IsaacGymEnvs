@@ -45,8 +45,8 @@ class DoorHook(VecTask):
 
         #set camera properties
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 128
-        self.camera_props.height = 96
+        self.camera_props.width = 64
+        self.camera_props.height = 48
 
         self.camera_props.enable_tensors = True # If False, doesnt work d_img process
 

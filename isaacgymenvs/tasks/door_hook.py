@@ -190,9 +190,11 @@ class DoorHook(VecTask):
 
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_asset)
-        for i in range(self.num_door_dofs):
-            door_dof_props['damping'][i] = 0.001
-            door_dof_props['friction'][i] = 0.001
+        
+        door_dof_props['damping'][0] = 0.001
+        door_dof_props['friction'][0] = 0.001
+        door_dof_props['damping'][1] = 0.02
+        door_dof_props['friction'][0] = 0.001
 
         # start pose
         ur3_start_pose = gymapi.Transform()

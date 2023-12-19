@@ -190,7 +190,7 @@ class DoorHook(VecTask):
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_asset)
         for i in range(self.num_door_dofs):
-            door_dof_props['damping'][i] = 10.0
+            door_dof_props['damping'][i] = 0.5
 
         # start pose
         ur3_start_pose = gymapi.Transform()
@@ -485,8 +485,8 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  
     # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # if action penalty needed
     rewards = open_reward_scale * open_reward # no action penalty 
-    # print(rewards[0,...])
-
+    print('-------------------------rewards : ',rewards[4])
+    print('------------------door_hinge_dof :', door_dof_pos[:,0][400])
     reset_buf = torch.where(door_dof_pos[:, 0] > 1.57, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 

@@ -154,12 +154,12 @@ class DoorHook(VecTask):
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
         self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_asset)
         self.num_door_dofs = self.gym.get_asset_dof_count(door_asset)
-        print('----------------------------------------------- num properties ----------------------------------------')
-        print("num ur3 bodies: ", self.num_ur3_bodies)
-        print("num ur3 dofs: ", self.num_ur3_dofs)
-        print("num door bodies: ", self.num_door_bodies)
-        print("num door dofs: ", self.num_door_dofs)
-        print('----------------------------------------------- num properties ----------------------------------------')
+        # print('----------------------------------------------- num properties ----------------------------------------')
+        # print("num ur3 bodies: ", self.num_ur3_bodies)
+        # print("num ur3 dofs: ", self.num_ur3_dofs)
+        # print("num door bodies: ", self.num_door_bodies)
+        # print("num door dofs: ", self.num_door_dofs)
+        # print('----------------------------------------------- num properties ----------------------------------------')
 
         # set ur3 dof properties
         ur3_dof_props = self.gym.get_asset_dof_properties(ur3_asset)
@@ -485,8 +485,8 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  
     # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # if action penalty needed
     rewards = open_reward_scale * open_reward # no action penalty 
-    print('-------------------------rewards : ',rewards[4])
-    print('------------------door_hinge_dof :', door_dof_pos[:,0][400])
+    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     reset_buf = torch.where(door_dof_pos[:, 0] > 1.57, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 

@@ -41,7 +41,10 @@ params:
     full_experiment_name: ${.name}
     env_name: rlgpu
     multi_gpu: ${....multi_gpu}
-    # ppo: True
+    num_warmup_steps: 10
+    critic_tau: 10
+    actor_lr: 0.0005
+    critic_lr: 0.0005
     mixed_precision: False
     normalize_input: True
     normalize_value: True
@@ -52,11 +55,12 @@ params:
     gamma: 0.99
     tau: 0.95
     learning_rate: 5e-4
+    learnable_temperature: true
     lr_schedule: adaptive
     kl_threshold: 0.008
     score_to_win: 10000
     max_epochs: ${resolve_default:100000,${....max_iterations}}
-    save_best_after: 200
+    save_best_after: 100
     save_frequency: 100
     print_stats: True
     grad_norm: 1.0
@@ -65,6 +69,10 @@ params:
     e_clip: 0.2
     horizon_length: 16
     minibatch_size: 8192
+    batch_size: 4096
+    replay_buffer_size: 250000
+    init_alpha: 1.0
+    alpha_lr: 0.005
     mini_epochs: 8
     critic_coef: 4
     clip_value: True

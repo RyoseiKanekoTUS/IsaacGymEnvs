@@ -12,4 +12,5 @@ isaacgym_task_map = {
     "DoorTest": DoorTest,
     "DoorTest_2": DoorTest_2,
     "DoorHook": DoorHook,
+    "DoorHookSAC": DoorHook
 }

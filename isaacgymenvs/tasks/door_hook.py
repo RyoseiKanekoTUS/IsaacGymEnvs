@@ -33,6 +33,7 @@ class DoorHook(VecTask):
 
         self.dof_vel_scale = self.cfg["env"]["dofVelocityScale"]
         self.open_reward_scale = self.cfg["env"]["openRewardScale"]
+        self.handle_reward_scale = self.cfg['env']['handleRewardScale']
         self.action_penalty_scale = self.cfg["env"]["actionPenaltyScale"]
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
@@ -294,7 +295,7 @@ class DoorHook(VecTask):
 
         self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
             self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos,self.num_envs, 
-            self.open_reward_scale, self.action_penalty_scale, self.max_episode_length
+            self.open_reward_scale, self.handle_reward_scale,self.action_penalty_scale, self.max_episode_length
         )
 
     def debug_camera_imgs(self):
@@ -474,21 +475,25 @@ class DoorHook(VecTask):
 
 @torch.jit.script
 def compute_ur3_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, num_envs, open_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, num_envs, open_reward_scale, handle_reward_scale,
     action_penalty_scale, max_episode_length
 ):
-    # type: (Tensor, Tensor, Tensor, Tensor, int, float, float, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, int, float, float, float, float) -> Tuple[Tensor, Tensor]
 
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(actions ** 2, dim=-1)
+    print('action_penalty :', action_penalty[0]) # debug 
 
     # door has been opened out
-    open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]  
-    # rewards = open_reward_scale * open_reward + action_penalty_scale * action_penalty # if action penalty needed
-    rewards = open_reward_scale * open_reward # no action penalty 
+    open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]
+    handle_reward = door_dof_pos[:,1]
+    
+    
+    # rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale + action_penalty_scale * action_penalty # if action penalty needed
+    rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale # no action penalty
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    reset_buf = torch.where(door_dof_pos[:, 0] > 1.57, torch.ones_like(reset_buf), reset_buf)
+    reset_buf = torch.where(door_dof_pos[:, 0] > 1.04, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf

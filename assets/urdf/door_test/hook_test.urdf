@@ -20,7 +20,7 @@
         <parent link="ee_x_link"/>
         <child link="ee_y_link"/>
         <axis xyz="0 1 0"/>
-        <limit effort="10000.0" lower="-0.5" upper="0.5" velocity="0.2"/>
+        <limit effort="10000.0" lower="-0.1" upper="0.1" velocity="0.2"/>
     </joint>
     <link name = 'ee_y_link'/>
     <joint name="ee_z" type="prismatic">

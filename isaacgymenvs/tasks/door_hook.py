@@ -44,12 +44,14 @@ class DoorHook(VecTask):
         self.distX_offset = 0.04 # 0.04 default
         self.dt = cfg["sim"]["dt"]
 
-        #set camera properties
+        # set camera properties for realsense now : 435 and 405
         self.camera_props = gymapi.CameraProperties()
         self.camera_props.width = 64
         self.camera_props.height = 48
+        self.depth_min = -0.5
+        self.depth_max = -0.07
 
-        self.camera_props.enable_tensors = True # If False, doesnt work d_img process
+        self.camera_props.enable_tensors = True # If False, doesnt work d_img process 
 
         # set observation space and action space
         self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
@@ -317,16 +319,24 @@ class DoorHook(VecTask):
         self.gym.render_all_camera_sensors(self.sim)
         self.gym.start_access_image_tensors(self.sim)
 
-        d_imgs = [gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height*self.camera_props.width, 1) 
-                  for env, camera_handle in zip(self.envs, self.camera_handles)]
-        # print(d_imgs[0].shape)
-        self.d_imgs = torch.cat([torch.tensor(d_img).view(1, -1).to(self.device) for d_img in d_imgs], dim=0)
-        self.d_imgs[torch.isinf(self.d_imgs)] = 0
+        self.d_imgs = torch.stack([
+            gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
+            for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
+
+        print(self.d_imgs[0].shape)
+        # normalization
+        out_idx = torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))
+        # out_idx = torch.where(self.d_imgs < self.depth_min | self.d_imgs > self.depth_max)
+        norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        norm_d_imgs[out_idx] = -1.0
+        self.norm_d_imgs = norm_d_imgs
         # print(self.d_imgs.shape)
 
         self.gym.end_access_image_tensors(self.sim)
-        print(self.d_imgs[4][4])
 
+        print('d_img_debug---------------------',self.d_imgs[4][4], self.d_imgs[500][500], self.d_imgs.shape)
+        print('norm_d_img_debug----------------',self.norm_d_imgs[4][4], self.norm_d_imgs[500][500], norm_d_imgs.shape)
+        print('debug fin')
         
     def compute_observations(self):  # NOW DEFINING
         

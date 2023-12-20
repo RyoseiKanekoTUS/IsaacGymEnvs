@@ -200,7 +200,7 @@ class DoorHook(VecTask):
 
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.0, -0.2, 1.25) # initial position of the ur3
+        ur3_start_pose.p = gymapi.Vec3(-0.25, -0.2, 1.2) # initial position of the ur3
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -334,8 +334,8 @@ class DoorHook(VecTask):
 
         self.gym.end_access_image_tensors(self.sim)
 
-        print('d_img_debug---------------------',self.d_imgs[4][4], self.d_imgs[500][500], self.d_imgs.shape)
-        print('norm_d_img_debug----------------',self.norm_d_imgs[4][4], self.norm_d_imgs[500][500], norm_d_imgs.shape)
+        print('d_img_debug---------------------',self.d_imgs[4][4], self.d_imgs[5][5], self.d_imgs.shape)
+        print('norm_d_img_debug----------------',self.norm_d_imgs[4][4], self.norm_d_imgs[5][5], norm_d_imgs.shape)
         print('debug fin')
         
     def compute_observations(self):  # NOW DEFINING
@@ -398,7 +398,7 @@ class DoorHook(VecTask):
 
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         pos = tensor_clamp(
-            self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
+            self.ur3_default_dof_pos.unsqueeze(0) + 0.125 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
             self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
         self.ur3_dof_pos[env_ids, :] = pos
         self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
@@ -510,7 +510,7 @@ def compute_ur3_reward(
     # handle_reward=torch.zeros(1,num_envs)
     open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     handle_reward = door_dof_pos[:,1] * door_dof_pos[:,1]
-
+    # action penalty must be minus??
     rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale + action_penalty_scale * action_penalty # if action penalty needed
     # rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale # no action penalty
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))

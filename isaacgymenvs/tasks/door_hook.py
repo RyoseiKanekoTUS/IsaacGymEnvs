@@ -191,10 +191,10 @@ class DoorHook(VecTask):
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_asset)
         
-        door_dof_props['damping'][0] = 0.001
-        door_dof_props['friction'][0] = 0.001
-        door_dof_props['damping'][1] = 0.02
-        door_dof_props['friction'][0] = 0.001
+        # door_dof_props['damping'][0] = 0.5
+        # door_dof_props['friction'][0] = 10
+        # door_dof_props['damping'][1] = 0.5
+        # door_dof_props['friction'][0] = 0.001
 
         # start pose
         ur3_start_pose = gymapi.Transform()
@@ -492,12 +492,12 @@ def compute_ur3_reward(
     #     handle_reward = door_dof_pos[:,1]
     # else:
     #     pass
-    print(door_dof_pos.shape)
-    print(door_dof_pos[:,0].shape)
-    open_reward=torch.zeros(1, num_envs)
-    print(open_reward.shape)
+    # print(door_dof_pos.shape)
+    # print(door_dof_pos[:,0].shape)
+    # open_reward=torch.zeros(1, num_envs)
+    # print(open_reward.shape)
 
-    handle_reward=torch.zeros(1,num_envs)
+    # handle_reward=torch.zeros(1,num_envs)
     open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     handle_reward = door_dof_pos[:,1] * door_dof_pos[:,1]
 

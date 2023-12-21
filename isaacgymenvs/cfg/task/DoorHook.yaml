@@ -21,7 +21,7 @@ env:
   aggregateMode: 3
 
   # actionScale: 1000.0 # if scale bigger : the speed became bigger
-  actionScale: 5.0
+  actionScale: 10.0
   dofVelocityScale: 0.1
   distRewardScale: 2.0
   rotRewardScale: 0.5
@@ -54,7 +54,7 @@ sim:
   substeps: 1
   up_axis: "z"
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
-  gravity: [0.0, 0.0, -9.81]
+  gravity: [0.0, 0.0, 0.0]
   physx:
     num_threads: ${....num_threads}
     solver_type: ${....solver_type}

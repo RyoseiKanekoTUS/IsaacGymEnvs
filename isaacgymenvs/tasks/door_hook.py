@@ -150,8 +150,8 @@ class DoorHook(VecTask):
         asset_options.armature = 0.005
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([100, 100, 100, 100, 100, 100], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([100] * 6, dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -171,13 +171,9 @@ class DoorHook(VecTask):
 
         for i in range(self.num_ur3_dofs):
             ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
-            if self.physics_engine == gymapi.SIM_PHYSX:
                 # print(f'############### feed back ####################\n{ur3_dof_props}')
-                ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-                ur3_dof_props['damping'][i] = ur3_dof_damping[i]
-            else:
-                ur3_dof_props['stiffness'][i] = 7000.0
-                ur3_dof_props['damping'][i] = 50.0
+            ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
+            ur3_dof_props['damping'][i] = ur3_dof_damping[i]
 
             self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
             self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])

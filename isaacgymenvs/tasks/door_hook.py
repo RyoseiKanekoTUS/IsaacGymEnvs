@@ -186,6 +186,7 @@ class DoorHook(VecTask):
         self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
         self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
         
+        
 
         # ur3_dof_props['effort'][4] = 200
         # ur3_dof_props['effort'][5] = 200
@@ -421,10 +422,11 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
+        # print('self.actions', self.actions)
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.ur3_dof_speed_scales * self.dt * self.actions * self.action_scale
         self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
             targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
-        env_ids_int32 = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
+        # env_ids_int32 = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
         self.gym.set_dof_position_target_tensor(self.sim,
                                                 gymtorch.unwrap_tensor(self.ur3_dof_targets))    
     
@@ -494,8 +496,8 @@ def compute_ur3_reward(
 
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(actions ** 2, dim=-1)
-    print('action_penalty :', action_penalty[0]) # debug 
-
+    # print('action_penalty :', action_penalty[0]) # debug 
+    # print('actions', actions)
     # door has been opened out
     # if door_dof_pos[:,0] > 0.01:
     #     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]

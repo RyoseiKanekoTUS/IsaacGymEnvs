@@ -134,10 +134,10 @@ class DoorHook(VecTask):
         asset_options.fix_base_link = True
         asset_options.collapse_fixed_joints = True
         asset_options.vhacd_enabled = True # if True, accurate collision enabled
-        vh_options.max_convex_hulls = 1000
+        vh_options.max_convex_hulls = 10000
         asset_options.convex_decomposition_from_submeshes = True
         asset_options.disable_gravity = True
-        asset_options.thickness = 0.001
+        asset_options.thickness = 0.1
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
         asset_options.use_mesh_materials = True
         ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
@@ -201,7 +201,7 @@ class DoorHook(VecTask):
 
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(-0.125, -0.2, 1.2) # initial position of the ur3
+        ur3_start_pose.p = gymapi.Vec3(-0.125, -0.2, 1.3) # initial position of the ur3
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()

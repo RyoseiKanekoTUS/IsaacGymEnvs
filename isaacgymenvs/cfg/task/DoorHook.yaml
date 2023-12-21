@@ -21,13 +21,13 @@ env:
   aggregateMode: 3
 
   # actionScale: 1000.0 # if scale bigger : the speed became bigger
-  actionScale: 10.0
+  actionScale: 5.0
   dofVelocityScale: 0.1
   distRewardScale: 2.0
   rotRewardScale: 0.5
   aroundHandleRewardScale: 0.25
   openRewardScale: 10.0
-  handleRewardScale: 5.0
+  handleRewardScale: 1.0
   fingerDistRewardScale: 5.0
   actionPenaltyScale: 0.001
   # reward params

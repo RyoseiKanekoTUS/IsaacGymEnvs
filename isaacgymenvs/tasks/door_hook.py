@@ -492,19 +492,6 @@ def compute_ur3_reward(
 
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(actions ** 2, dim=-1)
-    # print('action_penalty :', action_penalty[0]) # debug 
-    # print('actions', actions)
-    # door has been opened out
-    # if door_dof_pos[:,0] > 0.01:
-    #     open_reward = door_dof_pos[:, 0] * door_dof_pos[:, 0]
-    #     handle_reward = door_dof_pos[:,1]
-    # else:
-    #     pass
-    # print(door_dof_pos.shape)
-    # print(door_dof_pos[:,0].shape)
-    # open_reward=torch.zeros(1, num_envs)
-    # print(open_reward.shape)
-
     # handle_reward=torch.zeros(1,num_envs)
     open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     handle_reward = door_dof_pos[:,1] * door_dof_pos[:,1]

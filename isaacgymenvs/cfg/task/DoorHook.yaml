@@ -8,7 +8,7 @@ env:
   numEnvs: ${resolve_default:2560,${...num_envs}}
   # numEnvs: ${resolve_default:512,${...num_envs}} # for test
   envSpacing: 1.5
-  episodeLength: 150
+  episodeLength: 300
   enableDebugVis: False
 
   clipActions: 1.0
@@ -20,7 +20,8 @@ env:
   numProps: 0
   aggregateMode: 3
 
-  actionScale: 7.5
+  # actionScale: 1000.0 # if scale bigger : the speed became bigger
+  actionScale: 10.0
   dofVelocityScale: 0.1
   distRewardScale: 2.0
   rotRewardScale: 0.5

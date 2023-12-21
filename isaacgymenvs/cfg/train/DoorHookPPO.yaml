@@ -25,8 +25,8 @@ params:
         fixed_sigma: True
     mlp:
       # units: [256, 128, 64]
-      units: [1024, 256, 64]
-      activation: elu
+      units: [512, 128, 64]
+      activation: relu
       d2rl: False
       
       initializer:

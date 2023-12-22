@@ -27,7 +27,7 @@ env:
   rotRewardScale: 0.5
   aroundHandleRewardScale: 0.25
   openRewardScale: 10.0
-  handleRewardScale: 1.0
+  handleRewardScale: 2.0
   fingerDistRewardScale: 5.0
   actionPenaltyScale: 0.001
   # reward params

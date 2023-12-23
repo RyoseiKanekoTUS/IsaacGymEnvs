@@ -34,6 +34,7 @@ class DoorHook(VecTask):
         self.dof_vel_scale = self.cfg["env"]["dofVelocityScale"]
         self.open_reward_scale = self.cfg["env"]["openRewardScale"]
         self.handle_reward_scale = self.cfg['env']['handleRewardScale']
+        self.dist_reward_scale = self.cfg['env']['distRewardScale']
         self.action_penalty_scale = self.cfg["env"]["actionPenaltyScale"]
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
@@ -92,7 +93,7 @@ class DoorHook(VecTask):
         self.num_dofs = self.gym.get_sim_dof_count(self.sim) // self.num_envs
         self.ur3_dof_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
 
-        # self.global_indices = torch.arange(self.num_envs * (2 + self.num_props), dtype=torch.int32, device=self.device).view(self.num_envs, -1)
+        self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
 
     
@@ -196,7 +197,7 @@ class DoorHook(VecTask):
 
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(-0.125, -0.2, 1.3) # initial position of the ur3
+        ur3_start_pose.p = gymapi.Vec3(0.2, -0.2, 1.3) # initial position of the ur3
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -294,9 +295,9 @@ class DoorHook(VecTask):
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
         self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev,
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hand_dist, 
             self.num_envs, 
-            self.open_reward_scale, self.handle_reward_scale, self.action_penalty_scale, self.max_episode_length)
+            self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
 
     def debug_camera_imgs(self):
@@ -320,7 +321,7 @@ class DoorHook(VecTask):
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
 
-        print(self.d_imgs[0].shape)
+        # print(self.d_imgs[0].shape)
         # normalization
         out_idx = torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))
         # out_idx = torch.where(self.d_imgs < self.depth_min | self.d_imgs > self.depth_max)
@@ -352,7 +353,12 @@ class DoorHook(VecTask):
 
         # door handle rigid body states
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
-        print(door_handle_pos)
+        # print(hand_pos[0])
+        # print(door_handle_pos[0])
+
+        self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
+        # print(self.hand_dist.shape)
+
         # print(self.door_handle) index of door_handle
         door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]
         door_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
@@ -403,9 +409,18 @@ class DoorHook(VecTask):
         self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
         self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos
 
-        # reset door
+        # reset door dof state
         self.door_dof_state[env_ids, :] = torch.zeros_like(self.door_dof_state[env_ids])
         self.door_dof_pos_prev[env_ids, :] = torch.zeros_like(self.door_dof_pos_prev[env_ids])       
+
+        multi_env_ids_int32 = self.global_indices[env_ids, :2].flatten()
+        self.gym.set_dof_position_target_tensor_indexed(self.sim,
+                                                        gymtorch.unwrap_tensor(self.ur3_dof_targets),
+                                                        gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
+
+        self.gym.set_dof_state_tensor_indexed(self.sim,
+                                              gymtorch.unwrap_tensor(self.dof_state),
+                                              gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
 
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
@@ -415,12 +430,12 @@ class DoorHook(VecTask):
         self.actions = actions.clone().to(self.device)
         # print('self.actions', self.actions)
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.ur3_dof_speed_scales * self.dt * self.actions * self.action_scale
-        self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
-            targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
-        # env_ids_int32 = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
+        # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
+        #     targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
+        self.ur3_dof_targets[:, :self.num_ur3_dofs] = targets # no clamp, fuckin' move
         self.gym.set_dof_position_target_tensor(self.sim,
                                                 gymtorch.unwrap_tensor(self.ur3_dof_targets))    
-    
+
     def post_physics_step(self):
         self.progress_buf += 1
 
@@ -482,27 +497,33 @@ class DoorHook(VecTask):
 
 @torch.jit.script
 def compute_ur3_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, num_envs, open_reward_scale, handle_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hand_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float) -> Tuple[Tensor, Tensor]
 
     # regularization on the actions (summed for each environment)
-    action_penalty = torch.sum(actions ** 2, dim=-1)
+    action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
+    dist_reward = -1 * (hand_dist) * dist_reward_scale
     print('open_reward:',open_reward[0])
     print('handle_reward:', handle_reward[0])
+    print('dist_reward:', dist_reward[0])
+    print('action_penalty:', action_penalty[0])
     # edited reward to diff_hinge_ang handle_rew.
 
     # action penalty must be minus??
     # rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale + action_penalty_scale * action_penalty # if action penalty needed
-    rewards = open_reward + handle_reward  # no action penalty
+    # rewards = open_reward + handle_reward  # no action penalty
+    rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
+    rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
+
     # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
+    reset_buf = torch.where(door_dof_pos[:, 0] >= 0.785, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf

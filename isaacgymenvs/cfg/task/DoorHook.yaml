@@ -11,7 +11,7 @@ env:
   episodeLength: 300
   enableDebugVis: False
 
-  clipActions: 1.0
+  # clipActions: 1.0
   clipObservations: 5.0
 
   startPositionNoise: 0.0
@@ -21,14 +21,14 @@ env:
 
   # actionScale: 1000.0 # if scale bigger : the speed became bigger
   actionScale: 10.0
-  dofVelocityScale: 0.1
-  distRewardScale: 2.0
-  rotRewardScale: 0.5
-  aroundHandleRewardScale: 0.25
+  dofVelocityScale: 0.05
+  distRewardScale: 1.0
+  # rotRewardScale: 0.5
+  # aroundHandleRewardScale: 0.25
   openRewardScale: 1000.0
   handleRewardScale: 200.0
-  fingerDistRewardScale: 5.0
-  actionPenaltyScale: 0.001
+  # fingerDistRewardScale: 5.0
+  actionPenaltyScale: 0.05
   # reward params
   # reward_dist: 1.0
   # reward_log_dist: 1.0

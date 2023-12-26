@@ -496,7 +496,7 @@ def compute_ur3_reward(
     action_penalty = torch.sum(actions ** 2, dim=-1)
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
-    open_reward = 1000*(door_dof_pos[:,0] - door_dof_pos_prev[:,0])
+    open_reward = 50*(door_dof_pos[:,0] - door_dof_pos_prev[:,0])
     handle_reward = door_dof_pos[:,1] * door_dof_pos[:,1]
     print('open_dif_reward_max: -----------',torch.max(open_reward),'prev_max', torch.max(door_dof_pos_prev[:,0]), door_dof_pos_prev.dtype)
     # edited reward to diff_hinge_ang handle_rew.

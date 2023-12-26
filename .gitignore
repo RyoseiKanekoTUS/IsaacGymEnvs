@@ -26,6 +26,7 @@ _doxygen
 logs*
 nn/
 runs/
+skrl_runs/
 .idea
 outputs/
 *.hydra*

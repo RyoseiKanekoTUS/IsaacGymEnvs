@@ -528,7 +528,7 @@ def compute_ur3_reward(
     # rewards = open_reward + handle_reward + action_penalty # no dist_reward
     # rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
     # rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
-    rewards = open_reward + action_penalty
+    rewards = open_reward + action_penalty + dist_reward
     # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)

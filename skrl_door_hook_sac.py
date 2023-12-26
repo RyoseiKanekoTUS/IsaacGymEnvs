@@ -59,7 +59,7 @@ device = env.device
 
 
 # instantiate a memory as experience replay
-memory = RandomMemory(memory_size=4096, num_envs=env.num_envs, device=device)
+memory = RandomMemory(memory_size=1024, num_envs=env.num_envs, device=device)
 
 
 # instantiate the agent's models (function approximators).
@@ -93,7 +93,7 @@ cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": dev
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 800
 cfg["experiment"]["checkpoint_interval"] = 8000
-cfg["experiment"]["directory"] = "skrl_runs//DoorHook/sac"
+cfg["experiment"]["directory"] = "skrl_runs/DoorHook/sac"
 
 agent = SAC(models=models,
             memory=memory,

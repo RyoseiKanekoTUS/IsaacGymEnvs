@@ -18,68 +18,49 @@ from skrl.utils import set_seed
 # seed for reproducibility
 set_seed()  # e.g. `set_seed(42)` for fixed seed
 
-# load and wrap the Isaac Gym environment
-env = load_isaacgym_env_preview4(task_name="DoorHook")
-env = wrap_env(env)
-
-device = env.device
 
 # define shared model (stochastic and deterministic models) using mixins
 class Shared(GaussianMixin, DeterministicMixin, Model):
     def __init__(self, observation_space, action_space, device, clip_actions=False,
                  clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
         Model.__init__(self, observation_space, action_space, device)
-        DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
+        DeterministicMixin.__init__(self, clip_actions)
 
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
-                                                nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
-                                                nn.Conv2d(8, 8, kernel_size=(3, 2), stride=(1, 2)),
-                                                nn.ReLU(),
-                                                nn.Flatten()
-                                                )
-        self.mlp = nn.Sequential(nn.Linear(28, 256),
-                                         nn.ReLU(),
-                                         nn.Linear(256, 64),
-                                         nn.ReLU(),
-                                         nn.Linear(64, self.num_actions)
-                                         )
-        self.mean_layer = nn.Linear(6, self.num_actions)
+        self.net = nn.Sequential(nn.Linear(self.num_observations, 256),
+                                 nn.ELU(),
+                                 nn.Linear(256, 128),
+                                 nn.ELU(),
+                                 nn.Linear(128, 64),
+                                 nn.ELU())
+
+        self.mean_layer = nn.Linear(64, self.num_actions)
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
 
-        self.value_layer = nn.Linear(self.num_actions, 1)
-        
-    def compute(self, inputs, role):
-        
-        # print(inputs['states'].shape)
-        states = inputs['states']
-        ee_states = states[:, :12]
-        # print(ee_states.shape)
-        d_imgs = states[:, 12:]
-        # print(d_imgs.shape)
-        d_imgs = states[:, 12:].view(-1, 1, 48, 64)
-        fetures = self.d_feture_extractor(d_imgs)
-        combined = torch.cat([fetures, ee_states], dim=-1)
-        if role == 'policy':
-            return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
-        elif role == 'value':
-            return self.value_layer(self.mlp(combined)), {}
-        
+        self.value_layer = nn.Linear(64, 1)
+
     def act(self, inputs, role):
-        if role == 'policy':
+        if role == "policy":
             return GaussianMixin.act(self, inputs, role)
-        elif role == 'value':
+        elif role == "value":
             return DeterministicMixin.act(self, inputs, role)
 
+    def compute(self, inputs, role):
+        if role == "policy":
+            return self.mean_layer(self.net(inputs["states"])), self.log_std_parameter, {}
+        elif role == "value":
+            return self.value_layer(self.net(inputs["states"])), {}
 
+
+# load and wrap the Isaac Gym environment
+env = load_isaacgym_env_preview4(task_name="Anymal")
+env = wrap_env(env)
+
+device = env.device
 
 
 # instantiate a memory as rollout buffer (any memory can be used for this)
-memory = RandomMemory(memory_size=16, num_envs=env.num_envs, device=device)
+memory = RandomMemory(memory_size=24, num_envs=env.num_envs, device=device)
 
 
 # instantiate the agent's models (function approximators).
@@ -93,12 +74,12 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 16  # memory_size
-cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 8  # 16 * 4096 / 8192
+cfg["rollouts"] = 24  # memory_size
+cfg["learning_epochs"] = 5
+cfg["mini_batches"] = 3  # 24 * 4096 / 32768
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4
+cfg["learning_rate"] = 3e-4
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0
@@ -108,9 +89,9 @@ cfg["ratio_clip"] = 0.2
 cfg["value_clip"] = 0.2
 cfg["clip_predicted_values"] = True
 cfg["entropy_loss_scale"] = 0.0
-cfg["value_loss_scale"] = 2.0
+cfg["value_loss_scale"] = 1.0
 cfg["kl_threshold"] = 0
-cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.01
+cfg["rewards_shaper"] = None
 cfg["state_preprocessor"] = RunningStandardScaler
 cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": device}
 cfg["value_preprocessor"] = RunningStandardScaler
@@ -118,7 +99,7 @@ cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 120
 cfg["experiment"]["checkpoint_interval"] = 1200
-cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
+cfg["experiment"]["directory"] = "runs/torch/Anymal"
 
 agent = PPO(models=models,
             memory=memory,
@@ -129,7 +110,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 24000, "headless": False}
+cfg_trainer = {"timesteps": 24000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
@@ -143,7 +124,7 @@ trainer.train()
 # from skrl.utils.huggingface import download_model_from_huggingface
 
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
-# path = download_model_from_huggingface("skrl/IsaacGymEnvs-FrankaCabinet-PPO", filename="agent.pt")
+# path = download_model_from_huggingface("skrl/IsaacGymEnvs-Anymal-PPO", filename="agent.pt")
 # agent.load(path)
 
 # # start evaluation

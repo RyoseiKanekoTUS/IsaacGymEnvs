@@ -37,18 +37,20 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
                                          nn.ReLU(),
                                          nn.Linear(64, action_space)
                                          )
+        # self.mean_layer = nn.Linear(64, self.num_actions)
+        # self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
         
-    def compute(self, obs_buf, num_robot_state):
+    def compute(self, inputs, role):
         
-        states = obs_buf[:, :num_robot_state]
-        d_imgs = obs_buf[:, num_robot_state:].view(-1, 1, 48, 64)
-        feture = self.d_feture_extractor(d_imgs)
-        combined = torch.cat([feture, states], dim=1)
+        ee_states = inputs['states'][:, :12]
+        d_imgs = inputs['states'][:, 12:].view(-1, 1, 48, 64)
+        fetures = self.d_feture_extractor(d_imgs)
+        combined = torch.cat([fetures, ee_states], dim=1)
 
         return self.mlp(combined), {}
     
-    def act(self, inputs, role):
-        if role == "policy":
-            return GaussianMixin.act(self, inputs, role)
-        elif role == "value":
-            return DeterministicMixin.act(self, inputs, role)
+    # def act(self, obs_buf, role):
+    #     if role == "policy":
+    #         return GaussianMixin.act(self, inputs, role)
+    #     elif role == "value":
+    #         return DeterministicMixin.act(self, inputs, role)

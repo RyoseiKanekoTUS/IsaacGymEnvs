@@ -287,9 +287,9 @@ class DoorHook(VecTask):
         # door information
         door_handle = self.gym.find_actor_rigid_body_handle(self.envs[0], self.doors[0], "door_handles")
         
-        print(door_handle)
+        # print(door_handle)
         door_hinge = self.gym.find_actor_dof_handle(self.envs[0], self.doors[0], "door_hinge")
-        print(door_hinge)
+        # print(door_hinge)
         
         
     def compute_reward(self, actions): #if you edit, go to jitscripts
@@ -504,7 +504,7 @@ def compute_ur3_reward(
     action_penalty_scale, max_episode_length
 ):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float) -> Tuple[Tensor, Tensor]
-
+    print(open_reward_scale, handle_reward_scale, dist_reward_scale, action_penalty_scale)
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)

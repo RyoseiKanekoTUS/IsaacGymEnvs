@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: train.py",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -14,11 +14,21 @@
             "cwd": "${fileDirname}",
             "args": [
                 // "task=Closet"
-                "num_envs=512"
+                "num_envs=512", "task=DoorHook"
                 
                 // "task=cabinet"
                 // "task=FrankaCubeStack"
             ]
+        },
+        {
+            "name": "Python: door_hook.py",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "../",
+            "args":["num_envs=512", "task=DoorHook"]
+
         }
     ]
 }

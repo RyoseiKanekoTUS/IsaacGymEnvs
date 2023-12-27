@@ -38,11 +38,11 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
                                                 nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
                                                 nn.ReLU(),
                                                 nn.MaxPool2d(2, stride=2),
-                                                nn.Conv2d(8, 8, kernel_size=(3, 2), stride=(1, 2)),
-                                                nn.ReLU(),
+                                                # nn.Conv2d(8, 8, kernel_size=(3, 2), stride=(1, 2)),
+                                                # nn.ReLU(),
                                                 nn.Flatten()
                                                 )
-        self.mlp = nn.Sequential(nn.Linear(28, 256),
+        self.mlp = nn.Sequential(nn.Linear(108, 256),
                                          nn.ReLU(),
                                          nn.Linear(256, 64),
                                          nn.ReLU(),
@@ -130,7 +130,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 24000, "headless": False}
+cfg_trainer = {"timesteps": 50000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training

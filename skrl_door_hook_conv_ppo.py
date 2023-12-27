@@ -46,7 +46,8 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
                                          nn.ReLU(),
                                          nn.Linear(256, 64),
                                          nn.ReLU(),
-                                         nn.Linear(64, self.num_actions)
+                                         nn.Linear(64, self.num_actions),
+                                         nn.Tanh() # -1 < action < 1 
                                          )
         self.mean_layer = nn.Linear(6, self.num_actions)
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
@@ -93,12 +94,12 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 16  # memory_size
+cfg["rollouts"] = 256  # memory_size
 cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 8  # 16 * 4096 / 8192
+cfg["mini_batches"] = 128  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4
+cfg["learning_rate"] = 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0
@@ -116,8 +117,8 @@ cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": dev
 cfg["value_preprocessor"] = RunningStandardScaler
 cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
-cfg["experiment"]["write_interval"] = 120
-cfg["experiment"]["checkpoint_interval"] = 1200
+cfg["experiment"]["write_interval"] = 100
+cfg["experiment"]["checkpoint_interval"] = 1000
 cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
 
 agent = PPO(models=models,

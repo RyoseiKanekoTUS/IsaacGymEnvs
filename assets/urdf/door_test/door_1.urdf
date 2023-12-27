@@ -126,6 +126,20 @@
             <inertia ixx="14.2053" ixy="0.0004" ixz="0.0000" iyy="17.1997" iyz="0.0000" izz="3.0298"/>
         </inertial>
     </link>
+    
+    <joint name = 'handle2latch' type = 'fixed'>
+        <parent link = 'door_handles'/>
+        <child link = 'door_latch'/>
+    </joint>
+
+    <link name='door_latch'>
+        <collision>
+            <geometry>
+                <box size='0.001 0.14 0.01'/>
+            </geometry>
+            <origin xyz = '0.043 0.1 0' rpy = '0 0 0'/>
+        </collision>
+    </link>
     <!-- <gazebo reference="world">
         <material>Gazebo/Red</material>
     </gazebo> -->

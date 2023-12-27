@@ -31,9 +31,9 @@ class DoorHook(VecTask):
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 50.0
-        self.handle_reward_scale = 25.0
-        self.dist_reward_scale = 1.0
+        self.open_reward_scale = 500.0
+        self.handle_reward_scale = 250.0
+        self.dist_reward_scale = 10.0
         self.action_penalty_scale = 0.0050
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
@@ -261,7 +261,7 @@ class DoorHook(VecTask):
 
         # handles definition : index
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook_finger")
-        print(self.hand_handle)
+        # print(self.hand_handle)
         # self.hook_pose = self.dof_state
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
         # print('------------self.door_handle',self.door_handle)
@@ -495,7 +495,7 @@ def compute_ur3_reward(
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.1, torch.zeros_like(hand_dist), hand_dist)
     # print(hand_dist_thresh)
-    dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
+    dist_reward = -1 * (hand_dist_thresh ** 2) * dist_reward_scale
     print('open_reward max:',torch.max(open_reward))
     print('handle_reward max:', torch.max(handle_reward))
     print('dist_reward max:', torch.max(dist_reward))

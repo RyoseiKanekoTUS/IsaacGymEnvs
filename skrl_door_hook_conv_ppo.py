@@ -38,8 +38,6 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
                                                 nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
                                                 nn.ReLU(),
                                                 nn.MaxPool2d(2, stride=2),
-                                                # nn.Conv2d(8, 8, kernel_size=(3, 2), stride=(1, 2)),
-                                                # nn.ReLU(),
                                                 nn.Flatten()
                                                 )
         self.mlp = nn.Sequential(nn.Linear(108, 256),
@@ -63,14 +61,18 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         d_imgs = states[:, 12:]
         # print(d_imgs.shape)
         d_imgs = states[:, 12:].view(-1, 1, 48, 64)
+        print(d_imgs.shape)
         fetures = self.d_feture_extractor(d_imgs)
+        print(fetures.shape)
         combined = torch.cat([fetures, ee_states], dim=-1)
+        print(combined.shape)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
         
     def act(self, inputs, role):
+        
         if role == 'policy':
             return GaussianMixin.act(self, inputs, role)
         elif role == 'value':
@@ -94,12 +96,12 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 128  # memory_size
+cfg["rollouts"] = 512  # memory_size
 cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 512  # 16 * 4096 / 8192
+cfg["mini_batches"] = 64  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-3
+cfg["learning_rate"] = 5e-4
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0
@@ -128,7 +130,7 @@ agent = PPO(models=models,
             action_space=env.action_space,
             device=device)
 
-# agent.load('./skrl_runs/DoorHook/conv_ppo/23-12-27_17-51-31-666801_PPO/checkpoints/agent_100.pt')
+# agent.load('skrl_runs/DoorHook/conv_ppo/23-12-27_19-22-45-298891_PPO/checkpoints/best_agent.pt')
 
 
 # configure and instantiate the RL trainer
@@ -136,7 +138,8 @@ cfg_trainer = {"timesteps": 50000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
-trainer.train()
+# trainer.train()
+trainer.eval()
 
 
 

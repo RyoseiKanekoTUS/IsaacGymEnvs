@@ -80,7 +80,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 
 
 # instantiate a memory as rollout buffer (any memory can be used for this)
-memory = RandomMemory(memory_size=16, num_envs=env.num_envs, device=device)
+memory = RandomMemory(memory_size=128, num_envs=env.num_envs, device=device)
 
 
 # instantiate the agent's models (function approximators).
@@ -94,12 +94,12 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 256  # memory_size
-cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 128  # 16 * 4096 / 8192
+cfg["rollouts"] = 128  # memory_size
+cfg["learning_epochs"] = 4
+cfg["mini_batches"] = 1024  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 1e-3
+cfg["learning_rate"] = 5e-4
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0
@@ -110,7 +110,7 @@ cfg["value_clip"] = 0.2
 cfg["clip_predicted_values"] = True
 cfg["entropy_loss_scale"] = 0.0
 cfg["value_loss_scale"] = 2.0
-cfg["kl_threshold"] = 0
+cfg["kl_threshold"] = 0.008
 cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.01
 cfg["state_preprocessor"] = RunningStandardScaler
 cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": device}
@@ -118,7 +118,7 @@ cfg["value_preprocessor"] = RunningStandardScaler
 cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 100
-cfg["experiment"]["checkpoint_interval"] = 1000
+cfg["experiment"]["checkpoint_interval"] = 100
 cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
 
 agent = PPO(models=models,

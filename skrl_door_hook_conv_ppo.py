@@ -133,7 +133,7 @@ agent = PPO(models=models,
             action_space=env.action_space,
             device=device)
 
-# agent.load('skrl_runs/DoorHook/conv_ppo/23-12-27_19-22-45-298891_PPO/checkpoints/best_agent.pt')
+agent.load('skrl_runs/DoorHook/conv_ppo/23-12-28_01-42-12-425123_PPO/checkpoints/agent_1000.pt')
 
 
 # configure and instantiate the RL trainer
@@ -141,8 +141,8 @@ cfg_trainer = {"timesteps": 200000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
-trainer.train()
-# trainer.eval()
+# trainer.train()
+trainer.eval()
 
 
 

@@ -5,7 +5,7 @@ name: DoorHook
 physics_engine: ${..physics_engine}
 
 env:
-  numEnvs: ${resolve_default:512,${...num_envs}}
+  numEnvs: ${resolve_default:2560,${...num_envs}}
   # numEnvs: ${resolve_default:512,${...num_envs}} # for test
   envSpacing: 1.5
   episodeLength: 300
@@ -20,15 +20,15 @@ env:
   aggregateMode: 3
 
   # actionScale: 1000.0 # if scale bigger : the speed became bigger
-  actionScale: 1.0
+  actionScale: 0.75
   # actionScale: 10.0 # when use tensor clamp
   # dofVelocityScale: 0.05
   distRewardScale: 1.0
   # rotRewardScale: 0.5
   # aroundHandleRewardScale: 0.25
-  openRewardScale: 1000.0
-  handleRewardScale: 200.0
-  actionPenaltyScale: 0.05
+  openRewardScale: 100.0
+  handleRewardScale: 20.0
+  actionPenaltyScale: 0.050
   # reward params
   # reward_dist: 1.0
   # reward_log_dist: 1.0

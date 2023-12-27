@@ -26,7 +26,7 @@ _doxygen
 logs*
 nn/
 runs/
-.idea
+skrl_runs/
 outputs/
 *.hydra*
 /isaacgymenvs/wandb

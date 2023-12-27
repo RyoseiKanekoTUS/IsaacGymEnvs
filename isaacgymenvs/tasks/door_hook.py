@@ -494,6 +494,7 @@ def compute_ur3_reward(
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.1, torch.zeros_like(hand_dist), hand_dist)
+    # print(hand_dist)
     # print(hand_dist_thresh)
     dist_reward = -1 * (hand_dist_thresh ** 2) * dist_reward_scale
     print('open_reward max:',torch.max(open_reward))

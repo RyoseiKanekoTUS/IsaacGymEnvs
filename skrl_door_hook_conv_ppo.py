@@ -45,38 +45,39 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
                                          nn.Linear(256, 64),
                                          nn.ReLU(),
                                          nn.Linear(64, self.num_actions),
-                                         nn.Tanh() # -1 < action < 1 
-                                         )
-        self.mean_layer = nn.Linear(6, self.num_actions)
+                                         nn.Tanh())# -1 < action < 1 
+                                         
+        # self.mean_layer = nn.Linear(6, self.num_actions)
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
 
         self.value_layer = nn.Linear(self.num_actions, 1)
+
+    def act(self, inputs, role):
+
+        if role == 'policy':
+            return GaussianMixin.act(self, inputs , role)
+        elif role == 'value':
+            return DeterministicMixin.act(self, inputs, role)
         
     def compute(self, inputs, role):
         
-        # print(inputs['states'].shape)
         states = inputs['states']
+        # print('states.shape', states.shape)
         ee_states = states[:, :12]
         # print(ee_states.shape)
         d_imgs = states[:, 12:]
         # print(d_imgs.shape)
         d_imgs = states[:, 12:].view(-1, 1, 48, 64)
-        print(d_imgs.shape)
+        # print(d_imgs.shape)
         fetures = self.d_feture_extractor(d_imgs)
-        print(fetures.shape)
+        # print(fetures.shape)
         combined = torch.cat([fetures, ee_states], dim=-1)
         print(combined.shape)
         if role == 'policy':
-            return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
+            return self.mlp(combined), self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
         
-    def act(self, inputs, role):
-        
-        if role == 'policy':
-            return GaussianMixin.act(self, inputs, role)
-        elif role == 'value':
-            return DeterministicMixin.act(self, inputs, role)
 
 
 
@@ -96,9 +97,9 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 512  # memory_size
+cfg["rollouts"] = 64  # memory_size
 cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 64  # 16 * 4096 / 8192
+cfg["mini_batches"] = 16  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
 cfg["learning_rate"] = 5e-4
@@ -138,8 +139,8 @@ cfg_trainer = {"timesteps": 50000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
-# trainer.train()
-trainer.eval()
+trainer.train()
+# trainer.eval()
 
 
 

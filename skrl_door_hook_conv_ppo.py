@@ -43,14 +43,16 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         self.mlp = nn.Sequential(nn.Linear(108, 256),
                                          nn.ReLU(),
                                          nn.Linear(256, 64),
-                                         nn.ReLU(),
-                                         nn.Linear(64, self.num_actions),
-                                         nn.Tanh())# -1 < action < 1 
+                                        #  nn.ReLU(),
+                                        #  nn.Linear(64, self.num_actions),
+                                        #  nn.Tanh()
+                                        )
                                          
-        # self.mean_layer = nn.Linear(6, self.num_actions)
+        self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
+                                        nn.Tanh())
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
 
-        self.value_layer = nn.Linear(self.num_actions, 1)
+        self.value_layer = nn.Linear(64, 1)
 
     def act(self, inputs, role):
 
@@ -72,9 +74,9 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         fetures = self.d_feture_extractor(d_imgs)
         # print(fetures.shape)
         combined = torch.cat([fetures, ee_states], dim=-1)
-        print(combined.shape)
+        # print(combined.shape)
         if role == 'policy':
-            return self.mlp(combined), self.log_std_parameter, {}
+            return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
         
@@ -97,9 +99,9 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 64  # memory_size
+cfg["rollouts"] = 128  # memory_size
 cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 16  # 16 * 4096 / 8192
+cfg["mini_batches"] = 8  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
 cfg["learning_rate"] = 5e-4
@@ -135,7 +137,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 50000, "headless": False}
+cfg_trainer = {"timesteps": 200000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training

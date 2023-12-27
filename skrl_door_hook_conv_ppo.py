@@ -96,10 +96,10 @@ models["value"] = models["policy"]  # same instance: shared model
 cfg = PPO_DEFAULT_CONFIG.copy()
 cfg["rollouts"] = 128  # memory_size
 cfg["learning_epochs"] = 8
-cfg["mini_batches"] = 1024  # 16 * 4096 / 8192
+cfg["mini_batches"] = 512  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4
+cfg["learning_rate"] = 5e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0
@@ -117,7 +117,7 @@ cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": dev
 cfg["value_preprocessor"] = RunningStandardScaler
 cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
-cfg["experiment"]["write_interval"] = 100
+cfg["experiment"]["write_interval"] = 20
 cfg["experiment"]["checkpoint_interval"] = 100
 cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
 
@@ -128,6 +128,8 @@ agent = PPO(models=models,
             action_space=env.action_space,
             device=device)
 
+# agent.load('./skrl_runs/DoorHook/conv_ppo/23-12-27_17-51-31-666801_PPO/checkpoints/agent_100.pt')
+
 
 # configure and instantiate the RL trainer
 cfg_trainer = {"timesteps": 50000, "headless": False}
@@ -135,6 +137,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
 trainer.train()
+
 
 
 # # ---------------------------------------------------------

@@ -5,7 +5,7 @@ name: DoorHook
 physics_engine: ${..physics_engine}
 
 env:
-  numEnvs: ${resolve_default:2560,${...num_envs}}
+  numEnvs: ${resolve_default:512,${...num_envs}}
   # numEnvs: ${resolve_default:512,${...num_envs}} # for test
   envSpacing: 1.5
   episodeLength: 300
@@ -18,28 +18,6 @@ env:
   startRotationNoise: 0.0
 
   aggregateMode: 3
-
-  # actionScale: 1000.0 # if scale bigger : the speed became bigger
-  actionScale: 0.75
-  # actionScale: 10.0 # when use tensor clamp
-  # dofVelocityScale: 0.05
-  distRewardScale: 1.0
-  # rotRewardScale: 0.5
-  # aroundHandleRewardScale: 0.25
-  openRewardScale: 100.0
-  handleRewardScale: 20.0
-  actionPenaltyScale: 0.050
-  # reward params
-  # reward_dist: 1.0
-  # reward_log_dist: 1.0
-  # reward_door: 50
-  # reward_doorknob: 25
-  # reward_ctrl: 1.0
-
-  # plane:
-  #   staticFriction: 1.0
-  #   dynamicFriction: 1.0
-  #   restitution: 0.0
   
   asset:
     assetRoot: "../../assets"
@@ -49,8 +27,8 @@ env:
   enableCameraSensors: False
 
 sim:
-  dt: 0.0166 # 1/60
-  substeps: 1
+  dt: 0.0166
+  substeps: 10
   up_axis: "z"
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
@@ -60,7 +38,7 @@ sim:
     use_gpu: ${contains:"cuda",${....sim_device}} # set to False to run on CPU
     num_position_iterations: 12
     num_velocity_iterations: 1
-    contact_offset: 0.005
+    contact_offset: 0.1
     rest_offset: 0.0
     bounce_threshold_velocity: 0.2
     max_depenetration_velocity: 1000.0

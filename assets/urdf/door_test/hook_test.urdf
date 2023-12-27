@@ -90,5 +90,17 @@
             <origin rpy="1.57 0 0" xyz="0 0 0"/>
         </collision>
     </link>
+    <joint name='hook_finger' type='fixed'>
+        <origin rpy="0 0 0" xyz="0.08 0 0.17"/>
+        <parent link='hand_base'/>
+        <child link='hook_finger'/>
+    </joint >
+    <link name='hook_finger'>
+        <visual>
+            <geometry>
+                <sphere radius='0.007'/>
+            </geometry>
+        </visual>
+    </link>
 </robot>
     

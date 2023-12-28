@@ -510,7 +510,7 @@ def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val):
 
     # type: (Tensor, float, float, float) -> Tensor 
     condition = torch.logical_or(d_imgs < depth_min, d_imgs > depth_max)
-    norm_d_imgs = -1 * (d_imgs - depth_min)/(depth_max - depth_min)
+    norm_d_imgs = (d_imgs - depth_min)/(depth_max - depth_min)
     norm_d_imgs = torch.where(condition, replace_val, norm_d_imgs)
     return norm_d_imgs 
 

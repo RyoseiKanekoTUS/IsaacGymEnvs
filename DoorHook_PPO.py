@@ -15,15 +15,6 @@ from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
 
-# set_seed()  # e.g. `set_seed(42)` for fixed seed
-
-# load and wrap the Isaac Gym environment
-# env = load_isaacgym_env_preview4(task_name="DoorHook")
-# env = wrap_env(env)
-
-# device = env.device
-
-
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def __init__(self, observation_space, action_space, device, clip_actions=False,
                  clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
@@ -78,10 +69,7 @@ class DoorHookTrainer(PPOnet):
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
-
-        # super().__init__(self.env.observation_space, self.env.action_space, self.device)
-
-        self.memory = RandomMemory(memory_size=128, num_envs=self.env.num_envs, device=self.device)
+        self.memory = RandomMemory(memory_size=32, num_envs=self.env.num_envs, device=self.device)
         self.models = {}
         self.models["policy"] = PPOnet(self.env.observation_space, self.env.action_space, self.device)
         self.models["value"] = self.models["policy"]  # same instance: shared model
@@ -103,7 +91,7 @@ class DoorHookTrainer(PPOnet):
         self.cfg["clip_predicted_values"] = True
         self.cfg["entropy_loss_scale"] = 0.0
         self.cfg["value_loss_scale"] = 2.0
-        self.cfg["kl_threshold"] = 0.008
+        self.cfg["kl_threshold"] = 0
         self.cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.01
         self.cfg["state_preprocessor"] = RunningStandardScaler
         self.cfg["state_preprocessor_kwargs"] = {"size": self.env.observation_space, "device": self.device}
@@ -161,6 +149,7 @@ if __name__ == '__main__':
 
     path = None
     DoorHookTrainer = DoorHookTrainer()
+    # DoorHookTrainer.eval(path)
     DoorHookTrainer.train(path)
 
 

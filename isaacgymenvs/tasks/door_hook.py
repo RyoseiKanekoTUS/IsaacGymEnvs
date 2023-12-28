@@ -31,10 +31,10 @@ class DoorHook(VecTask):
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 50.0
+        self.open_reward_scale = 100.0
         self.handle_reward_scale = 30.0
-        self.dist_reward_scale = 1.0
-        self.action_penalty_scale = 0.001
+        self.dist_reward_scale = 10.0
+        self.action_penalty_scale = 0.0001
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -497,6 +497,7 @@ def compute_ur3_reward(
 
     # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
     dist_reward = -1 * hand_dist * dist_reward_scale
+    # print(hand_dist)
     print('----------------open_reward max:',torch.max(open_reward))
     print('--------------handle_reward max:', torch.max(handle_reward))
     print('----------------dist_reward max:', torch.max(dist_reward))
@@ -510,11 +511,11 @@ def compute_ur3_reward(
     # rewards = open_reward + handle_reward + action_penalty # no dist_reward
     # rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
     # rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward
     # rewards = dist_reward
-    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

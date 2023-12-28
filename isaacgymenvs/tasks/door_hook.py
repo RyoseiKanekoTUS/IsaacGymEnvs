@@ -300,15 +300,14 @@ class DoorHook(VecTask):
         self.d_imgs = torch.stack([
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
-
-        self.pp_d_imgs = compute_d_imgs(self.d_imgs, self.depth_min, self.depth_max, -1.0)
-
-        self.gym.end_access_image_tensors(self.sim)
-
-        # print('d_img_debug---------------------',self.d_imgs[4][4], self.d_imgs[5][5], self.d_imgs.shape)
-        # print('norm_d_img_debug----------------',self.pp_d_imgs[4][4], self.pp_d_imgs[5][5], norm_d_imgs.shape)
-        # print('debug fin')
         
+        norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0
+        self.pp_d_imgs = norm_d_imgs
+        self.gym.end_access_image_tensors(self.sim)
+        
+        # print(self.pp_d_imgs[0]) # debug
+
     def compute_observations(self):  # NOW DEFINING
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -506,7 +505,7 @@ def compute_ur3_reward(
     return rewards, reset_buf
 
 @torch.jit.script
-def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val):
+def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val): # wasnt better than normal function
 
     # type: (Tensor, float, float, float) -> Tensor 
     condition = torch.logical_or(d_imgs < depth_min, d_imgs > depth_max)

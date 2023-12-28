@@ -361,16 +361,6 @@ class DoorHook(VecTask):
         door_hinge_vel = self.door_dof_vel[:,0]
         door_handle_ang = self.door_dof_pos[:,1]
         door_handle_vel = self.door_dof_vel[:,1]
-        # print('############################ debug dimensions #########################################')
-        # print(self.ur3_dof_pos.shape, self.ur3_dof_vel.shape, door_hinge_ang.shape, door_handle_ang.shape)
-
-        # dof_pos_scaled = (2.0 * (self.ur3_dof_pos - self.ur3_dof_lower_limits)
-        #                   / (self.ur3_dof_upper_limits - self.ur3_dof_lower_limits) - 1.0)
-        # to_target = self.door_grasp_pos - self.ur3_grasp_pos
-        # self.obs_buf = torch.cat((dof_pos_scaled, self.ur3_dof_vel * self.dof_vel_scale, to_target,
-        #                           self.door_dof_pos[:, 0].unsqueeze(-1), self.door_dof_vel[:, 0].unsqueeze(-1)), dim=-1)
-
-        # print(self.ur3_dof_pos.shape, self.ur3_dof_vel.shape, self.d_imgs.shape)
         # define obsefcation space
         self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
         # print('observation space size:', self.obs_buf.shape)

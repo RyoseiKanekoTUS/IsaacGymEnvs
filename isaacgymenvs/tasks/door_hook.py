@@ -284,9 +284,8 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        for j in [0,1,2,3]:
+        for j in [0]:
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            # -inf.dtype : -np.inf?
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
@@ -308,13 +307,13 @@ class DoorHook(VecTask):
         # out_idx = torch.where(self.d_imgs < self.depth_min | self.d_imgs > self.depth_max)
         norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         norm_d_imgs[out_idx] = -1.0
-        self.norm_d_imgs = norm_d_imgs
+        self.pp_d_imgs = norm_d_imgs
         # print(self.d_imgs.shape)
 
         self.gym.end_access_image_tensors(self.sim)
 
         # print('d_img_debug---------------------',self.d_imgs[4][4], self.d_imgs[5][5], self.d_imgs.shape)
-        # print('norm_d_img_debug----------------',self.norm_d_imgs[4][4], self.norm_d_imgs[5][5], norm_d_imgs.shape)
+        # print('norm_d_img_debug----------------',self.pp_d_imgs[4][4], self.pp_d_imgs[5][5], norm_d_imgs.shape)
         # print('debug fin')
         
     def compute_observations(self):  # NOW DEFINING
@@ -373,7 +372,7 @@ class DoorHook(VecTask):
 
         # print(self.ur3_dof_pos.shape, self.ur3_dof_vel.shape, self.d_imgs.shape)
         # define obsefcation space
-        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.d_imgs), dim = -1)
+        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    
@@ -511,7 +510,7 @@ def compute_ur3_reward(
     # rewards = open_reward + handle_reward + action_penalty # no dist_reward
     # rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
     # rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
-    rewards = open_reward + action_penalty + dist_reward
+    rewards = open_reward + action_penalty + dist_reward + handle_reward
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))

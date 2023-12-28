@@ -28,7 +28,7 @@ env:
 
 sim:
   dt: 0.0166
-  substeps: 10
+  substeps: 5
   up_axis: "z"
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]

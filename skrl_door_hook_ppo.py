@@ -28,11 +28,11 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         DeterministicMixin.__init__(self, clip_actions)
 
         self.net = nn.Sequential(nn.Linear(self.num_observations, 512),
-                                 nn.ELU(),
+                                 nn.ReLU(),
                                  nn.Linear(512, 128),
-                                 nn.ELU(),
+                                 nn.ReLU(),
                                  nn.Linear(128, 64),
-                                 nn.ELU())
+                                 nn.ReLU())
 
         self.mean_layer = nn.Linear(64, self.num_actions)
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
@@ -108,7 +108,7 @@ agent = PPO(models=models,
             action_space=env.action_space,
             device=device)
 
-agent.load('./skrl_runs/DoorHook/ppo/23-12-27_20-41-12-593293_PPO/checkpoints/best_agent.pt')
+# agent.load('skrl_runs/DoorHook/ppo/23-12-27_21-06-31-359660_PPO/checkpoints/best_agent.pt')
 
 # configure and instantiate the RL trainer
 cfg_trainer = {"timesteps": 200000, "headless": False}
@@ -116,6 +116,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
 trainer.train()
+# trainer.eval()
 
 
 # # ---------------------------------------------------------

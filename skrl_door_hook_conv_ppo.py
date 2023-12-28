@@ -14,6 +14,7 @@ from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
+import numpy as np
 
 # seed for reproducibility
 set_seed()  # e.g. `set_seed(42)` for fixed seed
@@ -64,16 +65,25 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
+        # np.savetxt('./.test_data/states.csv', states[0].cpu(), delimiter=',')
         # print('states.shape', states.shape)
         ee_states = states[:, :12]
-        # print(ee_states.shape)
-        d_imgs = states[:, 12:]
-        # print(d_imgs.shape)
-        d_imgs = states[:, 12:].view(-1, 1, 48, 64)
-        # print(d_imgs.shape)
-        fetures = self.d_feture_extractor(d_imgs)
+        # print(ee_states)
+        # np.savetxt('./.test_data/ee_state.csv', ee_states[0].cpu(), delimiter=',')
+        # pp_d_imgs = states[:, 12:]
+        # print(pp_d_imgs.shape)
+        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
+        # print(pp_d_imgs.shape)
+        # np.savetxt('./.test_data/pp_d_imgs_0.csv', pp_d_imgs[0][0].cpu(), delimiter=',')
+
+        fetures = self.d_feture_extractor(pp_d_imgs)
+        # np.savetxt('./.test_data/fetures_0.csv', fetures[0].cpu(), delimiter=',')
+
         # print(fetures.shape)
         combined = torch.cat([fetures, ee_states], dim=-1)
+        # print(combined)
+        # np.savetxt('./.test_data/combined.csv', combined[0].cpu(), delimiter=',')
+
         # print(combined.shape)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
@@ -86,6 +96,9 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 
 # instantiate a memory as rollout buffer (any memory can be used for this)
 memory = RandomMemory(memory_size=128, num_envs=env.num_envs, device=device)
+        
+# when debug        
+# memory = RandomMemory(memory_size=128, num_envs=10, device=device)
 
 
 # instantiate the agent's models (function approximators).
@@ -104,7 +117,7 @@ cfg["learning_epochs"] = 8
 cfg["mini_batches"] = 8  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4
+cfg["learning_rate"] = 5e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0
@@ -141,8 +154,8 @@ cfg_trainer = {"timesteps": 200000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
-# trainer.train()
-trainer.eval()
+trainer.train()
+# trainer.eval()
 
 
 

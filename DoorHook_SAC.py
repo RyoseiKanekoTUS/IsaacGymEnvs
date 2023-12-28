@@ -123,7 +123,7 @@ class DoorHookTrainer(SACActor, SACCritic):
             pass
 
         self.cfg_trainer = {"timesteps": 200000, "headless": False}
-        self.trainer = SequentialTrainer(cfg=self.self.cfg_trainer, env=self.env, agents=self.agent)
+        self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.train()
     

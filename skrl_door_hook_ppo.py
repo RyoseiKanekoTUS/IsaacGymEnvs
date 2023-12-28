@@ -20,7 +20,7 @@ set_seed()  # e.g. `set_seed(42)` for fixed seed
 
 
 # define shared model (stochastic and deterministic models) using mixins
-class Shared(GaussianMixin, DeterministicMixin, Model):
+class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def __init__(self, observation_space, action_space, device, clip_actions=False,
                  clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
         Model.__init__(self, observation_space, action_space, device)
@@ -67,7 +67,7 @@ memory = RandomMemory(memory_size=16, num_envs=env.num_envs, device=device)
 # PPO requires 2 models, visit its documentation for more details
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#models
 models = {}
-models["policy"] = Shared(env.observation_space, env.action_space, device)
+models["policy"] = PPOnet(env.observation_space, env.action_space, device)
 models["value"] = models["policy"]  # same instance: shared model
 
 
@@ -79,7 +79,7 @@ cfg["learning_epochs"] = 8
 cfg["mini_batches"] = 8  # 16 * 4096 / 8192
 cfg["discount_factor"] = 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4
+cfg["learning_rate"] = 5e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
 cfg["random_timesteps"] = 0

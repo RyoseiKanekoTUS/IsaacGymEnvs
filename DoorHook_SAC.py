@@ -79,7 +79,7 @@ class DoorHookTrainer(SACActor, SACCritic):
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
-        self.memory = RandomMemory(memory_size=32, num_envs=self.env.num_envs, device=self.device)
+        self.memory = RandomMemory(memory_size=256, num_envs=self.env.num_envs, device=self.device)
 
         self.models = {}
         self.models["policy"] = SACActor(self.env.observation_space, self.env.action_space, self.device, clip_actions=True)
@@ -90,7 +90,7 @@ class DoorHookTrainer(SACActor, SACCritic):
 
         self.cfg = SAC_DEFAULT_CONFIG.copy()
         self.cfg["gradient_steps"] = 1
-        self.cfg["batch_size"] = 1024
+        self.cfg["batch_size"] = 2048
         self.cfg["discount_factor"] = 0.99
         self.cfg["polyak"] = 0.005
         self.cfg["actor_learning_rate"] = 5e-4

@@ -123,7 +123,7 @@ cfg["value_preprocessor"] = RunningStandardScaler
 cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 20
-cfg["experiment"]["checkpoint_interval"] = 100
+cfg["experiment"]["checkpoint_interval"] = 1000
 cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
 
 agent = PPO(models=models,
@@ -133,7 +133,7 @@ agent = PPO(models=models,
             action_space=env.action_space,
             device=device)
 
-agent.load('skrl_runs/DoorHook/conv_ppo/23-12-28_01-42-12-425123_PPO/checkpoints/agent_1000.pt')
+# agent.load('skrl_runs/DoorHook/conv_ppo/23-12-28_01-42-12-425123_PPO/checkpoints/agent_1000.pt')
 
 
 # configure and instantiate the RL trainer

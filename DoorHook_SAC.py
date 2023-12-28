@@ -61,6 +61,7 @@ class SACCritic(DeterministicMixin, Model):
         self.mlp = nn.Sequential(nn.Linear(108 + self.num_actions, 128),
                                          nn.ReLU(),
                                          nn.Linear(128, 32),
+                                         nn.ReLU(),
                                          nn.Linear(32, 1)
                                         )
     def compute(self, inputs, role):
@@ -107,7 +108,7 @@ class DoorHookTrainer(SACActor, SACCritic):
         
     def train(self, load_path=None):
         # logging to TensorBoard and write checkpoints (in timesteps)
-        self.cfg["experiment"]["write_interval"] = 20
+        self.cfg["experiment"]["write_interval"] = 300
         self.cfg["experiment"]["checkpoint_interval"] = 2000
         self.cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_sac"
 

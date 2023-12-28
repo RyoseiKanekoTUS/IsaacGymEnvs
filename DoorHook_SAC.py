@@ -107,8 +107,8 @@ class DoorHookTrainer(SACActor, SACCritic):
         
     def train(self, load_path=None):
         # logging to TensorBoard and write checkpoints (in timesteps)
-        self.cfg["experiment"]["write_interval"] = 400
-        self.cfg["experiment"]["checkpoint_interval"] = 5000
+        self.cfg["experiment"]["write_interval"] = 20
+        self.cfg["experiment"]["checkpoint_interval"] = 2000
         self.cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_sac"
 
         self.agent = SAC(models=self.models,

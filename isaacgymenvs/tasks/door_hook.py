@@ -25,7 +25,7 @@ class DoorHook(VecTask):
 
         self.max_episode_length = 450
 
-        self.action_scale = 1.0
+        self.action_scale = 2.5
         self.start_position_noise = self.cfg["env"]["startPositionNoise"]
         self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
@@ -149,8 +149,8 @@ class DoorHook(VecTask):
         asset_options.armature = 0.005
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        ur3_dof_stiffness = to_torch([100] * 6, dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 100, 100, 100], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -186,7 +186,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.05, -0.2, 1.15) # initial position of the ur3
+        ur3_start_pose.p = gymapi.Vec3(0.05, -0.3, 1.15) # initial position of the ur3
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()

@@ -480,7 +480,7 @@ def compute_ur3_reward(
     hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
-    dist_reward = -1 * hand_dist * dist_reward_scale
+    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
     # print(hand_dist)
     print('----------------open_reward max:',torch.max(open_reward))
     print('--------------handle_reward max:', torch.max(handle_reward))

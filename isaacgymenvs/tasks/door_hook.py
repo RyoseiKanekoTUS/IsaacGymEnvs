@@ -150,7 +150,7 @@ class DoorHook(VecTask):
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 100, 100, 100], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 50, 50, 50], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)

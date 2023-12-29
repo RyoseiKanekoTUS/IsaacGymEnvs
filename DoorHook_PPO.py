@@ -69,14 +69,14 @@ class DoorHookTrainer(PPOnet):
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
-        self.memory = RandomMemory(memory_size=32, num_envs=self.env.num_envs, device=self.device)
+        self.memory = RandomMemory(memory_size=256, num_envs=self.env.num_envs, device=self.device)
         self.models = {}
         self.models["policy"] = PPOnet(self.env.observation_space, self.env.action_space, self.device)
         self.models["value"] = self.models["policy"]  # same instance: shared model
 
         self.cfg = PPO_DEFAULT_CONFIG.copy()
-        self.cfg["rollouts"] = 128  # memory_size
-        self.cfg["learning_epochs"] = 8
+        self.cfg["rollouts"] = 256  # memory_size
+        self.cfg["learning_epochs"] = 128
         self.cfg["mini_batches"] = 8  # 16 * 4096 / 8192
         self.cfg["discount_factor"] = 0.99
         self.cfg["lambda"] = 0.95

@@ -94,8 +94,8 @@ class DoorHookTrainer(SACActor, SACCritic):
         self.cfg["batch_size"] = 2048
         self.cfg["discount_factor"] = 0.99
         self.cfg["polyak"] = 0.005
-        self.cfg["actor_learning_rate"] = 5e-4
-        self.cfg["critic_learning_rate"] = 5e-4
+        self.cfg["actor_learning_rate"] = 5e-3
+        self.cfg["critic_learning_rate"] = 5e-3
         self.cfg["random_timesteps"] = 80
         self.cfg["learning_starts"] = 80
         self.cfg["grad_norm_clip"] = 0
@@ -142,7 +142,7 @@ class DoorHookTrainer(SACActor, SACCritic):
         else:
             pass
 
-        self.self.cfg_trainer = {"timesteps": 10000, "headless": False}
+        self.cfg_trainer = {"timesteps": 10000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -150,11 +150,11 @@ class DoorHookTrainer(SACActor, SACCritic):
 
 if __name__ == '__main__':
 
-    # path = 'skrl_runs/DoorHook/conv_ppo/23-12-28_17-35-32-724297_SAC/checkpoints/agent_26000.pt'
-    path =None
+    # path = 'skrl_runs/DoorHook/conv_sac/23-12-29_01-16-38-304979_SAC/checkpoints/agent_2000.pt'
+    path = None
     DoorHookTrainer = DoorHookTrainer()
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

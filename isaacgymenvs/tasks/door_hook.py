@@ -472,6 +472,8 @@ def compute_ur3_reward(
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
+    open_reward += (door_dof_pos[:,0] * door_dof_pos[:,0]) * open_reward_scale
+    # additional reward to open
     open_reward = torch.where(door_dof_pos[:,0] > 0.785, open_reward + 500, open_reward) 
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
     # print(hand_dist)

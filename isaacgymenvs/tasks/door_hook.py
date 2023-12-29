@@ -25,14 +25,14 @@ class DoorHook(VecTask):
 
         self.max_episode_length = 450
 
-        self.action_scale = 1.0
+        self.action_scale = 2.5
         self.start_position_noise = self.cfg["env"]["startPositionNoise"]
         self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
         self.open_reward_scale = 100.0
-        self.handle_reward_scale = 30.0
+        self.handle_reward_scale = 50.0
         self.dist_reward_scale = 10.0
         self.action_penalty_scale = 0.0001
 
@@ -149,8 +149,8 @@ class DoorHook(VecTask):
         asset_options.armature = 0.005
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        ur3_dof_stiffness = to_torch([100] * 6, dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 100, 100, 100], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -186,7 +186,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.2, -0.2, 1.2) # initial position of the ur3
+        ur3_start_pose.p = gymapi.Vec3(0.05, -0.3, 1.15) # initial position of the ur3
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -300,22 +300,14 @@ class DoorHook(VecTask):
         self.d_imgs = torch.stack([
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
-
-        # print(self.d_imgs[0].shape)
-        # normalization
-        out_idx = torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))
-        # out_idx = torch.where(self.d_imgs < self.depth_min | self.d_imgs > self.depth_max)
-        norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
-        norm_d_imgs[out_idx] = -1.0
-        self.pp_d_imgs = norm_d_imgs
-        # print(self.d_imgs.shape)
-
-        self.gym.end_access_image_tensors(self.sim)
-
-        # print('d_img_debug---------------------',self.d_imgs[4][4], self.d_imgs[5][5], self.d_imgs.shape)
-        # print('norm_d_img_debug----------------',self.pp_d_imgs[4][4], self.pp_d_imgs[5][5], norm_d_imgs.shape)
-        # print('debug fin')
         
+        norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0
+        self.pp_d_imgs = norm_d_imgs
+        self.gym.end_access_image_tensors(self.sim)
+        
+        # print(self.pp_d_imgs[0]) # debug
+
     def compute_observations(self):  # NOW DEFINING
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -480,6 +472,8 @@ def compute_ur3_reward(
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
+    open_reward += (door_dof_pos[:,0] * door_dof_pos[:,0]) * open_reward_scale
+    # additional reward to open
     open_reward = torch.where(door_dof_pos[:,0] > 0.785, open_reward + 500, open_reward) 
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
     # print(hand_dist)
@@ -501,7 +495,7 @@ def compute_ur3_reward(
     # rewards = open_reward + handle_reward + action_penalty # no dist_reward
     # rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
     # rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
-    rewards = open_reward + dist_reward + handle_reward
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
@@ -511,6 +505,16 @@ def compute_ur3_reward(
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf
+
+@torch.jit.script
+def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val): # wasnt better than normal function
+
+    # type: (Tensor, float, float, float) -> Tensor 
+    condition = torch.logical_or(d_imgs < depth_min, d_imgs > depth_max)
+    norm_d_imgs = (d_imgs - depth_min)/(depth_max - depth_min)
+    norm_d_imgs = torch.where(condition, replace_val, norm_d_imgs)
+    return norm_d_imgs 
+
 
 
 

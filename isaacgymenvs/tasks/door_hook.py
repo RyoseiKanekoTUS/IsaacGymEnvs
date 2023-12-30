@@ -157,10 +157,9 @@ class DoorHook(VecTask):
         self.num_door_dofs = self.gym.get_asset_dof_count(door_asset)
 
         # torque tensor for door handle
-        torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs + self.num_door_dofs], dtype=torch.float, device=self.device)
-        torque_tensor[:,7] = 500
-        self.handle_torque_tensor = gymtorch.unwrap_tensor(torque_tensor)
-        self.env_index_tensor = gymtorch.unwrap_tensor(torch.arange(self.num_envs, device=self.device, dtype=torch.int))
+        self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
+        self.handle_torque_tensor[:,7] = 100
+
         # print('----------------------------------------------- num properties ----------------------------------------')
         # print("num ur3 bodies: ", self.num_ur3_bodies)
         # print("num ur3 dofs: ", self.num_ur3_dofs)
@@ -319,12 +318,11 @@ class DoorHook(VecTask):
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
-        #apply door handle torque_tensor
-        self.gym.set_dof_actuation_force_tensor_indexed(self.sim, self.handle_torque_tensor, self.env_index_tensor, self.num_envs)
-
-        
         self.d_img_process()
         # self.debug_camera_imgs()
+
+        #apply door handle torque_tensor as spring actuation
+        self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position

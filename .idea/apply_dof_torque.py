@@ -63,7 +63,7 @@ if viewer is None:
     raise Exception("Failed to create viewer")
 
 # load ball asset
-asset_root = "../../assets"
+asset_root = "../assets"
 asset_file = "urdf/door_test/door_1.urdf"
 
 asset_options = gymapi.AssetOptions()
@@ -149,7 +149,7 @@ while not gym.query_viewer_has_closed(viewer):
         torques = torch.zeros((num_envs, 2), device=device, dtype=torch.float)
         indexes = torch.zeros((num_envs), device=device, dtype=torch.int)
         indexes = torch.tensor([0,1,2,3,4,5,6,7,8,9], device=device, dtype=torch.int)
-        print('indexex',indexes)
+        print('indexes shape',indexes.shape)
         # forces[:, 0, 2] = 300
         torques[:] = -50
         print(torques)

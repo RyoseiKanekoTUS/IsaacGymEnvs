@@ -33,6 +33,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         self.mlp = nn.Sequential(nn.Linear(108, 256),
                                          nn.ReLU(),
                                          nn.Linear(256, 64),
+                                         nn.ReLU()
                                         )
                                          
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
@@ -120,7 +121,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 200000, "headless": False}
+        self.cfg_trainer = {"timesteps": 500000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.train()

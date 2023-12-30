@@ -23,7 +23,7 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
 
-        self.max_episode_length = 600
+        self.max_episode_length = 300
 
         self.action_scale = 2.0
         self.start_position_noise = self.cfg["env"]["startPositionNoise"]

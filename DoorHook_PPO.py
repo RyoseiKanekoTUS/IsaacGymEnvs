@@ -33,6 +33,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         self.mlp = nn.Sequential(nn.Linear(108, 256),
                                          nn.ReLU(),
                                          nn.Linear(256, 64),
+                                         nn.ReLU()
                                         )
                                          
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
@@ -150,8 +151,8 @@ if __name__ == '__main__':
     path = None
     path = 'skrl_runs/DoorHook/conv_ppo/23-12-29_18-07-04-788674_PPO_best/checkpoints/agent_24000.pt'
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

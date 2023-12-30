@@ -326,7 +326,7 @@ class DoorHook(VecTask):
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
-        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientationskrl_runs/DoorHook/conv_ppo/23-12-30_10-27-09-165116_PPO_additional_1/checkpoints/agent_15000.pt
+        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
         hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
         hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
 

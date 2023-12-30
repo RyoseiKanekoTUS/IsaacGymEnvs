@@ -25,16 +25,16 @@ class DoorHook(VecTask):
 
         self.max_episode_length = 300
 
-        self.action_scale = 2.0
+        self.action_scale = 1.0
         self.start_position_noise = self.cfg["env"]["startPositionNoise"]
         self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 2000.0
-        self.handle_reward_scale = 100.0
+        self.open_reward_scale = 1000.0
+        self.handle_reward_scale = 200.0
         self.dist_reward_scale = 10.0
-        self.action_penalty_scale = 0.0001
+        self.action_penalty_scale = 0.0005
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -158,7 +158,7 @@ class DoorHook(VecTask):
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,7] = -20
+        self.handle_torque_tensor[:,7] = -5
 
         # print('----------------------------------------------- num properties ----------------------------------------')
         # print("num ur3 bodies: ", self.num_ur3_bodies)
@@ -484,7 +484,7 @@ def compute_ur3_reward(
     open_reward = torch.where(door_dof_pos[:,0] > 0.785, open_reward + 500, open_reward) 
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
     # print(hand_dist)
-    hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
+    hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale

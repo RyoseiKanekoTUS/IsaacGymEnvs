@@ -151,11 +151,12 @@ class DoorHookTrainer(SACActor, SACCritic):
 
 if __name__ == '__main__':
 
-    # path = 'skrl_runs/DoorHook/conv_sac/23-12-29_01-16-38-304979_SAC/checkpoints/agent_2000.pt'
     path = None
+    # path = 'skrl_runs/DoorHook/conv_sac/23-12-29_01-16-38-304979_SAC/checkpoints/agent_2000.pt'
+
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

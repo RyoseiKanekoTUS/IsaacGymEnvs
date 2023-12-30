@@ -123,7 +123,7 @@
         <inertial>
             <origin xyz="0.0 0.0 0.0" rpy="3.14159 0 1.57"/>
             <mass value="1.0"/>
-            <inertia ixx="14.2053" ixy="0.0004" ixz="0.0000" iyy="17.1997" iyz="0.0000" izz="3.0298"/>
+            <!-- <inertia ixx="14.2053" ixy="0.0004" ixz="0.0000" iyy="17.1997" iyz="0.0000" izz="3.0298"/> -->
         </inertial>
     </link>
     

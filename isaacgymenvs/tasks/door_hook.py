@@ -158,7 +158,7 @@ class DoorHook(VecTask):
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,7] = -100
+        self.handle_torque_tensor[:,7] = -10
 
         # print('----------------------------------------------- num properties ----------------------------------------')
         # print("num ur3 bodies: ", self.num_ur3_bodies)
@@ -169,6 +169,7 @@ class DoorHook(VecTask):
 
         # set ur3 dof properties
         ur3_dof_props = self.gym.get_asset_dof_properties(ur3_asset)
+        print(ur3_dof_props)
         self.ur3_dof_lower_limits = []
         self.ur3_dof_upper_limits = []
 
@@ -184,7 +185,8 @@ class DoorHook(VecTask):
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
         self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
         self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
-        
+        print(ur3_dof_props)
+
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_asset)
     

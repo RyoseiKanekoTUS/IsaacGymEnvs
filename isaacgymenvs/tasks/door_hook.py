@@ -478,16 +478,18 @@ def compute_ur3_reward(
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
-    open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
-    open_reward += (door_dof_pos[:,0] * door_dof_pos[:,0]) * open_reward_scale
+    # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
+    open_reward = (door_dof_pos[:,0] * door_dof_pos[:,0]) * open_reward_scale
     # additional reward to open
-    open_reward = torch.where(door_dof_pos[:,0] > 0.785, open_reward + 500, open_reward) 
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+
+
+
     # print(hand_dist)
     print('----------------open_reward max:',torch.max(open_reward))
     print('--------------handle_reward max:', torch.max(handle_reward))
@@ -503,12 +505,16 @@ def compute_ur3_reward(
     # rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
     # rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
     rewards = open_reward + dist_reward + handle_reward + action_penalty
+
+    # success reward
+    rewards = torch.where(door_dof_pos[:,0] > 1.0, rewards + 10000, rewards)
+
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
-    reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
+    reset_buf = torch.where(door_dof_pos[:, 0] >= 1.047, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf

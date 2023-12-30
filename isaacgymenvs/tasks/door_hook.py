@@ -23,7 +23,7 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
 
-        self.max_episode_length = 450
+        self.max_episode_length = 600
 
         self.action_scale = 2.0
         self.start_position_noise = self.cfg["env"]["startPositionNoise"]
@@ -31,8 +31,8 @@ class DoorHook(VecTask):
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 100.0
-        self.handle_reward_scale = 50.0
+        self.open_reward_scale = 2000.0
+        self.handle_reward_scale = 100.0
         self.dist_reward_scale = 10.0
         self.action_penalty_scale = 0.0001
 
@@ -149,7 +149,7 @@ class DoorHook(VecTask):
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 100, 100, 100], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 50, 50, 50], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -487,7 +487,7 @@ def compute_ur3_reward(
     hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
-    dist_reward = -1 * hand_dist * dist_reward_scale
+    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
     # print(hand_dist)
     print('----------------open_reward max:',torch.max(open_reward))
     print('--------------handle_reward max:', torch.max(handle_reward))

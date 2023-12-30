@@ -32,6 +32,7 @@ class SACActor(GaussianMixin, Model):
         self.mlp = nn.Sequential(nn.Linear(108, 256),
                                          nn.ReLU(),
                                          nn.Linear(256, 64),
+                                         nn.ReLU(),
                                          nn.Linear(64, self.num_actions),
                                          nn.Tanh()
                                         )

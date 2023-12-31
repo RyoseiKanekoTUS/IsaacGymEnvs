@@ -507,14 +507,14 @@ def compute_ur3_reward(
     rewards = open_reward + dist_reward + handle_reward + action_penalty
 
     # success reward
-    rewards = torch.where(door_dof_pos[:,0] > 1.0, rewards + 10000, rewards)
+    rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
 
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
-    reset_buf = torch.where(door_dof_pos[:, 0] >= 1.047, torch.ones_like(reset_buf), reset_buf)
+    reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf

@@ -370,9 +370,15 @@ class DoorHook(VecTask):
         # env_ids_int32 = env_ids.to(dtype=torch.int32)
 
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
-        pos = tensor_clamp(
-            self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
-            self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
+        # -0.25 - 0.25 noise
+        # with no limit
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
+
+        # with limit
+        # pos = tensor_clamp(
+        #     self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
+        #     self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)            
+        
         self.ur3_dof_pos[env_ids, :] = pos
         self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
         self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos

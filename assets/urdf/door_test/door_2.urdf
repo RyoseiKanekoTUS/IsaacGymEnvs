@@ -10,7 +10,7 @@
         
     <joint name = 'base_joint' type = 'fixed'>
         <parent link = 'base_link'/>
-        <origin xyz = '0 0.5 0.0' rpy='0 0 3.14'/>
+        <origin xyz = '0 0.5 0.0' rpy='0 0 0'/>
         <!-- if move y : the door will slide -->
         <child link = 'door_frame'/>
     </joint>
@@ -55,10 +55,10 @@
     </link>
 
     <joint name = 'door_hinge' type = 'revolute'>
-        <axis xyz = '0 0 1' rpy = '0 0 0 '/>
+        <axis xyz = '0 0 1' rpy = '0 0 3.14159 '/>
         <origin xyz = '0.432 0.06858 2.040'/>
         <limit lower = '0' upper = '1.57' effort='100' velocity="100.00"/>
-        <dynamics damping="50.0" friction="0.005"/>
+        <dynamics damping="5.0" friction="0.005"/>
         <parent link = 'door_frame'/>
         <child link = 'door'/>
     </joint>

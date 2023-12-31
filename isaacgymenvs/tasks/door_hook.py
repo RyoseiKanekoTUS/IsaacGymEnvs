@@ -326,9 +326,9 @@ class DoorHook(VecTask):
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
-        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
-        hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
-        hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
+        # hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
+        # hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
+        # hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
 
         # door handle rigid body states
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
@@ -339,9 +339,9 @@ class DoorHook(VecTask):
         # print(self.hand_dist.shape)
 
         # print(self.door_handle) index of door_handle
-        door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]
-        door_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
-        door_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
+        # door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]
+        # door_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
+        # door_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
 
         # ur3 dof states [x y z rx ry rz] to obs_buf
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
@@ -355,11 +355,11 @@ class DoorHook(VecTask):
         # print('self.door_dof_pos :', self.door_dof_pos.shape)
         self.door_dof_vel = self.door_dof_state[..., 1] 
 
-        door_hinge_ang = self.door_dof_pos[:,0] # 0 : hinge, 1 : handle
-        # print('doof_hinge_ang :', door_hinge_ang[0])
-        door_hinge_vel = self.door_dof_vel[:,0]
-        door_handle_ang = self.door_dof_pos[:,1]
-        door_handle_vel = self.door_dof_vel[:,1]
+        # door_hinge_ang = self.door_dof_pos[:,0] # 0 : hinge, 1 : handle
+        # # print('doof_hinge_ang :', door_hinge_ang[0])
+        # door_hinge_vel = self.door_dof_vel[:,0]
+        # door_handle_ang = self.door_dof_pos[:,1]
+        # door_handle_vel = self.door_dof_vel[:,1]
         # define obsefcation space
         self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
         # print('observation space size:', self.obs_buf.shape)
@@ -367,7 +367,7 @@ class DoorHook(VecTask):
         return self.obs_buf    
         
     def reset_idx(self, env_ids):
-        env_ids_int32 = env_ids.to(dtype=torch.int32)
+        # env_ids_int32 = env_ids.to(dtype=torch.int32)
 
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         pos = tensor_clamp(

@@ -500,7 +500,7 @@ def compute_ur3_reward(
     print('----------------open_reward max:',torch.max(open_reward))
     print('--------------handle_reward max:', torch.max(handle_reward))
     print('----------------dist_reward max:', torch.max(dist_reward))
-    print('-------------action_penalty max:', torch.max(action_penalty))
+    print('-------------action_penalty max:', torch.min(action_penalty))
 
     # edited reward to diff_hinge_ang handle_rew.
 

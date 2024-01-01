@@ -77,7 +77,7 @@ class DoorHookTrainer(PPOnet):
 
         self.cfg = PPO_DEFAULT_CONFIG.copy()
         self.cfg["rollouts"] = 256  # memory_size
-        self.cfg["learning_epochs"] = 12
+        self.cfg["learning_epochs"] = 24
         self.cfg["mini_batches"] = 128  # 16 * 4096 / 8192
         self.cfg["discount_factor"] = 0.99
         self.cfg["lambda"] = 0.95
@@ -149,7 +149,7 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = 'skrl_runs/DoorHook/conv_ppo/24-01-01_01-27-05-304134_PPO/checkpoints/agent_10000.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-01_01-27-05-304134_PPO/checkpoints/agent_10000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.eval(path)

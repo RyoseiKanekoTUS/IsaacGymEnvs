@@ -118,11 +118,6 @@ class DoorHook(VecTask):
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
         door_asset_file = 'urdf/door_test/door_1.urdf'
-
-        if "asset" in self.cfg["env"]:
-            asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.cfg["env"]["asset"].get("assetRoot", asset_root))
-            ur3_asset_file = self.cfg["env"]["asset"].get("assetFileNameUr3", ur3_asset_file)
-            door_asset_file = self.cfg["env"]["asset"].get("assetFileNameDoor", door_asset_file)
         
         # load ur3 asset
         asset_options = gymapi.AssetOptions()

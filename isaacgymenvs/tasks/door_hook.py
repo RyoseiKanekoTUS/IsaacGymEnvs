@@ -378,7 +378,7 @@ class DoorHook(VecTask):
         # pos = tensor_clamp(
         #     self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
         #     self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)            
-        
+
         self.ur3_dof_pos[env_ids, :] = pos
         self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
         self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos
@@ -485,7 +485,7 @@ def compute_ur3_reward(
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
-    open_reward = (door_dof_pos[:,0] * door_dof_pos[:,0]) * open_reward_scale
+    open_reward = ((door_dof_pos[:,0] * door_dof_pos[:,0]) + (door_dof_pos[:,0] - door_dof_pos_prev[:,0])) * open_reward_scale
     # additional reward to open
     handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
     # print(hand_dist)

@@ -158,7 +158,7 @@ while not gym.query_viewer_has_closed(viewer):
         # forces[:, 0, 2] = 300
         torques[:,0] = -50
         # time.sleep(1)
-        torques[:,1] = -50
+        # torques[:,1] = -50
         print(torques)
         # gym.apply_rigid_body_force_tensors(sim, gymtorch.unwrap_tensor(forces), gymtorch.unwrap_tensor(torques), gymapi.ENV_SPACE)
         gym.set_dof_actuation_force_tensor_indexed(sim, gymtorch.unwrap_tensor(torques) , gymtorch.unwrap_tensor(indexes), num_envs)

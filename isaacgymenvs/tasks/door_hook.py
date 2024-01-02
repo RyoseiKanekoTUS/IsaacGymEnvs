@@ -367,7 +367,7 @@ class DoorHook(VecTask):
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
         # with no limit
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.5 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
 
         # with limit
         # pos = tensor_clamp(
@@ -397,6 +397,7 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
+        self.actions = self.zero_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +  self.dt * self.actions * self.action_scale
         # -----------with clamp limit --------------------------------------

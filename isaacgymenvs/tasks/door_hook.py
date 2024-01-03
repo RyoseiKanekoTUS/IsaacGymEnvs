@@ -26,7 +26,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.0
-        self.start_position_noise = self.cfg["env"]["startPositionNoise"]
+        self.start_position_noise = 0.1
         self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -236,11 +236,12 @@ class DoorHook(VecTask):
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             door_pose = door_start_pose
-            door_pose.p.x += self.start_position_noise * (np.random.rand() - 0.5)
+            dx = np.random.rand() - 0.5
+            door_pose.p.x += self.start_position_noise * dx
             dz = 0.5 * np.random.rand()
             dy = np.random.rand() - 0.5
             door_pose.p.y += self.start_position_noise * dy
-            door_pose.p.z += self.start_position_noise * dz
+            # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
 
@@ -362,7 +363,7 @@ class DoorHook(VecTask):
         # door_handle_vel = self.door_dof_vel[:,1]
         # define obsefcation space
         self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
-        print(self.pp_d_imgs)
+        # print(self.pp_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    

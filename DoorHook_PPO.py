@@ -64,7 +64,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 class DoorHookTrainer(PPOnet):
     def __init__(self):
 
-        set_seed(42)
+        set_seed(210)
         
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)

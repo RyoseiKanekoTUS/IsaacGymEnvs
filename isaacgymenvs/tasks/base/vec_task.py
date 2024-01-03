@@ -348,7 +348,7 @@ class VecTask(Env):
     @abc.abstractmethod
     def pre_physics_step(self, actions: torch.Tensor):
         """Apply the actions to the environment (eg by setting torques, position targets).
-
+        
         Args:
             actions: the actions to apply
         """
@@ -370,9 +370,9 @@ class VecTask(Env):
         # randomize actions
         if self.dr_randomizations.get('actions', None):
             actions = self.dr_randomizations['actions']['noise_lambda'](actions)
-        print('input for action_tensor:',actions)
+        # print('input for action_tensor:',actions)
         action_tensor = torch.clamp(actions, -self.clip_actions, self.clip_actions)
-        print('action_tensor:', action_tensor)
+        # print('action_tensor:', action_tensor)
         # apply actions
         self.pre_physics_step(action_tensor)
 

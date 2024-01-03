@@ -34,7 +34,7 @@ class DoorHook(VecTask):
         self.open_reward_scale = 1000.0
         self.handle_reward_scale = 200.0
         self.dist_reward_scale = 10.0
-        self.action_penalty_scale = 0.0005
+        self.action_penalty_scale = 0.005
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -144,8 +144,8 @@ class DoorHook(VecTask):
         asset_options.armature = 0.005
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        ur3_dof_stiffness = to_torch([199900, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([0,0,0,0,0,0], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([[0, 0, 0, 0, 0, 0]], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -186,7 +186,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 0.2) # initial position of the robot
+        ur3_start_pose.p = gymapi.Vec3(0.5, -0.3, 1.02) # initial position of the robot
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -204,7 +204,7 @@ class DoorHook(VecTask):
         # camera pose setting
         camera_tf = gymapi.Transform()
         camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
-        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(5.0))
+        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(0))
 
         self.camera_props.enable_tensors = True # when Vram larger
 
@@ -340,18 +340,20 @@ class DoorHook(VecTask):
         # door_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
 
         # ur3 dof states [x y z rx ry rz] to obs_buf
-        self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
-        self.ur3_dof_pos = self.ur3_dof_state[...,0]
-        print('current_pos:', self.ur3_dof_pos)
-        self.ur3_dof_vel = self.ur3_dof_state[...,1]
+        # self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
+        # self.ur3_dof_pos = self.ur3_dof_state[...,0]
+        dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
+        # print(dof_pos_dt)
+        # print('prev_pos:',self.ur3_dof_pos_prev)
+        # print('current_pos:', self.ur3_dof_pos)
+        # self.ur3_dof_vel = self.ur3_dof_state[...,1]
 
         # door dof states [hinge handle] ang to obs_buf
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
-        # print('self.door_dof_state :',self.door_dof_state.shape)
-        self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
-        # print(self.door_dof_pos)
-        # print('self.door_dof_pos :', self.door_dof_pos.shape)
-        self.door_dof_vel = self.door_dof_state[..., 1] 
+    
+        # self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
+        
+        # self.door_dof_vel = self.door_dof_state[..., 1] 
 
         # door_hinge_ang = self.door_dof_pos[:,0] # 0 : hinge, 1 : handle
         # # print('doof_hinge_ang :', door_hinge_ang[0])
@@ -359,7 +361,8 @@ class DoorHook(VecTask):
         # door_handle_ang = self.door_dof_pos[:,1]
         # door_handle_vel = self.door_dof_vel[:,1]
         # define obsefcation space
-        self.obs_buf = torch.cat((self.ur3_dof_pos, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
+        print(self.pp_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    
@@ -370,8 +373,12 @@ class DoorHook(VecTask):
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
         # with no limit
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.5 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-
+        rand_pos = -1 * torch.rand(len(env_ids), self.num_ur3_dofs, device=self.device)
+        rand_pos[:,1:] += 0.5
+        # print(rand_pos)
+        # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.5 * rand_pos
+        # print(pos)
         # with limit
         # pos = tensor_clamp(
         #     self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
@@ -401,10 +408,10 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
-        print('self.actions',self.actions)
+        # print('self.actions',self.actions)
         # self.actions = self.zero_actions()
         # print('self.actions', self.actions) # for debug
-        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +  self.dt * self.actions * self.action_scale
+        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
         # -----------with clamp limit --------------------------------------
         # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
         #     targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
@@ -427,7 +434,7 @@ class DoorHook(VecTask):
         self.door_dof_pos_prev = self.door_dof_pos.clone()
         self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
         
-        print('prev_pos:',self.ur3_dof_pos_prev)
+        # print('prev_pos:',self.ur3_dof_pos_prev)
 
 
         # debug viz
@@ -501,27 +508,23 @@ def compute_ur3_reward(
 
 
     # print(hand_dist)
-    print('----------------open_reward max:',torch.max(open_reward))
-    print('--------------handle_reward max:', torch.max(handle_reward))
+    # print('----------------open_reward max:',torch.max(open_reward))
+    # print('--------------handle_reward max:', torch.max(handle_reward))
     print('----------------dist_reward max:', torch.max(dist_reward))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
     # edited reward to diff_hinge_ang handle_rew.
 
     # action penalty must be minus??
-    # rewards = open_reward_scale * open_reward + handle_reward * handle_reward_scale - action_penalty_scale * action_penalty # if action penalty needed
-    # rewards = open_reward + handle_reward  # no action penalty
-    # rewards = open_reward + handle_reward + action_penalty # no dist_reward
-    # rewards = open_reward + handle_reward + dist_reward + action_penalty # with dist reward, action penalty
-    # rewards = open_reward + dist_reward + action_penalty # with dist reward, no handle reward, action penalty to eval no clamp
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
+    # rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = dist_reward + action_penalty
 
     # success reward
     rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
 
     # rewards = dist_reward
-    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)

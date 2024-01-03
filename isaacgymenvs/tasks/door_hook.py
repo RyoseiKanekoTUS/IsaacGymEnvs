@@ -352,7 +352,7 @@ class DoorHook(VecTask):
         # door dof states [hinge handle] ang to obs_buf
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
     
-        # self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
+        self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
         # self.door_dof_vel = self.door_dof_state[..., 1] 
 

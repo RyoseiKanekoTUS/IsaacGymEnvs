@@ -57,6 +57,8 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         fetures = self.d_feture_extractor(pp_d_imgs)
         combined = torch.cat([fetures, ee_states], dim=-1)
         if role == 'policy':
+            print('output:',self.mean_layer(self.mlp(combined)))
+            print(self.log_std_parameter)
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
@@ -89,7 +91,7 @@ class DoorHookTrainer(PPOnet):
         self.cfg["grad_norm_clip"] = 1.0
         self.cfg["ratio_clip"] = 0.2
         self.cfg["value_clip"] = 0.2
-        self.cfg["clip_predicted_values"] = True
+        self.cfg["clip_predicted_values"] = False
         self.cfg["entropy_loss_scale"] = 0.0
         self.cfg["value_loss_scale"] = 2.0
         self.cfg["kl_threshold"] = 0

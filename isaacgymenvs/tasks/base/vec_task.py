@@ -370,8 +370,9 @@ class VecTask(Env):
         # randomize actions
         if self.dr_randomizations.get('actions', None):
             actions = self.dr_randomizations['actions']['noise_lambda'](actions)
-
+        print('input for action_tensor:',actions)
         action_tensor = torch.clamp(actions, -self.clip_actions, self.clip_actions)
+        print('action_tensor:', action_tensor)
         # apply actions
         self.pre_physics_step(action_tensor)
 

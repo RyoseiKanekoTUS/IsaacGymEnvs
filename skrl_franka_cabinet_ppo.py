@@ -47,6 +47,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 
     def compute(self, inputs, role):
         if role == "policy":
+            print('output from net:',self.mean_layer(self.net(inputs["states"])))
             return self.mean_layer(self.net(inputs["states"])), self.log_std_parameter, {}
         elif role == "value":
             return self.value_layer(self.net(inputs["states"])), {}

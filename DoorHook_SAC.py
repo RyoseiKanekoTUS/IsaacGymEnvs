@@ -44,6 +44,7 @@ class SACActor(GaussianMixin, Model):
         ee_states = states[:, :12]
         pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         fetures = self.d_feture_extractor(pp_d_imgs)
+        print(self.mlp(torch.cat([fetures, ee_states], dim=-1)))
         return self.mlp(torch.cat([fetures, ee_states], dim=-1)), self.log_std_parameter, {}
     
 class SACCritic(DeterministicMixin, Model):

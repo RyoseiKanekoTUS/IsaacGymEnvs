@@ -342,7 +342,7 @@ class DoorHook(VecTask):
         # ur3 dof states [x y z rx ry rz] to obs_buf
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
         self.ur3_dof_pos = self.ur3_dof_state[...,0]
-        print(self.ur3_dof_pos)
+        print('current_pos:', self.ur3_dof_pos)
         self.ur3_dof_vel = self.ur3_dof_state[...,1]
 
         # door dof states [hinge handle] ang to obs_buf
@@ -401,6 +401,7 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
+        print('self.actions',self.actions)
         # self.actions = self.zero_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +  self.dt * self.actions * self.action_scale
@@ -426,7 +427,7 @@ class DoorHook(VecTask):
         self.door_dof_pos_prev = self.door_dof_pos.clone()
         self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
         
-        print(self.ur3_dof_pos_prev)
+        print('prev_pos:',self.ur3_dof_pos_prev)
 
 
         # debug viz

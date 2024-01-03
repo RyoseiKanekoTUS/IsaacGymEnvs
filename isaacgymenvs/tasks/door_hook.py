@@ -26,7 +26,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.0
-        self.start_position_noise = 0.1
+        self.start_position_noise = 0.2
         self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -237,10 +237,10 @@ class DoorHook(VecTask):
 
             door_pose = door_start_pose
             dx = np.random.rand() - 0.5
-            door_pose.p.x += self.start_position_noise * dx
+            door_pose.p.x = self.start_position_noise * dx
             dz = 0.5 * np.random.rand()
             dy = np.random.rand() - 0.5
-            door_pose.p.y += self.start_position_noise * dy
+            door_pose.p.y = self.start_position_noise * dy
             # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
@@ -503,29 +503,29 @@ def compute_ur3_reward(
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
-    # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
+    # dist_reward = -1 * hand_dist * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
 
 
 
     # print(hand_dist)
-    # print('----------------open_reward max:',torch.max(open_reward))
-    # print('--------------handle_reward max:', torch.max(handle_reward))
+    print('----------------open_reward max:',torch.max(open_reward))
+    print('--------------handle_reward max:', torch.max(handle_reward))
     print('----------------dist_reward max:', torch.max(dist_reward))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
     # edited reward to diff_hinge_ang handle_rew.
 
     # action penalty must be minus??
-    # rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
     rewards = dist_reward + action_penalty
 
     # success reward
     rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
 
     # rewards = dist_reward
-    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)

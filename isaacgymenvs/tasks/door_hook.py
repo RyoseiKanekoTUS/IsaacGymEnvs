@@ -76,6 +76,7 @@ class DoorHook(VecTask):
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
         # print(self.ur3_dof_state.shape)
         self.ur3_dof_pos = self.ur3_dof_state[..., 0]
+        self.ur3_dof_pos_prev = torch.zeros_like(self.ur3_dof_pos, device=self.device)
         self.ur3_dof_vel = self.ur3_dof_state[..., 1]
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         # print(self.door_dof_state.shape)
@@ -143,8 +144,8 @@ class DoorHook(VecTask):
         asset_options.armature = 0.005
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
-        ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 50, 50, 50], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([199900, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([0,0,0,0,0,0], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -170,8 +171,8 @@ class DoorHook(VecTask):
         for i in range(self.num_ur3_dofs):
             ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
                 # print(f'############### feed back ####################\n{ur3_dof_props}')
-            ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+            # ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
+            # ur3_dof_props['damping'][i] = ur3_dof_damping[i]
 
             self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
             self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
@@ -185,7 +186,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.05, -0.3, 1.15) # initial position of the ur3
+        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 0.2) # initial position of the robot
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         door_start_pose = gymapi.Transform()
@@ -341,12 +342,14 @@ class DoorHook(VecTask):
         # ur3 dof states [x y z rx ry rz] to obs_buf
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
         self.ur3_dof_pos = self.ur3_dof_state[...,0]
+        print(self.ur3_dof_pos)
         self.ur3_dof_vel = self.ur3_dof_state[...,1]
 
         # door dof states [hinge handle] ang to obs_buf
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         # print('self.door_dof_state :',self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
+        # print(self.door_dof_pos)
         # print('self.door_dof_pos :', self.door_dof_pos.shape)
         self.door_dof_vel = self.door_dof_state[..., 1] 
 
@@ -381,6 +384,7 @@ class DoorHook(VecTask):
         # reset door dof state
         self.door_dof_state[env_ids, :] = torch.zeros_like(self.door_dof_state[env_ids])
         self.door_dof_pos_prev[env_ids, :] = torch.zeros_like(self.door_dof_pos_prev[env_ids])       
+        self.ur3_dof_pos_prev[env_ids, :] = torch.zeros_like(self.ur3_dof_pos_prev[env_ids])       
 
         multi_env_ids_int32 = self.global_indices[env_ids, :2].flatten()
         self.gym.set_dof_position_target_tensor_indexed(self.sim,
@@ -397,7 +401,7 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +  self.dt * self.actions * self.action_scale
         # -----------with clamp limit --------------------------------------
@@ -420,6 +424,9 @@ class DoorHook(VecTask):
         self.compute_observations()
         self.compute_reward(self.actions)
         self.door_dof_pos_prev = self.door_dof_pos.clone()
+        self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
+        
+        print(self.ur3_dof_pos_prev)
 
 
         # debug viz

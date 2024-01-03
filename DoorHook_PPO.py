@@ -43,7 +43,6 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         self.value_layer = nn.Linear(64, 1)
 
     def act(self, inputs, role):
-
         if role == 'policy':
             return GaussianMixin.act(self, inputs , role)
         elif role == 'value':
@@ -57,8 +56,6 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         fetures = self.d_feture_extractor(pp_d_imgs)
         combined = torch.cat([fetures, ee_states], dim=-1)
         if role == 'policy':
-            print('output:',self.mean_layer(self.mlp(combined)))
-            print(self.log_std_parameter)
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
@@ -154,8 +151,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/conv_ppo/24-01-01_23-37-40-336812_PPO/checkpoints/agent_62000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

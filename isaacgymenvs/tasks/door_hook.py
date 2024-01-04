@@ -25,7 +25,7 @@ class DoorHook(VecTask):
 
         self.max_episode_length = 300
 
-        self.action_scale = 1.0
+        self.action_scale = 1.5
         self.start_position_noise = 0.75
         self.start_rotation_noise = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
@@ -176,10 +176,7 @@ class DoorHook(VecTask):
             ur3_dof_props['lower'][i] = -10
             ur3_dof_props['upper'][i] = 10
 
-
-            # self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
-            # self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
-        
+            ur3_dof_props['effort'][i] = 500
         print(ur3_dof_props)
 
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)

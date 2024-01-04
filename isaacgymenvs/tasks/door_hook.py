@@ -26,8 +26,8 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.0
-        self.start_position_noise = 0.2
-        self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
+        self.start_position_noise = 0.75
+        self.start_rotation_noise = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
@@ -243,9 +243,10 @@ class DoorHook(VecTask):
             door_pose = door_start_pose
             dx = np.random.rand() - 0.5
             door_pose.p.x = self.start_position_noise * dx
-            dz = 0.5 * np.random.rand()
+            dz = np.random.rand() - 0.5
             dy = np.random.rand() - 0.5
-            door_pose.p.y = 5*self.start_position_noise * dy
+            door_pose.p.y = self.start_position_noise * dy
+            door_pose.r.z = self.start_rotation_noise * dz
             # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
@@ -290,7 +291,7 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        for j in [0]:
+        for j in [0,1,2,3,4,5]:
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
@@ -421,6 +422,7 @@ class DoorHook(VecTask):
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions)
         # self.actions = self.zero_actions()
+        # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
         # -----------with clamp limit --------------------------------------
@@ -513,8 +515,8 @@ def compute_ur3_reward(
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
-    dist_reward = -1 * hand_dist * dist_reward_scale
-    # dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+    # dist_reward = -1 * hand_dist * dist_reward_scale
+    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
 
 
 
@@ -527,8 +529,8 @@ def compute_ur3_reward(
     # edited reward to diff_hinge_ang handle_rew.
 
     # action penalty must be minus??
-    # rewards = open_reward + dist_reward + handle_reward + action_penalty
-    rewards = dist_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
+    # rewards = dist_reward + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)

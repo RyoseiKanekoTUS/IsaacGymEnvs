@@ -108,7 +108,7 @@ class DoorHookTrainer(PPOnet):
         # logging to TensorBoard and write checkpoints (in timesteps)
         self.cfg["experiment"]["write_interval"] = 20
         self.cfg["experiment"]["checkpoint_interval"] = 1000
-        self.cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
+        self.cfg["experiment"]["directory"] = "dev_skrl_runs/DoorHook/conv_ppo"
 
         self.agent = PPO(models=self.models,
                         memory=self.memory,

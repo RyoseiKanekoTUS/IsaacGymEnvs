@@ -47,8 +47,8 @@ class DoorHook(VecTask):
 
         # set camera properties for realsense now : 435 and 405
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 640
-        self.camera_props.height = 480
+        self.camera_props.width = 64
+        self.camera_props.height = 48
         self.depth_min = -3.0
         self.depth_max = -0.07
 
@@ -349,10 +349,12 @@ class DoorHook(VecTask):
         # self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
         # self.ur3_dof_pos = self.ur3_dof_state[...,0]
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
-        print('prev_pos:', self.ur3_dof_pos_prev)
-        print('current_pos:',self.ur3_dof_pos)
-        print('dt:', dof_pos_dt)
-        print('vel',self.ur3_dof_vel)
+        
+        # print('prev_pos:', self.ur3_dof_pos_prev)
+        # print('current_pos:',self.ur3_dof_pos)
+        # print('dt:', dof_pos_dt)
+        # print('vel',self.ur3_dof_vel)
+
         # print('prev_pos:',self.ur3_dof_pos_prev)
         # print('current_pos:', self.ur3_dof_pos)
         # self.ur3_dof_vel = self.ur3_dof_state[...,1]
@@ -525,11 +527,11 @@ def compute_ur3_reward(
     # edited reward to diff_hinge_ang handle_rew.
 
     # action penalty must be minus??
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
-    # rewards = dist_reward + action_penalty
+    # rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = dist_reward + action_penalty
 
     # success reward
-    rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
+    # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
 
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))

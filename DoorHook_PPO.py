@@ -23,17 +23,17 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
 
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
+                                                nn.ELU(),
+                                                nn.AvgPool2d(2, stride=2),
                                                 nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
+                                                nn.ELU(),
+                                                nn.AvgPool2d(2, stride=2),
                                                 nn.Flatten()
                                                 )
         self.mlp = nn.Sequential(nn.Linear(108, 256),
-                                         nn.ReLU(),
+                                         nn.ELU(),
                                          nn.Linear(256, 64),
-                                         nn.ReLU()
+                                         nn.ELU()
                                         )
                                          
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
@@ -54,7 +54,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         ee_states = states[:, :12]
         pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         fetures = self.d_feture_extractor(pp_d_imgs)
-        print('d_fetures:',fetures)
+        # print('d_fetures:',fetures)
         combined = torch.cat([fetures, ee_states], dim=-1)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
@@ -149,11 +149,11 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = 'skrl_runs/DoorHook/conv_ppo/24-01-03_22-50-10-437847_PPO/checkpoints/agent_10000.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-03_22-50-10-437847_PPO/checkpoints/agent_10000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

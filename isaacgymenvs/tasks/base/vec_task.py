@@ -417,6 +417,16 @@ class VecTask(Env):
         actions = torch.zeros([self.num_envs, self.num_actions], dtype=torch.float32, device=self.rl_device)
 
         return actions
+    
+    def uni_actions(self) -> torch.Tensor:
+        """Returns a buffer with one actions to check dof conditions
+
+        Returns:
+            A buffer of zero torch actions
+        """
+        actions = torch.ones([self.num_envs, self.num_actions], dtype=torch.float32, device=self.rl_device)
+
+        return actions
 
     def reset_idx(self, env_idx):
         """Reset environment with indces in env_idx. 

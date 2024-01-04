@@ -349,7 +349,10 @@ class DoorHook(VecTask):
         # self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
         # self.ur3_dof_pos = self.ur3_dof_state[...,0]
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
-        # print(dof_pos_dt)
+        print('prev_pos:', self.ur3_dof_pos_prev)
+        print('current_pos:',self.ur3_dof_pos)
+        print('dt:', dof_pos_dt)
+        print('vel',self.ur3_dof_vel)
         # print('prev_pos:',self.ur3_dof_pos_prev)
         # print('current_pos:', self.ur3_dof_pos)
         # self.ur3_dof_vel = self.ur3_dof_state[...,1]

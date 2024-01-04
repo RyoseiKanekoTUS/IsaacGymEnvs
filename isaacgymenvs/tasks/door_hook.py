@@ -362,7 +362,7 @@ class DoorHook(VecTask):
         # door_handle_vel = self.door_dof_vel[:,1]
         # define obsefcation space
         self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
-        print(self.pp_d_imgs)
+        # print(self.pp_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    
@@ -377,7 +377,7 @@ class DoorHook(VecTask):
         rand_pos[:,1:] += 0.5
         # print(rand_pos)
         # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.5 * rand_pos
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + 1.0 * rand_pos
         # print(pos)
         # with limit
         # pos = tensor_clamp(
@@ -502,8 +502,8 @@ def compute_ur3_reward(
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
-    # dist_reward = -1 * (hand_dist_thresh) * dist_reward_scale
-    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+    dist_reward = -1 * hand_dist * dist_reward_scale
+    # dist_reward = -1 * hand_dist_thresh * dist_reward_scale
 
 
 

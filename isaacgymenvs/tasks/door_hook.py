@@ -26,7 +26,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.0
-        self.start_position_noise = self.cfg["env"]["startPositionNoise"]
+        self.start_position_noise = 0.2
         self.start_rotation_noise = self.cfg["env"]["startRotationNoise"]
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -145,7 +145,7 @@ class DoorHook(VecTask):
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([[0, 0, 0, 0, 0, 0]], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -170,12 +170,17 @@ class DoorHook(VecTask):
 
         for i in range(self.num_ur3_dofs):
             ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            # ur3_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{ur3_dof_props}')
-            # ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            # ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+            ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
+            ur3_dof_props['lower'][i] = -10
+            ur3_dof_props['upper'][i] = 10
 
-            self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
-            self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
+
+            # self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
+            # self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
+        
+        print(ur3_dof_props)
 
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
         self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
@@ -236,11 +241,12 @@ class DoorHook(VecTask):
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             door_pose = door_start_pose
-            door_pose.p.x += self.start_position_noise * (np.random.rand() - 0.5)
+            dx = np.random.rand() - 0.5
+            door_pose.p.x = self.start_position_noise * dx
             dz = 0.5 * np.random.rand()
             dy = np.random.rand() - 0.5
-            door_pose.p.y += self.start_position_noise * dy
-            door_pose.p.z += self.start_position_noise * dz
+            door_pose.p.y = 5*self.start_position_noise * dy
+            # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
 
@@ -351,7 +357,7 @@ class DoorHook(VecTask):
         # door dof states [hinge handle] ang to obs_buf
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
     
-        # self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
+        self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
         # self.door_dof_vel = self.door_dof_state[..., 1] 
 
@@ -508,23 +514,23 @@ def compute_ur3_reward(
 
 
     # print(hand_dist)
-    # print('----------------open_reward max:',torch.max(open_reward))
-    # print('--------------handle_reward max:', torch.max(handle_reward))
+    print('----------------open_reward max:',torch.max(open_reward))
+    print('--------------handle_reward max:', torch.max(handle_reward))
     print('----------------dist_reward max:', torch.max(dist_reward))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
     # edited reward to diff_hinge_ang handle_rew.
 
     # action penalty must be minus??
-    # rewards = open_reward + dist_reward + handle_reward + action_penalty
-    rewards = dist_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
+    # rewards = dist_reward + action_penalty
 
     # success reward
     rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
 
     # rewards = dist_reward
-    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)

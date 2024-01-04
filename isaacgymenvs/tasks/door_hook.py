@@ -47,8 +47,8 @@ class DoorHook(VecTask):
 
         # set camera properties for realsense now : 435 and 405
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 64
-        self.camera_props.height = 48
+        self.camera_props.width = 640
+        self.camera_props.height = 480
         self.depth_min = -3.0
         self.depth_max = -0.07
 

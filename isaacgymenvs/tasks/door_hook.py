@@ -145,7 +145,7 @@ class DoorHook(VecTask):
         door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([[0, 0, 0, 0, 0, 0]], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -170,12 +170,17 @@ class DoorHook(VecTask):
 
         for i in range(self.num_ur3_dofs):
             ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            # ur3_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{ur3_dof_props}')
-            # ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            # ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+            ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
+            ur3_dof_props['lower'][i] = -10
+            ur3_dof_props['upper'][i] = 10
 
-            self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
-            self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
+
+            # self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
+            # self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
+        
+        print(ur3_dof_props)
 
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
         self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
@@ -240,7 +245,7 @@ class DoorHook(VecTask):
             door_pose.p.x = self.start_position_noise * dx
             dz = 0.5 * np.random.rand()
             dy = np.random.rand() - 0.5
-            door_pose.p.y = self.start_position_noise * dy
+            door_pose.p.y = 5*self.start_position_noise * dy
             # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
@@ -518,7 +523,7 @@ def compute_ur3_reward(
 
     # action penalty must be minus??
     rewards = open_reward + dist_reward + handle_reward + action_penalty
-    rewards = dist_reward + action_penalty
+    # rewards = dist_reward + action_penalty
 
     # success reward
     rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)

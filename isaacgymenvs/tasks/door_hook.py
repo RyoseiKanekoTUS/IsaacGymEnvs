@@ -530,7 +530,7 @@ def compute_ur3_reward(
     # rewards = dist_reward + action_penalty
 
     # success reward
-    # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
+    rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))

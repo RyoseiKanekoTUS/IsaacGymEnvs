@@ -238,12 +238,12 @@ class DoorHook(VecTask):
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             door_pose = door_start_pose
-            dx = np.random.rand() - 0.5
-            door_pose.p.x = self.start_position_noise * dx
-            dz = np.random.rand() - 0.5
-            dy = np.random.rand() - 0.5
-            door_pose.p.y = self.start_position_noise * dy
-            door_pose.r.z = self.start_rotation_noise * dz
+            # dx = np.random.rand() - 0.5
+            # door_pose.p.x = self.start_position_noise * dx
+            # dz = np.random.rand() - 0.5
+            # dy = np.random.rand() - 0.5
+            # door_pose.p.y = self.start_position_noise * dy
+            # door_pose.r.z = self.start_rotation_noise * dz
             # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)

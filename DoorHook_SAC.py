@@ -22,17 +22,17 @@ class SACActor(GaussianMixin, Model):
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std)
 
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
+                                                nn.ELU(),
+                                                nn.AvgPool2d(2, stride=2),
                                                 nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
+                                                nn.ELU(),
+                                                nn.AvgPool2d(2, stride=2),
                                                 nn.Flatten()
                                                 )
         self.mlp = nn.Sequential(nn.Linear(108, 256),
-                                         nn.ReLU(),
+                                         nn.ELU(),
                                          nn.Linear(256, 64),
-                                         nn.ReLU(),
+                                         nn.ELU(),
                                          nn.Linear(64, self.num_actions),
                                          nn.Tanh()
                                         )
@@ -53,17 +53,17 @@ class SACCritic(DeterministicMixin, Model):
         DeterministicMixin.__init__(self, clip_actions)
 
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
+                                                nn.ELU(),
+                                                nn.AvgPool2d(2, stride=2),
                                                 nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-                                                nn.ReLU(),
-                                                nn.MaxPool2d(2, stride=2),
+                                                nn.ELU(),
+                                                nn.AvgPool2d(2, stride=2),
                                                 nn.Flatten()
                                                 )
         self.mlp = nn.Sequential(nn.Linear(108 + self.num_actions, 128),
-                                         nn.ReLU(),
+                                         nn.ELU(),
                                          nn.Linear(128, 32),
-                                         nn.ReLU(),
+                                         nn.ELU(),
                                          nn.Linear(32, 1)
                                         )
     def compute(self, inputs, role):
@@ -99,7 +99,7 @@ class DoorHookTrainer(SACActor, SACCritic):
         self.cfg["actor_learning_rate"] = 5e-3
         self.cfg["critic_learning_rate"] = 5e-3
         self.cfg["random_timesteps"] = 80
-        self.cfg["learning_starts"] = 80
+        self.cfg["learning_starts"] = 0
         self.cfg["grad_norm_clip"] = 0
         self.cfg["learn_entropy"] = True
         self.cfg["entropy_learning_rate"] = 5e-3

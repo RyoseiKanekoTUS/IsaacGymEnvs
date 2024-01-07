@@ -22,7 +22,7 @@ class DoorHook(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
         self.cfg = cfg
-
+        self.n = 0
         self.max_episode_length = 300
 
         self.action_scale = 1.5
@@ -308,9 +308,18 @@ class DoorHook(VecTask):
         norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0
         self.pp_d_imgs = norm_d_imgs
+
+        # self.get_d_img_dataset()
+
         self.gym.end_access_image_tensors(self.sim)
         
         # print(self.pp_d_imgs[0]) # debug
+
+    def get_d_img_dataset(self):
+
+        for z in range(self.num_envs):
+            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset/new_{self.n}_{z}.d_img')
+        self.n = self.n + 1
 
     def compute_observations(self):  # NOW DEFINING
         

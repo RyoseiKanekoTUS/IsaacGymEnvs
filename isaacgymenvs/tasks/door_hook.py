@@ -22,11 +22,11 @@ class DoorHook(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
         self.cfg = cfg
-
+        self.n = 0
         self.max_episode_length = 300
 
-        self.action_scale = 1.0
-        self.start_position_noise = 0.75
+        self.action_scale = 1.5
+        self.start_position_noise = 1.0
         self.start_rotation_noise = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -176,10 +176,7 @@ class DoorHook(VecTask):
             ur3_dof_props['lower'][i] = -10
             ur3_dof_props['upper'][i] = 10
 
-
-            # self.ur3_dof_lower_limits.append(ur3_dof_props['lower'][i])
-            # self.ur3_dof_upper_limits.append(ur3_dof_props['upper'][i])
-        
+            ur3_dof_props['effort'][i] = 500
         print(ur3_dof_props)
 
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
@@ -241,12 +238,12 @@ class DoorHook(VecTask):
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             door_pose = door_start_pose
-            dx = np.random.rand() - 0.5
-            door_pose.p.x = self.start_position_noise * dx
-            dz = np.random.rand() - 0.5
-            dy = np.random.rand() - 0.5
-            door_pose.p.y = self.start_position_noise * dy
-            door_pose.r.z = self.start_rotation_noise * dz
+            # dx = np.random.rand() - 0.5
+            # door_pose.p.x = self.start_position_noise * dx
+            # dz = np.random.rand() - 0.5
+            # dy = np.random.rand() - 0.5
+            # door_pose.p.y = self.start_position_noise * dy
+            # door_pose.r.z = self.start_rotation_noise * dz
             # door_pose.p.z += self.start_position_noise * dz
             door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
@@ -311,9 +308,18 @@ class DoorHook(VecTask):
         norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0
         self.pp_d_imgs = norm_d_imgs
+
+        # self.get_d_img_dataset()
+
         self.gym.end_access_image_tensors(self.sim)
         
         # print(self.pp_d_imgs[0]) # debug
+
+    def get_d_img_dataset(self):
+
+        for z in range(self.num_envs):
+            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset/new_{self.n}_{z}.d_img')
+        self.n = self.n + 1
 
     def compute_observations(self):  # NOW DEFINING
         
@@ -533,7 +539,7 @@ def compute_ur3_reward(
     # rewards = dist_reward + action_penalty
 
     # success reward
-    # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 10000, rewards)
+    rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))

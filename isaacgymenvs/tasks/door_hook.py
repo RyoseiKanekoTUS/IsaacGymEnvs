@@ -26,7 +26,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 1.0
+        self.start_pos_noise_scale = 0
         self.start_rot_noise_scale = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -190,8 +190,8 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, -0.3, 1.02) # initial position of the robot
-        ur3_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
+        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.02) # initial position of the robot
+        ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
         door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
@@ -285,7 +285,7 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        for j in [0,1,2,3,4,5]:
+        for j in range(10):
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
@@ -424,7 +424,7 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
@@ -520,6 +520,7 @@ def compute_ur3_reward(
 
     # dist_reward = -1 * hand_dist * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+    dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
 
 
 
@@ -529,14 +530,11 @@ def compute_ur3_reward(
     print('----------------dist_reward max:', torch.max(dist_reward))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
-    # edited reward to diff_hinge_ang handle_rew.
-
-    # action penalty must be minus??
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
-    # rewards = dist_reward + action_penalty
+    # rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = dist_reward_no_thresh + action_penalty
 
     # success reward
-    rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
+    # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
     # rewards = dist_reward
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))

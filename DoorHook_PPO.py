@@ -149,7 +149,7 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = '../../learning_data/DoorHook/skrl/0105_levorg_as1.5_best/best_agent.pt'
+    # path = '../../learning_data/DoorHook/skrl/0105_levorg_as1.5_best/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

@@ -26,7 +26,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0
+        self.start_pos_noise_scale = 0.5
         self.start_rot_noise_scale = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -424,7 +424,7 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
@@ -530,8 +530,8 @@ def compute_ur3_reward(
     print('----------------dist_reward max:', torch.max(dist_reward))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
-    # rewards = open_reward + dist_reward + handle_reward + action_penalty
-    rewards = dist_reward_no_thresh + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
+    # rewards = dist_reward_no_thresh + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)

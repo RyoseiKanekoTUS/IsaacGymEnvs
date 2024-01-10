@@ -16,13 +16,11 @@ from skrl.utils import set_seed
 
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
-    def __init__(self, d_img_width, d_img_heigt,  observation_space, action_space, device, clip_actions=False,
+    def __init__(self, observation_space, action_space, device, clip_actions=False,
                  clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
         Model.__init__(self, observation_space, action_space, device)
         DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
-        self.d_img_width = d_img_width
-        self.d_img_heigt = d_img_heigt
 
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
                                                 nn.ELU(),
@@ -32,6 +30,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                                 nn.AvgPool2d(2, stride=2),
                                                 nn.Flatten()
                                                 )
+        self.d_feture_extractor = torch.load('depthnet/pre_trained/encoder990.pt', map_location=self.device)
         self.mlp = nn.Sequential(nn.Linear(108, 256),
                                          nn.ELU(),
                                          nn.Linear(256, 64),
@@ -54,9 +53,9 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         
         states = inputs['states']
         ee_states = states[:, :12]
-        pp_d_imgs = states[:, 12:].view(-1, 1, self.d_img_heigt, self.d_img_width)
+        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         fetures = self.d_feture_extractor(pp_d_imgs)
-        print('d_fetures:',fetures)
+        # print('d_fetures:',fetures)
         combined = torch.cat([fetures, ee_states], dim=-1)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
@@ -72,11 +71,9 @@ class DoorHookTrainer(PPOnet):
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
-        self.d_img_width = self.env.camera_props.width
-        self.d_img_heigt = self.env.camera_props.height
         self.memory = RandomMemory(memory_size=256, num_envs=self.env.num_envs, device=self.device)
         self.models = {}
-        self.models["policy"] = PPOnet(self.d_img_width, self.d_img_heigt, self.env.observation_space, self.env.action_space, self.device)
+        self.models["policy"] = PPOnet(self.env.observation_space, self.env.action_space, self.device)
         self.models["value"] = self.models["policy"]  # same instance: shared model
 
         self.cfg = PPO_DEFAULT_CONFIG.copy()
@@ -112,7 +109,7 @@ class DoorHookTrainer(PPOnet):
         # logging to TensorBoard and write checkpoints (in timesteps)
         self.cfg["experiment"]["write_interval"] = 20
         self.cfg["experiment"]["checkpoint_interval"] = 1000
-        self.cfg["experiment"]["directory"] = "dev_skrl_runs/DoorHook/conv_ppo"
+        self.cfg["experiment"]["directory"] = "skrl_runs/DoorHook/conv_ppo"
 
         self.agent = PPO(models=self.models,
                         memory=self.memory,
@@ -153,7 +150,7 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-03_22-50-10-437847_PPO/checkpoints/agent_10000.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-09_20-23-55-341686_PPO_pre_add_avg/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

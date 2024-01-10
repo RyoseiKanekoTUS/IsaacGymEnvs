@@ -26,8 +26,8 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.5
-        self.start_position_noise = 1.0
-        self.start_rotation_noise = 0.2
+        self.start_pos_noise_scale = 1.0
+        self.start_rot_noise_scale = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
@@ -118,7 +118,8 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
-        door_asset_file = 'urdf/door_test/door_1.urdf'
+        door_1_asset_file = 'urdf/door_test/door_1.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2.urdf'
         
         # load ur3 asset
         asset_options = gymapi.AssetOptions()
@@ -142,15 +143,16 @@ class DoorHook(VecTask):
         asset_options.disable_gravity = False
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
         asset_options.armature = 0.005
-        door_asset = self.gym.load_asset(self.sim, asset_root, door_asset_file, asset_options)
+        door_1_asset = self.gym.load_asset(self.sim, asset_root, door_1_asset_file, asset_options)
+        door_2_asset = self.gym.load_asset(self.sim, asset_root, door_2_asset_file, asset_options)
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
         ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
-        self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_asset)
-        self.num_door_dofs = self.gym.get_asset_dof_count(door_asset)
+        self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
+        self.num_door_dofs = self.gym.get_asset_dof_count(door_1_asset)
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
@@ -184,7 +186,7 @@ class DoorHook(VecTask):
         self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
 
         # set door dof properties
-        door_dof_props = self.gym.get_asset_dof_properties(door_asset)
+        door_dof_props = self.gym.get_asset_dof_properties(door_1_asset)
     
         # start pose
         ur3_start_pose = gymapi.Transform()
@@ -197,8 +199,8 @@ class DoorHook(VecTask):
         # compute aggregate size
         num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         num_ur3_shapes = self.gym.get_asset_rigid_shape_count(ur3_asset)
-        num_door_bodies = self.gym.get_asset_rigid_body_count(door_asset)
-        num_door_shapes = self.gym.get_asset_rigid_shape_count(door_asset)
+        num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
+        num_door_shapes = self.gym.get_asset_rigid_shape_count(door_1_asset)
 
         max_agg_bodies = num_ur3_bodies + num_door_bodies
         max_agg_shapes = num_ur3_shapes + num_door_shapes
@@ -237,16 +239,11 @@ class DoorHook(VecTask):
             if self.aggregate_mode == 2:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            door_pose = door_start_pose
-            # dx = np.random.rand() - 0.5
-            # door_pose.p.x = self.start_position_noise * dx
-            # dz = np.random.rand() - 0.5
-            # dy = np.random.rand() - 0.5
-            # door_pose.p.y = self.start_position_noise * dy
-            # door_pose.r.z = self.start_rotation_noise * dz
-            # door_pose.p.z += self.start_position_noise * dz
-            door_actor = self.gym.create_actor(env_ptr, door_asset, door_pose, "door", i, 0, 0) # 0 : self collision ON
-            self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+            if i % 2 == 0:
+                door_actor = self.gym.create_actor(env_ptr, door_1_asset, door_start_pose, "door", i, 0, 0) # 0 : self collision ON
+                self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+            else:
+                door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -395,7 +392,7 @@ class DoorHook(VecTask):
         rand_pos[:,1:] += 0.5
         # print(rand_pos)
         # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + 1.0 * rand_pos
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + self.start_pos_noise_scale * rand_pos
         # print(pos)
         # with limit
         # pos = tensor_clamp(

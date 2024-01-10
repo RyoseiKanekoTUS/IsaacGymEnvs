@@ -10,7 +10,7 @@
         
     <joint name = 'base_joint' type = 'fixed'>
         <parent link = 'base_link'/>
-        <origin xyz = '0 -0.5 0.0' rpy='0 0 0'/>
+        <origin xyz = '0 0.5 0.0' rpy='0 0 0'/>
         <!-- if move y : the door will slide -->
         <child link = 'door_frame'/>
     </joint>
@@ -20,7 +20,7 @@
             <geometry>
                 <mesh filename = './meshes/frame.dae'/>
             </geometry>
-            <origin xyz = '0 0 0' rpy = '1.57 0 0'/>
+            <origin xyz = '0.5 0 0' rpy = '1.57 0 0'/>
             <!-- <color rgba = '0.5 0.5 0.5 1.0'/> -->
         </visual>
         <!-- <collision name = "door frame_collision">
@@ -33,19 +33,19 @@
             <geometry>
                 <box size = '0.05029 0.06858 2.10820'/>
             </geometry>
-            <origin xyz = '-0.02 0.02 1.05' rpy = '0 0 0'/>
+            <origin xyz = '0.48 0.02 1.05' rpy = '0 0 0'/>
         </collision>
         <collision name="side_2">
             <geometry>
                 <box size = '0.05029 0.06858 2.10820'/>
             </geometry>
-            <origin xyz="-0.02 1.02 1.05" rpy="0 0 0"/>
+            <origin xyz="0.48 1.02 1.05" rpy="0 0 0"/>
         </collision>
         <collision name="top">
             <geometry>
                 <box size = '0.05029 0.92964 0.07366'/>
             </geometry>
-            <origin xyz="-0.02 0.52 2.05820" rpy="0 0 0"/>
+            <origin xyz="0.48 0.52 2.05820" rpy="0 0 0"/>
         </collision>
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -56,7 +56,7 @@
 
     <joint name = 'door_hinge' type = 'revolute'>
         <axis xyz = '0 0 1' rpy = '0 0 0'/>
-        <origin xyz = '0.025 0.06858 0' rpy='0 3.14159 0'/>
+        <origin xyz = '0.525 0.06858 0' rpy='0 3.14159 0'/>
         <limit lower = '0' upper = '1.57' effort='100' velocity="100.00"/>
         <dynamics damping="10.0" friction="0.0"/>
         <parent link = 'door_frame'/>

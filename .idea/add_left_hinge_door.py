@@ -144,7 +144,7 @@ while not gym.query_viewer_has_closed(viewer):
         print('indexex',indexes)
         # forces[:, 0, 2] = 300
         torques[:,1] = 50
-        torques[:,0] = 50
+        torques[:,0] = 100
         print(torques)
         # gym.apply_rigid_body_force_tensors(sim, gymtorch.unwrap_tensor(forces), gymtorch.unwrap_tensor(torques), gymapi.ENV_SPACE)
         gym.set_dof_actuation_force_tensor_indexed(sim, gymtorch.unwrap_tensor(torques) ,gymtorch.unwrap_tensor(indexes) , num_envs)
@@ -164,6 +164,22 @@ while not gym.query_viewer_has_closed(viewer):
         gym.set_dof_actuation_force_tensor_indexed(sim, gymtorch.unwrap_tensor(torques) , gymtorch.unwrap_tensor(indexes), num_envs)
         torque_amt = -torque_amt
 
+    elif (frame_count - 99) % 170 == 0:
+        # set forces and torques for the ant root bodies
+        torques = torch.zeros((num_envs, 2), device=device, dtype=torch.float)
+        indexes = torch.zeros((num_envs), device=device, dtype=torch.int)
+        indexes = torch.tensor([0,1,2,3,4,5,6,7,8,9], device=device, dtype=torch.int)
+        print('indexes shape',indexes.shape)
+        # forces[:, 0, 2] = 300
+        torques[:,0] = -100
+        # time.sleep(1)
+        torques[:,1] = -50
+        print(torques)
+        # gym.apply_rigid_body_force_tensors(sim, gymtorch.unwrap_tensor(forces), gymtorch.unwrap_tensor(torques), gymapi.ENV_SPACE)
+        gym.set_dof_actuation_force_tensor_indexed(sim, gymtorch.unwrap_tensor(torques) , gymtorch.unwrap_tensor(indexes), num_envs)
+        torque_amt = -torque_amt
+
+
     # step the physics
     gym.simulate(sim)
     gym.fetch_results(sim, True)
@@ -177,6 +193,7 @@ while not gym.query_viewer_has_closed(viewer):
     gym.sync_frame_time(sim)
 
     frame_count += 1
+    print(frame_count)
 
 gym.destroy_viewer(viewer)
 gym.destroy_sim(sim)

@@ -118,8 +118,11 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
-        door_1_asset_file = 'urdf/door_test/door_2.urdf'
-        door_2_asset_file = 'urdf/door_test/door_2_inv.urdf'
+        door_1_asset_file = 'urdf/door_test/door_1.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv.urdf'
+
         
         # load ur3 asset
         asset_options = gymapi.AssetOptions()
@@ -145,6 +148,9 @@ class DoorHook(VecTask):
         asset_options.armature = 0.005
         door_1_asset = self.gym.load_asset(self.sim, asset_root, door_1_asset_file, asset_options)
         door_2_asset = self.gym.load_asset(self.sim, asset_root, door_2_asset_file, asset_options)
+        door_1_inv_asset = self.gym.load_asset(self.sim, asset_root, door_1_inv_asset_file, asset_options)
+        door_2_inv_asset = self.gym.load_asset(self.sim, asset_root, door_2_inv_asset_file, asset_options)
+        door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
         ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
@@ -221,7 +227,7 @@ class DoorHook(VecTask):
         self.envs = []
         self.camera_handles = []
         
-        
+        door_asset_count = 0
         for i in range(self.num_envs):
             # create env instance
             env_ptr = self.gym.create_env(
@@ -239,12 +245,23 @@ class DoorHook(VecTask):
             if self.aggregate_mode == 2:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            if i % 2 == 0:
-                door_actor = self.gym.create_actor(env_ptr, door_1_asset, door_start_pose, "door", i, 0, 0) # 0 : self collision ON
-                self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+            # create door actors # all doors ------------------------------------------
+            if door_asset_count == 3:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count = 0
             else:
-                door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
-                self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count += 1
+            # -------------------------------------------------------------------------
+                
+            # # only left hinge ---------------------------------------------------------
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[3], door_start_pose, "door", i, 0, 0)
+            # # -------------------------------------------------------------------------
+                
+            self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -427,49 +444,6 @@ class DoorHook(VecTask):
         
         # print('prev_pos:',self.ur3_dof_pos_prev)
 
-
-        # debug viz
-        # if self.debug_viz:
-        #     self.gym.clear_lines(self.viewer)
-        #     self.gym.refresh_rigid_body_state_tensor(self.sim)
-
-        #     for i in range(self.num_envs):
-        #         px = (self.ur3_grasp_pos[i] + quat_apply(self.ur3_grasp_rot[i], to_torch([1, 0, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         py = (self.ur3_grasp_pos[i] + quat_apply(self.ur3_grasp_rot[i], to_torch([0, 1, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         pz = (self.ur3_grasp_pos[i] + quat_apply(self.ur3_grasp_rot[i], to_torch([0, 0, 1], device=self.device) * 0.2)).cpu().numpy()
-
-        #         p0 = self.ur3_grasp_pos[i].cpu().numpy()
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], px[0], px[1], px[2]], [0.85, 0.1, 0.1])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], py[0], py[1], py[2]], [0.1, 0.85, 0.1])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], pz[0], pz[1], pz[2]], [0.1, 0.1, 0.85])
-
-        #         px = (self.door_grasp_pos[i] + quat_apply(self.door_grasp_rot[i], to_torch([1, 0, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         py = (self.door_grasp_pos[i] + quat_apply(self.door_grasp_rot[i], to_torch([0, 1, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         pz = (self.door_grasp_pos[i] + quat_apply(self.door_grasp_rot[i], to_torch([0, 0, 1], device=self.device) * 0.2)).cpu().numpy()
-
-        #         p0 = self.door_grasp_pos[i].cpu().numpy()
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], px[0], px[1], px[2]], [1, 0, 0])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], py[0], py[1], py[2]], [0, 1, 0])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], pz[0], pz[1], pz[2]], [0, 0, 1])
-
-        #         px = (self.ur3_lfinger_pos[i] + quat_apply(self.ur3_lfinger_rot[i], to_torch([1, 0, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         py = (self.ur3_lfinger_pos[i] + quat_apply(self.ur3_lfinger_rot[i], to_torch([0, 1, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         pz = (self.ur3_lfinger_pos[i] + quat_apply(self.ur3_lfinger_rot[i], to_torch([0, 0, 1], device=self.device) * 0.2)).cpu().numpy()
-
-        #         p0 = self.ur3_lfinger_pos[i].cpu().numpy()
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], px[0], px[1], px[2]], [1, 0, 0])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], py[0], py[1], py[2]], [0, 1, 0])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], pz[0], pz[1], pz[2]], [0, 0, 1])
-
-        #         px = (self.ur3_rfinger_pos[i] + quat_apply(self.ur3_rfinger_rot[i], to_torch([1, 0, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         py = (self.ur3_rfinger_pos[i] + quat_apply(self.ur3_rfinger_rot[i], to_torch([0, 1, 0], device=self.device) * 0.2)).cpu().numpy()
-        #         pz = (self.ur3_rfinger_pos[i] + quat_apply(self.ur3_rfinger_rot[i], to_torch([0, 0, 1], device=self.device) * 0.2)).cpu().numpy()
-
-        #         p0 = self.ur3_rfinger_pos[i].cpu().numpy()
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], px[0], px[1], px[2]], [1, 0, 0])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], py[0], py[1], py[2]], [0, 1, 0])
-        #         self.gym.add_lines(self.viewer, self.envs[i], 1, [p0[0], p0[1], p0[2], pz[0], pz[1], pz[2]], [0, 0, 1])
-
 #####################################################################
 ###=========================jit functions=========================###
 #####################################################################
@@ -485,7 +459,7 @@ def compute_ur3_reward(
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)
-    # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0]
+    # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0] * open_reward_scale
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
     open_reward = ((door_dof_pos[:,0] * door_dof_pos[:,0]) + (door_dof_pos[:,0] - door_dof_pos_prev[:,0])) * open_reward_scale
     # additional reward to open

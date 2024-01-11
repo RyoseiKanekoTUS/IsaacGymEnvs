@@ -26,7 +26,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.5
+        self.start_pos_noise_scale = 1.0
         self.start_rot_noise_scale = 0.2
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -239,11 +239,11 @@ class DoorHook(VecTask):
             if self.aggregate_mode == 2:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            if i % 2 == 0:
-                door_actor = self.gym.create_actor(env_ptr, door_1_asset, door_start_pose, "door", i, 0, 0) # 0 : self collision ON
-                self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
-            else:
-                door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_1_asset, door_start_pose, "door", i, 0, 0) # 0 : self collision ON
+            #     self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+            # else:
+            door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)

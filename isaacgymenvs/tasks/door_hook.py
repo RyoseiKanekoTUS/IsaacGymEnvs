@@ -240,10 +240,10 @@ class DoorHook(VecTask):
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             # if i % 2 == 0:
-            #     door_actor = self.gym.create_actor(env_ptr, door_1_asset, door_start_pose, "door", i, 0, 0) # 0 : self collision ON
+            door_actor = self.gym.create_actor(env_ptr, door_1_asset, door_start_pose, "door", i, 0, 0) # 0 : self collision ON
             #     self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             # else:
-            door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
+                # door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -527,10 +527,10 @@ def compute_ur3_reward(
     # print(hand_dist)
     print('----------------open_reward max:',torch.max(open_reward))
     print('--------------handle_reward max:', torch.max(handle_reward))
-    print('----------------dist_reward max:', torch.max(dist_reward))
+    print('----------------dist_min:', torch.min(hand_dist))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
     # rewards = dist_reward_no_thresh + action_penalty
 
     # success reward

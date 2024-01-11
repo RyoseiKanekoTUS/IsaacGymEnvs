@@ -191,6 +191,7 @@ if __name__ == '__main__':
 
     path = None
     # path = '../../learning_data/DoorHook/skrl/0105_levorg_as1.5_best/best_agent.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/0111_pull_push_both/checkpoints/agent_55000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.eval(path)

@@ -23,11 +23,11 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 300
+        self.max_episode_length = 100 # 300
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 1.0
-        self.start_rot_noise_scale = 0.2
+        self.start_pos_noise_scale = 0.2
+        self.start_rot_noise_scale = 0.0
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
@@ -245,7 +245,7 @@ class DoorHook(VecTask):
             else:
                 door_actor = self.gym.create_actor(env_ptr, door_2_asset, door_start_pose, "door", i, 0, 0)
                 self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
-                
+
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
@@ -287,8 +287,8 @@ class DoorHook(VecTask):
         
         import cv2
         for j in range(10):
-            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow(f'rgb{j}', rgb_img)
@@ -339,44 +339,13 @@ class DoorHook(VecTask):
 
         # door handle rigid body states
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
-        # print(hand_pos[0])
-        # print(door_handle_pos[0])
-
         self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
-        # print(self.hand_dist.shape)
-
-        # print(self.door_handle) index of door_handle
-        # door_rot = self.rigid_body_states[:, self.door_handle][:, 3:7]
-        # door_vel_pos = self.rigid_body_states[:, self.door_handle][:, 7:10]
-        # door_vel_rot = self.rigid_body_states[:, self.door_handle][:, 10:13]
-
-        # ur3 dof states [x y z rx ry rz] to obs_buf
-        # self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs] # (num_envs, 6, 2)
-        # self.ur3_dof_pos = self.ur3_dof_state[...,0]
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
-        
-        # print('prev_pos:', self.ur3_dof_pos_prev)
-        # print('current_pos:',self.ur3_dof_pos)
-        # print('dt:', dof_pos_dt)
-        # print('vel',self.ur3_dof_vel)
-
-        # print('prev_pos:',self.ur3_dof_pos_prev)
-        # print('current_pos:', self.ur3_dof_pos)
-        # self.ur3_dof_vel = self.ur3_dof_state[...,1]
-
-        # door dof states [hinge handle] ang to obs_buf
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
-    
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
         # self.door_dof_vel = self.door_dof_state[..., 1] 
 
-        # door_hinge_ang = self.door_dof_pos[:,0] # 0 : hinge, 1 : handle
-        # # print('doof_hinge_ang :', door_hinge_ang[0])
-        # door_hinge_vel = self.door_dof_vel[:,0]
-        # door_handle_ang = self.door_dof_pos[:,1]
-        # door_handle_vel = self.door_dof_vel[:,1]
-        # define obsefcation space
         self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
         # print(self.pp_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
@@ -389,11 +358,12 @@ class DoorHook(VecTask):
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
         # with no limit
-        rand_pos = -1 * torch.rand(len(env_ids), self.num_ur3_dofs, device=self.device)
+        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device)
+        rand_rot = torch.zeros(len(env_ids), 3, device=self.device)
         rand_pos[:,1:] += 0.5
         # print(rand_pos)
         # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + self.start_pos_noise_scale * rand_pos
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + self.start_pos_noise_scale * torch.cat([rand_pos , rand_rot], dim=-1)
         # print(pos)
         # with limit
         # pos = tensor_clamp(
@@ -531,8 +501,8 @@ def compute_ur3_reward(
     print('----------------dist_min:', torch.min(hand_dist))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
-    rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    # rewards = dist_reward_no_thresh + action_penalty
+    # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
+    rewards = dist_reward_no_thresh + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)

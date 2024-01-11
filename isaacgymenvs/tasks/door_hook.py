@@ -23,11 +23,11 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 100 # 300
+        self.max_episode_length = 300 # 300
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.2
-        self.start_rot_noise_scale = 0.0
+        self.start_pos_noise_scale = 1.0
+        self.start_rot_noise_scale = 1.0
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
@@ -118,8 +118,8 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
-        door_1_asset_file = 'urdf/door_test/door_1.urdf'
-        door_2_asset_file = 'urdf/door_test/door_2.urdf'
+        door_1_asset_file = 'urdf/door_test/door_2.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2_inv.urdf'
         
         # load ur3 asset
         asset_options = gymapi.AssetOptions()
@@ -358,12 +358,16 @@ class DoorHook(VecTask):
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
         # with no limit
-        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device)
-        rand_rot = torch.zeros(len(env_ids), 3, device=self.device)
+        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device) 
+        rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_pos[:,1:] += 0.5
+        rand_rot += 0.5
+        rand_pos = rand_pos * self.start_pos_noise_scale
+        rand_rot = rand_rot * self.start_rot_noise_scale
+
         # print(rand_pos)
         # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + self.start_pos_noise_scale * torch.cat([rand_pos , rand_rot], dim=-1)
+        pos = self.ur3_default_dof_pos.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         # print(pos)
         # with limit
         # pos = tensor_clamp(
@@ -501,8 +505,8 @@ def compute_ur3_reward(
     print('----------------dist_min:', torch.min(hand_dist))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
-    # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    rewards = dist_reward_no_thresh + action_penalty
+    rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
+    # rewards = dist_reward_no_thresh + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)

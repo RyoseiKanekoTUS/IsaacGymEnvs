@@ -67,6 +67,8 @@ if viewer is None:
 asset_root = "../assets"
 door_1 = "urdf/door_test/door_1.urdf"
 door_2 = 'urdf/door_test/door_2.urdf'
+door_1_inv = 'urdf/door_test/door_1_inv.urdf'
+door_2_inv = 'urdf/door_test/door_2_inv.urdf'
 
 asset_options = gymapi.AssetOptions()
 asset_options.fix_base_link = True
@@ -79,9 +81,12 @@ asset_options.armature = 0.005
 
 asset_1 = gym.load_asset(sim, asset_root, door_1, asset_options)
 asset_2 = gym.load_asset(sim, asset_root, door_2, asset_options)
+asset_1_inv = gym.load_asset(sim, asset_root, door_1_inv, asset_options)
+asset_2_inv = gym.load_asset(sim, asset_root, door_2_inv, asset_options)
+
+assets = [asset_1, asset_2, asset_1_inv, asset_2_inv]
 
 door_dof_props = gym.get_asset_dof_properties(asset_1)
-
 
 num_bodies = gym.get_asset_rigid_body_count(asset_1)
 num_dofs = gym.get_asset_dof_count(asset_1)
@@ -104,7 +109,14 @@ np.random.seed(17)
 
 envs = []
 handles = []
+assets_load_count = 0
 for i in range(num_envs):
+    
+    asset = assets[assets_load_count]
+    if assets_load_count == 3:
+        assets_load_count = 0
+    else:
+        assets_load_count += 1
     # create env
     env = gym.create_env(sim, env_lower, env_upper, num_per_row)
     envs.append(env)
@@ -112,14 +124,9 @@ for i in range(num_envs):
     # generate random bright color
     c = 0.5 + 0.5 * np.random.random(3)
     color = gymapi.Vec3(c[0], c[1], c[2])
-    if i % 2 == 0:
-        ahandle = gym.create_actor(env, asset_1, pose, "door", i, 0, 0)
-        gym.set_actor_dof_properties(env, ahandle, door_dof_props)
-    else:
-        ahandle = gym.create_actor(env, asset_2, pose, "door", i, 0, 0)
-    # get handle idx
-    door_handle_idx = gym.get_actor_dof_handle(env, ahandle, 1)
-    print(door_handle_idx)
+    
+    ahandle = gym.create_actor(env, asset, pose, "door", i, 0, 0)
+    gym.set_actor_dof_properties(env, ahandle, door_dof_props)
 
     handles.append(ahandle)
     gym.set_rigid_body_color(env, ahandle, 0, gymapi.MESH_VISUAL_AND_COLLISION, color)
@@ -171,7 +178,7 @@ while not gym.query_viewer_has_closed(viewer):
         indexes = torch.tensor([0,1,2,3,4,5,6,7,8,9], device=device, dtype=torch.int)
         print('indexes shape',indexes.shape)
         # forces[:, 0, 2] = 300
-        torques[:,0] = -100
+        torques[:,0] = -50
         # time.sleep(1)
         torques[:,1] = -50
         print(torques)
@@ -193,7 +200,7 @@ while not gym.query_viewer_has_closed(viewer):
     gym.sync_frame_time(sim)
 
     frame_count += 1
-    print(frame_count)
+    # print(frame_count)
 
 gym.destroy_viewer(viewer)
 gym.destroy_sim(sim)

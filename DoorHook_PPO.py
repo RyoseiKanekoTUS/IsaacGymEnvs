@@ -37,7 +37,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         #                                  nn.ELU()
         #                                 )
 
-        # NW_v2
+        # NW_v2_Max
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
                                                 nn.ELU(),
                                                 nn.MaxPool2d(2, stride=2), # (4,24,32) 3072
@@ -56,6 +56,27 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                  nn.Linear(256, 64),
                                  nn.ELU()
                                  )        
+        
+        # # NW_v2_Avg
+        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
+        #                                         nn.ELU(),
+        #                                         nn.AvgPool2d(2, stride=2), # (4,24,32) 3072
+        #                                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
+        #                                         nn.ELU(),
+        #                                         nn.AvgPool2d(2, stride=2), # (8,12,16) 1536
+        #                                         nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1), # (16,6,8) 768
+        #                                         nn.ELU(),
+        #                                         nn.AvgPool2d(2, stride=1), # (16,5,7) 560
+        #                                         nn.Flatten()
+        #                                         )
+        # self.mlp = nn.Sequential(nn.Linear((12+560), 512),
+        #                          nn.ELU(),
+        #                          nn.Linear(512, 256),
+        #                          nn.ELU(),
+        #                          nn.Linear(256, 64),
+        #                          nn.ELU()
+        #                          )        
+
 
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())
@@ -172,8 +193,8 @@ if __name__ == '__main__':
     # path = '../../learning_data/DoorHook/skrl/0105_levorg_as1.5_best/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

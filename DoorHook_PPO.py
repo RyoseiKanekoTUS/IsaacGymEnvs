@@ -53,7 +53,9 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                  nn.ELU(),
                                  nn.Linear(512, 256),
                                  nn.ELU(),
-                                 nn.Linear(256, 64))
+                                 nn.Linear(256, 64),
+                                 nn.ELU()
+                                 )        
 
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())

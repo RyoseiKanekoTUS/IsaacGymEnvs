@@ -37,25 +37,25 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         #                                  nn.ELU()
         #                                 )
 
-        # # NW_v2_Max
-        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=2), # (4,24,32) 3072
-        #                                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=2), # (8,12,16) 1536
-        #                                         nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1), # (16,6,8) 768
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=1), # (16,5,7) 560
-        #                                         nn.Flatten()
-        #                                         )
-        # self.mlp = nn.Sequential(nn.Linear((12+560), 512),
-        #                          nn.ELU(),
-        #                          nn.Linear(512, 256),
-        #                          nn.ELU(),
-        #                          nn.Linear(256, 64),
-        #                          nn.ELU()
-        #                          )        
+        # NW_v2_Max pull push both
+        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
+                                                nn.ELU(),
+                                                nn.MaxPool2d(2, stride=2), # (4,24,32) 3072
+                                                nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
+                                                nn.ELU(),
+                                                nn.MaxPool2d(2, stride=2), # (8,12,16) 1536
+                                                nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1), # (16,6,8) 768
+                                                # nn.ELU(), # comment out 
+                                                # nn.MaxPool2d(2, stride=1), # (16,5,7) 560 # comment out
+                                                nn.Flatten()
+                                                )
+        self.mlp = nn.Sequential(nn.Linear((12+768), 512),  # 560/768
+                                 nn.ELU(),
+                                 nn.Linear(512, 256),
+                                 nn.ELU(),
+                                 nn.Linear(256, 64),
+                                 nn.ELU()
+                                 )        
         
         # NW_v2_Avg
         # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
@@ -77,29 +77,29 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         #                          nn.ELU()
         #                          )        
         
-        # NW_v2.2_Max
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-                                     nn.ELU(),
-                                     nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
-                                     nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-                                     nn.ELU(),
-                                     nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
-                                     nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
-                                     nn.ELU(),
-                                     nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
-                                     nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
-                                     nn.ELU(),
-                                     nn.MaxPool2d(2, stride=2), # (24, 3, 4) # 288
-                                     nn.Flatten()
-                                     )
+        # # NW_v2.2_Max
+        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
+        #                              nn.ELU(),
+        #                              nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
+        #                              nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
+        #                              nn.ELU(),
+        #                              nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
+        #                              nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
+        #                              nn.ELU(),
+        #                              nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
+        #                              nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
+        #                              nn.ELU(),
+        #                              nn.MaxPool2d(2, stride=2), # (24, 3, 4) # 288
+        #                              nn.Flatten()
+        #                              )
         
-        self.mlp = nn.Sequential(nn.Linear((12+288), 512),
-                            nn.ELU(),
-                            nn.Linear(512, 256),
-                            nn.ELU(),
-                            nn.Linear(256, 64),
-                            nn.ELU()
-                            )        
+        # self.mlp = nn.Sequential(nn.Linear((12+288), 512),
+        #                     nn.ELU(),
+        #                     nn.Linear(512, 256),
+        #                     nn.ELU(),
+        #                     nn.Linear(256, 64),
+        #                     nn.ELU()
+        #                     )        
 
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())

@@ -153,7 +153,7 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-03_22-50-10-437847_PPO/checkpoints/agent_10000.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/0112_pull_push_both_add_V2.1/checkpoints/agent_45000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

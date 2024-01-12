@@ -34,10 +34,10 @@ class DoorHook(VecTask):
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 1000.0
-        self.handle_reward_scale = 200.0
-        self.dist_reward_scale = 10.0
-        self.action_penalty_scale = 0.005
+        self.open_reward_scale = 10.0
+        self.handle_reward_scale = 10.0
+        self.dist_reward_scale = 1.0
+        self.action_penalty_scale = 0.1
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -326,7 +326,7 @@ class DoorHook(VecTask):
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         
         norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
-        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = 0 # replaced from -1
+        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
         self.pp_d_imgs = norm_d_imgs
 
         # self.get_d_img_dataset()
@@ -466,15 +466,14 @@ def compute_ur3_reward(
     # handle_reward=torch.zeros(1,num_envs)
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0] * open_reward_scale
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
-    open_reward = ((door_dof_pos[:,0] * door_dof_pos[:,0]) + (door_dof_pos[:,0] - door_dof_pos_prev[:,0])) * open_reward_scale
-    # additional reward to open
-    handle_reward = (door_dof_pos[:,1] * door_dof_pos[:,1]) * handle_reward_scale
+    open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
+    handle_reward = door_dof_pos[:,1] * handle_reward_scale
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * hand_dist * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
-    dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
+    dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
 
 
 

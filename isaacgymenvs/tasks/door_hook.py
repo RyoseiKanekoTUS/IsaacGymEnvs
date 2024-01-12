@@ -25,9 +25,12 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
+        self.door_scale_param = 0.3
+
         self.action_scale = 1.5
         self.start_pos_noise_scale = 1.0
         self.start_rot_noise_scale = 1.0
+
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
@@ -213,7 +216,7 @@ class DoorHook(VecTask):
 
         # camera pose setting
         camera_tf = gymapi.Transform()
-        camera_tf.p = gymapi.Vec3(-0.065, 0, 0.131)
+        camera_tf.p = gymapi.Vec3(0.1, 0, 0.05)
         camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(0))
 
         self.camera_props.enable_tensors = True # when Vram larger
@@ -262,6 +265,8 @@ class DoorHook(VecTask):
             # # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+            #door size randomization
+            self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -321,7 +326,7 @@ class DoorHook(VecTask):
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         
         norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
-        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0
+        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = 0 # replaced from -1
         self.pp_d_imgs = norm_d_imgs
 
         # self.get_d_img_dataset()

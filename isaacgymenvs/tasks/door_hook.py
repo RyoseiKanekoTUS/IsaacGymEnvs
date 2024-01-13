@@ -338,7 +338,7 @@ class DoorHook(VecTask):
     def get_d_img_dataset(self):
 
         for z in range(self.num_envs):
-            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset/new_{self.n}_{z}.d_img')
+            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/{self.n}_{z}.d_img')
         self.n = self.n + 1
 
     def compute_observations(self):  # NOW DEFINING
@@ -348,7 +348,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

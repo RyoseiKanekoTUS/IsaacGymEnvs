@@ -100,7 +100,28 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         #                     nn.Linear(256, 64),
         #                     nn.ELU()
         #                     )        
-
+        
+        # # NW v3_Max
+        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
+        #                         nn.ELU(),
+        #                         nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
+        #                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
+        #                         nn.ELU(),
+        #                         nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
+        #                         nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
+        #                         nn.ELU(),
+        #                         nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
+        #                         nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
+        #                         nn.ELU(),
+        #                         nn.Flatten()
+        #                         )
+        # self.mlp = nn.Sequential(nn.Linear((12+1152), 512),
+        #             nn.ELU(),
+        #             nn.Linear(512, 256),
+        #             nn.ELU(),
+        #             nn.Linear(256, 64),
+        #             nn.ELU()
+        #             )        
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))

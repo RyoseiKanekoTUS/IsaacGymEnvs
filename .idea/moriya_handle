@@ -1,0 +1,20 @@
+def normalize(self,v):
+        norm = np.linalg.norm(v)
+        if norm == 0:
+            return v
+        return v / norm
+def quaternion_look_rotation(self, direction , default =[1, 0, 0]):
+    # prepare
+    direction = np.array(direction)
+    default = np.array(default)
+    # value check
+    assert np.linalg.norm( direction ) > 0
+    # normalize
+    direction = self.normalize(direction)
+    default = self.normalize(default)
+    # calculate angle
+    angle = np.arccos( np.dot( default, direction) )
+    # calculate axis
+    axis = self.normalize( np.cross(default, direction) )
+    axis = gymapi.Vec3(axis[0], axis[1], axis[2])
+    return gymapi.Quat.from_axis_angle(axis, angle)

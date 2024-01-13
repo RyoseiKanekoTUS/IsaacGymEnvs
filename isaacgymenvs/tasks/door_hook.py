@@ -25,11 +25,11 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.3
+        self.door_scale_param = 0.2
 
         self.action_scale = 1.5
         self.start_pos_noise_scale = 1.0
-        self.start_rot_noise_scale = 1.0
+        self.start_rot_noise_scale = 0.5
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -121,10 +121,10 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
-        door_1_asset_file = 'urdf/door_test/door_1.urdf'
-        door_2_asset_file = 'urdf/door_test/door_2.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv.urdf'
+        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
 
         
         # load ur3 asset
@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.02) # initial position of the robot
+        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.02) # initial position of the robot
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -384,6 +384,7 @@ class DoorHook(VecTask):
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_pos[:,1:] += 0.5
         rand_rot += 0.5
+        rand_rot[:,1] *= 0.1 # smallen pitch
         rand_pos = rand_pos * self.start_pos_noise_scale
         rand_rot = rand_rot * self.start_rot_noise_scale
 

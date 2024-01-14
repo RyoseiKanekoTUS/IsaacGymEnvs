@@ -23,13 +23,13 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 300 # 300
+        self.max_episode_length = 5 # 300
 
-        self.door_scale_param = 0.2
+        self.door_scale_param = 0.25
 
         self.action_scale = 1.5
         self.start_pos_noise_scale = 1.0
-        self.start_rot_noise_scale = 0.5
+        self.start_rot_noise_scale = 0.2
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.02) # initial position of the robot
+        ur3_start_pose.p = gymapi.Vec3(0.5, 0, 1.06) # initial position of the robot
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -264,6 +264,12 @@ class DoorHook(VecTask):
             #     door_actor = self.gym.create_actor(env_ptr, door_assets[3], door_start_pose, "door", i, 0, 0)
             # # -------------------------------------------------------------------------
                 
+            # # only rihgt hinge ---------------------------------------------------------
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            # # -------------------------------------------------------------------------
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
             self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
@@ -338,7 +344,7 @@ class DoorHook(VecTask):
     def get_d_img_dataset(self):
 
         for z in range(self.num_envs):
-            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/{self.n}_{z}.d_img')
+            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/h2l_{self.n}_{z}.d_img')
         self.n = self.n + 1
 
     def compute_observations(self):  # NOW DEFINING

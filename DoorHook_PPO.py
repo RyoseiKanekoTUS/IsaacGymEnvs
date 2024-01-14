@@ -102,26 +102,54 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         #                     )        
 
         # # NW v3_Max
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-                                nn.ELU(),
-                                nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
-                                nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-                                nn.ELU(),
-                                nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
-                                nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
-                                nn.ELU(),
-                                nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
-                                nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
-                                nn.ELU(),
+        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
+        #                         nn.ELU(),
+        #                         nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
+        #                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
+        #                         nn.ELU(),
+        #                         nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
+        #                         nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
+        #                         nn.ELU(),
+        #                         nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
+        #                         nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
+        #                         nn.ELU(),
+        #                         nn.Flatten()
+        #                         )
+        # self.mlp = nn.Sequential(nn.Linear((12+1152), 512),
+        #             nn.ELU(),
+        #             nn.Linear(512, 256),
+        #             nn.ELU(),
+        #             nn.Linear(256, 64),
+        #             nn.ELU()
+        #             )        
+        # self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
+        #                                 nn.Tanh())
+        # self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
+
+        # self.value_layer = nn.Linear(64, 1)
+
+        # # NW v4 + silhouette
+        self.silhouette_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
+                                nn.ReLU(),
+                                nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
+                                nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 18, 26
+                                nn.ReLU(),
+                                nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
+                                nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
+                                nn.ReLU(),
                                 nn.Flatten()
                                 )
-        self.mlp = nn.Sequential(nn.Linear((12+1152), 512),
+        
+        self.depth_extractor = self.silhouette_extractor
+        
+        self.mlp = nn.Sequential(nn.Linear((12+3072+3072), 1024),
                     nn.ELU(),
-                    nn.Linear(512, 256),
+                    nn.Linear(1024, 256),
                     nn.ELU(),
                     nn.Linear(256, 64),
                     nn.ELU()
                     )        
+        
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
@@ -138,9 +166,13 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         
         states = inputs['states']
         ee_states = states[:, :12]
-        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
-        fetures = self.d_feture_extractor(pp_d_imgs)
-        combined = torch.cat([ee_states, fetures], dim=-1)
+
+        silh_d_imgs = states[:, 12:3084].view(-1, 1, 48, 64)
+        silhouette = self.silhouette_extractor(silh_d_imgs)
+
+        dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
+        distance = self.depth_extractor(dist_d_imgs)
+        combined = torch.cat([ee_states, silhouette, distance], dim=-1)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
@@ -225,7 +257,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 150, "headless": False}
+        self.cfg_trainer = {"timesteps": 10000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -238,8 +270,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/conv_ppo/24-01-13_22-42-05-802443_PPO/checkpoints/agent_7000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

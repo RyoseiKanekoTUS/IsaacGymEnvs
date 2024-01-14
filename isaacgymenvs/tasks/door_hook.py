@@ -23,7 +23,7 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 5 # 300
+        self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.25
 
@@ -37,7 +37,7 @@ class DoorHook(VecTask):
         self.open_reward_scale = 10.0
         self.handle_reward_scale = 10.0
         self.dist_reward_scale = 1.0
-        self.action_penalty_scale = 0.1
+        self.action_penalty_scale = 0.01
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -58,7 +58,7 @@ class DoorHook(VecTask):
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
+        self.cfg["env"]["numObservations"] = 12 + 2*(self.camera_props.width*self.camera_props.height)
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.1) # initial position of the robot
+        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.1) # initial position of the robot
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -333,14 +333,15 @@ class DoorHook(VecTask):
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         
         self.thresh_d_imgs = torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max), 0, self.d_imgs)
-        print(self.thresh_d_imgs)
+
         # dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
         # dist_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
         self.dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
 
-        self.silh_d_imgs = torch.stack([(self.thresh_d_imgs[i,...]  - torch.min(self.thresh_d_imgs[i,...]))/(torch.max(self.thresh_d_imgs[i,...])-torch.min(self.thresh_d_imgs[i,...]) + 1e-8) for i in range(self.num_envs)])
-        print(self.dist_d_imgs, self.silh_d_imgs)
-        
+        self.silh_d_imgs = torch.stack([(self.thresh_d_imgs[i,...]  - torch.min(self.thresh_d_imgs[i,...]))/
+                                        (torch.max(self.thresh_d_imgs[i,...])-torch.min(self.thresh_d_imgs[i,...]) + 1e-8) 
+                                        for i in range(self.num_envs)])
+
         # self.get_d_img_dataset()
 
         self.gym.end_access_image_tensors(self.sim)
@@ -353,14 +354,14 @@ class DoorHook(VecTask):
             torch.save(self.dist_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/ff_{self.n}_{z}.d_img')
         self.n = self.n + 1
 
-    def compute_observations(self):  # NOW DEFINING
+    def compute_observations(self): 
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -380,7 +381,9 @@ class DoorHook(VecTask):
         
         # self.door_dof_vel = self.door_dof_state[..., 1] 
 
-        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
+        # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
+
+        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.silh_d_imgs, self.dist_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 

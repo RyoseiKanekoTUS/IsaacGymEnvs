@@ -29,7 +29,7 @@ class DoorHook(VecTask):
 
         self.action_scale = 1.5
         self.start_pos_noise_scale = 1.0
-        self.start_rot_noise_scale = 0.2
+        self.start_rot_noise_scale = 1.0
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -390,7 +390,7 @@ class DoorHook(VecTask):
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_pos[:,1:] += 0.5
         rand_rot += 0.5
-        rand_rot[:,1] *= 0.1 # smallen pitch
+        rand_rot[:,1] *= 0.5 # smallen pitch
         rand_pos = rand_pos * self.start_pos_noise_scale
         rand_rot = rand_rot * self.start_rot_noise_scale
 

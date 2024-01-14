@@ -29,7 +29,7 @@ class DoorHook(VecTask):
 
         self.action_scale = 1.5
         self.start_pos_noise_scale = 1.0
-        self.start_rot_noise_scale = 1.0
+        self.start_rot_noise_scale = 0.5
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, 0, 1.06) # initial position of the robot
+        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.1) # initial position of the robot
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -270,6 +270,7 @@ class DoorHook(VecTask):
             # else:
             #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
             # # -------------------------------------------------------------------------
+                
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
             self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
@@ -331,20 +332,25 @@ class DoorHook(VecTask):
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         
-        norm_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
-        norm_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
-        self.pp_d_imgs = norm_d_imgs
+        self.thresh_d_imgs = torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max), 0, self.d_imgs)
+        print(self.thresh_d_imgs)
+        # dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
+        # dist_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
+        self.dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
 
+        self.silh_d_imgs = torch.stack([(self.thresh_d_imgs[i,...]  - torch.min(self.thresh_d_imgs[i,...]))/(torch.max(self.thresh_d_imgs[i,...])-torch.min(self.thresh_d_imgs[i,...]) + 1e-8) for i in range(self.num_envs)])
+        print(self.dist_d_imgs, self.silh_d_imgs)
+        
         # self.get_d_img_dataset()
 
         self.gym.end_access_image_tensors(self.sim)
         
-        # print(self.pp_d_imgs[0]) # debug
+        # print(self.dist_d_imgs[0]) # debug
 
     def get_d_img_dataset(self):
 
         for z in range(self.num_envs):
-            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/h2l_{self.n}_{z}.d_img')
+            torch.save(self.dist_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/ff_{self.n}_{z}.d_img')
         self.n = self.n + 1
 
     def compute_observations(self):  # NOW DEFINING
@@ -374,8 +380,8 @@ class DoorHook(VecTask):
         
         # self.door_dof_vel = self.door_dof_state[..., 1] 
 
-        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
-        # print(self.pp_d_imgs)
+        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
+        # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    
@@ -511,9 +517,9 @@ def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val): # wasnt better th
 
     # type: (Tensor, float, float, float) -> Tensor 
     condition = torch.logical_or(d_imgs < depth_min, d_imgs > depth_max)
-    norm_d_imgs = (d_imgs - depth_min)/(depth_max - depth_min)
-    norm_d_imgs = torch.where(condition, replace_val, norm_d_imgs)
-    return norm_d_imgs 
+    dist_d_imgs = (d_imgs - depth_min)/(depth_max - depth_min)
+    dist_d_imgs = torch.where(condition, replace_val, dist_d_imgs)
+    return dist_d_imgs 
 
 
 

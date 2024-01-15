@@ -22,7 +22,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
 
-# # NW 4_1
+# NW 4_1
         # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=9, stride=1, padding=1), # 4, 42, 58 
         #                         nn.ReLU(),
         #                         nn.MaxPool2d(2, stride=2, padding=1), #  4, 22, 30
@@ -157,7 +157,7 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-09_20-23-55-341686_PPO_pre_add_avg/checkpoints/best_agent.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-15_19-41-38-217325_PPO/checkpoints/agent_11000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.eval(path)

@@ -25,19 +25,19 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.25
+        self.door_scale_param = 0.1
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 1.0
-        self.start_rot_noise_scale = 0.5
+        self.start_pos_noise_scale = 0.75
+        self.start_rot_noise_scale = 0.75
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 10.0
-        self.handle_reward_scale = 10.0
+        self.open_reward_scale = 20.0
+        self.handle_reward_scale = 20.0
         self.dist_reward_scale = 1.0
-        self.action_penalty_scale = 0.01
+        self.action_penalty_scale = 0.001
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -58,7 +58,7 @@ class DoorHook(VecTask):
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 12 + 2*(self.camera_props.width*self.camera_props.height)
+        self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.1) # initial position of the robot
+        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -328,19 +328,30 @@ class DoorHook(VecTask):
         self.gym.render_all_camera_sensors(self.sim)
         self.gym.start_access_image_tensors(self.sim)
 
-        self.d_imgs = torch.stack([
+        d_imgs = torch.stack([
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
-        
-        self.thresh_d_imgs = torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max), 0, self.d_imgs)
+        # print(torch.max(d_imgs), torch.min(d_imgs))
+
+        thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
+        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+
+        self.th_n_d_imgs = (thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
+        # print('thresh_norm all', self.th_n_d_imgs)
 
         # dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
         # dist_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
-        self.dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
 
-        self.silh_d_imgs = torch.stack([(self.thresh_d_imgs[i,...]  - torch.min(self.thresh_d_imgs[i,...]))/
-                                        (torch.max(self.thresh_d_imgs[i,...])-torch.min(self.thresh_d_imgs[i,...]) + 1e-8) 
+
+        self.silh_d_imgs = torch.stack([(self.th_n_d_imgs[i,...]  - torch.min(self.th_n_d_imgs[i,...]))/
+                                        (torch.max(self.th_n_d_imgs[i,...])-torch.min(self.th_n_d_imgs[i,...]) + 1e-12) 
                                         for i in range(self.num_envs)])
+        # print('silh',torch.max(self.silh_d_imgs), torch.min(self.silh_d_imgs))
+        # print('silh all', self.silh_d_imgs)
+
+        self.pp_d_imgs = 0.5*(self.th_n_d_imgs + self.silh_d_imgs)
+        # print('pp',torch.max(self.pp_d_imgs), torch.min(self.pp_d_imgs))
 
         # self.get_d_img_dataset()
 
@@ -351,7 +362,7 @@ class DoorHook(VecTask):
     def get_d_img_dataset(self):
 
         for z in range(self.num_envs):
-            torch.save(self.dist_d_imgs[z, :], f'../../depthnet/depth_dataset_v2/ff_{self.n}_{z}.d_img')
+            torch.save(self.pp_d_imgs[z, :], f'../../depthnet/depth_dataset_v4/trash_{self.n}_{z}.d_img')
         self.n = self.n + 1
 
     def compute_observations(self): 
@@ -383,7 +394,7 @@ class DoorHook(VecTask):
 
         # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
 
-        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.silh_d_imgs, self.dist_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
@@ -485,7 +496,7 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
     # print(hand_dist)
-    hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
+    hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * hand_dist * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
@@ -499,7 +510,8 @@ def compute_ur3_reward(
     print('----------------dist_min:', torch.min(hand_dist))
     print('-------------action_penalty max:', torch.min(action_penalty))
 
-    rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
+    # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
     # rewards = dist_reward_no_thresh + action_penalty
 
     # success reward

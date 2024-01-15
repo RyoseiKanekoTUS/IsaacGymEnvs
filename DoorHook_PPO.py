@@ -129,7 +129,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         # self.value_layer = nn.Linear(64, 1)
 
         # # NW v4 + silhouette
-        self.silhouette_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
+        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
                                 nn.ReLU(),
                                 nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
                                 nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 18, 26
@@ -140,11 +140,11 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 nn.Flatten()
                                 )
         
-        self.depth_extractor = self.silhouette_extractor
+        # self.depth_extractor = self.silhouette_extractor
         
-        self.mlp = nn.Sequential(nn.Linear((12+3072+3072), 1024),
+        self.mlp = nn.Sequential(nn.Linear((12+3072), 512),
                     nn.ELU(),
-                    nn.Linear(1024, 256),
+                    nn.Linear(512, 256),
                     nn.ELU(),
                     nn.Linear(256, 64),
                     nn.ELU()
@@ -167,12 +167,12 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         states = inputs['states']
         ee_states = states[:, :12]
 
-        silh_d_imgs = states[:, 12:3084].view(-1, 1, 48, 64)
-        silhouette = self.silhouette_extractor(silh_d_imgs)
+        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
+        d_feture = self.d_feture_extractor(pp_d_imgs)
 
-        dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
-        distance = self.depth_extractor(dist_d_imgs)
-        combined = torch.cat([ee_states, silhouette, distance], dim=-1)
+        # dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
+        # distance = self.depth_extractor(dist_d_imgs)
+        combined = torch.cat([ee_states, d_feture], dim=-1)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
@@ -257,7 +257,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 10000, "headless": False}
+        self.cfg_trainer = {"timesteps": 300, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -270,8 +270,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/conv_ppo/24-01-13_22-42-05-802443_PPO/checkpoints/agent_7000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

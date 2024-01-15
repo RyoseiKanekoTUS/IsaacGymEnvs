@@ -22,21 +22,28 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
 
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-                                                nn.ELU(),
-                                                nn.AvgPool2d(2, stride=2),
-                                                nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-                                                nn.ELU(),
-                                                nn.AvgPool2d(2, stride=2),
-                                                nn.Flatten()
-                                                )
-        self.d_feture_extractor = torch.load('depthnet/pre_trained/encoder990.pt', map_location=self.device)
-        self.mlp = nn.Sequential(nn.Linear(108, 256),
-                                         nn.ELU(),
-                                         nn.Linear(256, 64),
-                                         nn.ELU()
-                                        )
-                                         
+# # NW 4_1
+        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=9, stride=1, padding=1), # 4, 42, 58 
+        #                         nn.ReLU(),
+        #                         nn.MaxPool2d(2, stride=2, padding=1), #  4, 22, 30
+        #                         nn.Conv2d(4, 8, kernel_size=7, stride=1, padding=1), # 16, 18, 26
+        #                         nn.ReLU(),
+        #                         nn.MaxPool2d(2, stride=2, padding=1), # 8, 10, 14
+        #                         nn.Conv2d(8, 16, kernel_size=5, padding=1), # 16, 8, 12
+        #                         nn.ReLU(),
+        #                         nn.Flatten()
+        #                         )
+        
+        self.d_feture_extractor = torch.load('../../depthnet/logs/2024-01-15 13:51:14.804368/encoder105.pt', map_location=self.device)
+
+        self.mlp = nn.Sequential(nn.Linear((12+1536), 512),
+                    nn.ELU(),
+                    nn.Linear(512, 256),
+                    nn.ELU(),
+                    nn.Linear(256, 64),
+                    nn.ELU()
+                    )  
+              
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
@@ -153,8 +160,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/conv_ppo/24-01-09_20-23-55-341686_PPO_pre_add_avg/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

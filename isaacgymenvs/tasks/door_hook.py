@@ -25,11 +25,11 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.1
+        self.door_scale_param = 0.0
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.75
-        self.start_rot_noise_scale = 0.75
+        self.start_pos_noise_scale = 0.5
+        self.start_rot_noise_scale = 0.5
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()

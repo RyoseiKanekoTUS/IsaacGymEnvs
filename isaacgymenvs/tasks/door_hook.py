@@ -34,10 +34,10 @@ class DoorHook(VecTask):
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
         # reward parameters
-        self.open_reward_scale = 20.0
-        self.handle_reward_scale = 20.0
+        self.open_reward_scale = 100.0
+        self.handle_reward_scale = 50.0
         self.dist_reward_scale = 1.0
-        self.action_penalty_scale = 0.001
+        self.action_penalty_scale = 0.0001
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 

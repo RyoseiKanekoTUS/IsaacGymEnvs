@@ -29,7 +29,7 @@ class DoorHook(VecTask):
 
         self.action_scale = 1.5
         self.start_pos_noise_scale = 0.5
-        self.start_rot_noise_scale = 0.5
+        self.start_rot_noise_scale = 0.25
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 

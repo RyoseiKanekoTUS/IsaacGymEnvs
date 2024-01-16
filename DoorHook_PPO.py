@@ -129,20 +129,20 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         # self.value_layer = nn.Linear(64, 1)
 
         # # NW v4 + silhouette
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
+        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=9, stride=1, padding=1), # 8, 42, 58
                                 nn.ReLU(),
                                 nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
-                                nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 18, 26
+                                nn.Conv2d(4, 8, kernel_size=7, stride=1, padding=1), # 16, 18, 26
                                 nn.ReLU(),
                                 nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
-                                nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
+                                nn.Conv2d(8, 16, kernel_size=5, padding=1), # 32, 8, 12
                                 nn.ReLU(),
                                 nn.Flatten()
                                 )
         
         # self.depth_extractor = self.silhouette_extractor
         
-        self.mlp = nn.Sequential(nn.Linear((12+3072), 512),
+        self.mlp = nn.Sequential(nn.Linear((12+1536), 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -257,7 +257,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 300, "headless": False}
+        self.cfg_trainer = {"timesteps": 1200, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -267,7 +267,7 @@ if __name__ == '__main__':
 
     path = None
     # path = '../../learning_data/DoorHook/skrl/0111_uni_pull_push_both/best_agent.pt'
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-13_22-42-05-802443_PPO/checkpoints/agent_7000.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/24-01-16_17-45-53-591374_PPO_hand_up_some_open/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

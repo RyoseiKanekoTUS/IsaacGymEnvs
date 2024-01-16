@@ -25,21 +25,21 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.0
+        self.door_scale_param = 0.1
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.5
+        self.start_pos_noise_scale = 0.75
         self.start_rot_noise_scale = 0.5
 
-        self.aggregate_mode = self.cfg["env"]["aggregateMode"]
+        self.aggregate_mode = 3
 
         # reward parameters
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 50.0
         self.dist_reward_scale = 1.0
-        self.action_penalty_scale = 0.0001
+        self.action_penalty_scale = 0.001
 
-        self.debug_viz = self.cfg["env"]["enableDebugVis"]
+        self.debug_viz = False
 
         self.up_axis = "z"
         self.up_axis_idx = 2
@@ -73,7 +73,9 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.ur3_default_dof_pos = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
+        self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
+        self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
+        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
@@ -199,7 +201,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.6, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -216,8 +218,8 @@ class DoorHook(VecTask):
 
         # camera pose setting
         camera_tf = gymapi.Transform()
-        camera_tf.p = gymapi.Vec3(0.1, 0, 0.05)
-        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(0))
+        camera_tf.p = gymapi.Vec3(0.1, 0, 0.12)
+        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(20))
 
         self.camera_props.enable_tensors = True # when Vram larger
 
@@ -233,20 +235,14 @@ class DoorHook(VecTask):
         door_asset_count = 0
         for i in range(self.num_envs):
             # create env instance
-            env_ptr = self.gym.create_env(
-                self.sim, lower, upper, num_per_row
-            )
+            env_ptr = self.gym.create_env(self.sim, lower, upper, num_per_row)
 
-            if self.aggregate_mode >= 3:
-                self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
+            self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             # create robot hand actor name as "robot_hand"
             ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "robot_hand", i, 0, 0)
                                                                                                 # ↑self collision ON
             self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
-
-            if self.aggregate_mode == 2:
-                self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             # create door actors # all doors ------------------------------------------
             if door_asset_count == 3:
@@ -372,7 +368,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -402,7 +398,7 @@ class DoorHook(VecTask):
         
     def reset_idx(self, env_ids):
         # env_ids_int32 = env_ids.to(dtype=torch.int32)
-
+        # print(env_ids)
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
         # with no limit
@@ -410,17 +406,20 @@ class DoorHook(VecTask):
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_pos[:,1:] += 0.5
         rand_rot += 0.5
-        rand_rot[:,1] *= 0.5 # smallen pitch
+        rand_rot[:,1] *= 0.5 # smallen pitch rand
         rand_pos = rand_pos * self.start_pos_noise_scale
         rand_rot = rand_rot * self.start_rot_noise_scale
 
-        # print(rand_pos)
-        # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
-        # print(pos)
+        # # both side 
+        # pos = self.ur3_default_dof_pos_right.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        # pos[0::2] = self.ur3_default_dof_pos_left + torch.cat([rand_pos[0::2], rand_rot[0::2]], dim=-1)
+
+        # mid
+        pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+
         # with limit
         # pos = tensor_clamp(
-        #     self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
+        #     self.ur3_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
         #     self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)            
 
         self.ur3_dof_pos[env_ids, :] = pos
@@ -496,11 +495,11 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
     # print(hand_dist)
-    hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
+    hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * hand_dist * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
-    dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
+    # dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
 
 
 
@@ -512,7 +511,7 @@ def compute_ur3_reward(
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
     rewards = open_reward + dist_reward + handle_reward + action_penalty
-    # rewards = dist_reward_no_thresh + action_penalty
+    # rewards = open_reward + handle_reward + dist_reward_no_thresh + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)

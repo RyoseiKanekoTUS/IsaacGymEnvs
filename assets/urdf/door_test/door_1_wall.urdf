@@ -70,7 +70,7 @@
         <axis xyz = '0 0 1' rpy = '0 0 0 '/>
         <origin xyz = '-0.07 0.06858 2.040'/>
         <limit lower = '0' upper = '1.57' effort='10000' velocity="100.00"/>
-        <dynamics damping="10.0" friction="0.0"/>
+        <dynamics damping="25.0" friction="0.0"/>
         <parent link = 'door_wall'/>
         <child link = 'door'/>
     </joint>
@@ -101,7 +101,7 @@
         <parent link = 'door'/>
         <origin xyz = '0.035 0.75 -1.02'/>
         <limit lower = '0' upper = '0.5236' effort='100' velocity="1000.00"/>
-        <dynamics damping="0.0" friction="0.0"/>
+        <dynamics damping="0.01" friction="0.0"/>
         <child link = 'door_handles'/>
     </joint>
 

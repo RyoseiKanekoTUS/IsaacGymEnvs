@@ -199,7 +199,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.75, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()

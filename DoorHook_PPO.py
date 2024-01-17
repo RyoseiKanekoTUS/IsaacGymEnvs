@@ -270,8 +270,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/conv_ppo/24-01-16_11-52-32-365183_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

@@ -520,7 +520,7 @@ def compute_ur3_reward(
     # print(hand_dist)
     hand_dist_thresh = torch.where(hand_dist < 0.20, torch.zeros_like(hand_dist), hand_dist)
 
-    # dist_reward = -1 * hand_dist * dist_reward_scale
+    dist_reward = -1 * hand_dist * dist_reward_scale
     # dist_reward = -1 * hand_dist_thresh * dist_reward_scale
     dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
 
@@ -533,9 +533,9 @@ def compute_ur3_reward(
     print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    # rewards = open_reward + dist_reward + handle_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
     # rewards = open_reward + handle_reward + dist_reward_no_thresh + action_penalty
-    rewards = open_reward + handle_reward + action_penalty
+    # rewards = open_reward + handle_reward + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)

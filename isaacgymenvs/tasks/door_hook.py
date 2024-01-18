@@ -25,7 +25,7 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.0
+        self.door_scale_param = 0.2
 
         self.action_scale = 1.5
         self.start_pos_noise_scale = 0.75 # 0.5

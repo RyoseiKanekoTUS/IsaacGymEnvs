@@ -266,8 +266,8 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = '../../learning_data/DoorHook/skrl/0118_LEVORG_DEVEL/best_agent.pt'
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-16_11-52-32-365183_PPO/checkpoints/best_agent.pt'
+    # path = '../../learning_data/DoorHook/skrl/0118_LEVORG_DEVEL/best_agent.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/BEST_levorg_devel_additional/checkpoints/agent_38000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.eval(path)

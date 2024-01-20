@@ -28,7 +28,7 @@ class DoorHook(VecTask):
         self.door_scale_param = 0.1
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.25
+        self.start_pos_noise_scale = 0.5
         self.start_rot_noise_scale = 0.25
 
         self.aggregate_mode = 3
@@ -420,6 +420,7 @@ class DoorHook(VecTask):
         rand_rot = rand_rot * self.start_rot_noise_scale
 
         pos = torch.zeros(env_ids.shape[0], 6).to(self.device)
+
         # both side 
         left_mask = (env_ids % 2 == 0)
         right_mask = ~left_mask

@@ -213,7 +213,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
         pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         d_feture = self.d_feture_extractor(pp_d_imgs)
-        print(d_feture.shape)
+        # print(d_feture.shape)
 
         # dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
         # distance = self.depth_extractor(dist_d_imgs)

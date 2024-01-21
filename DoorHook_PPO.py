@@ -149,7 +149,29 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         #             nn.ELU()
         #             )
         
-        # # NW v4
+        # # # NW v4
+        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
+        #                 nn.ReLU(),
+        #                 nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
+        #                 nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 18, 26
+        #                 nn.ReLU(),
+        #                 nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
+        #                 nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
+        #                 nn.ReLU(),
+        #                 nn.Flatten()
+        #                 )
+        
+        
+        # self.mlp = nn.Sequential(nn.Linear((12+3072), 512),
+        #             nn.ELU(),
+        #             nn.Linear(512, 256),
+        #             nn.ELU(),
+        #             nn.Linear(256, 64),
+        #             nn.ELU()
+        #             )  
+
+
+        # # NW v4_4
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
                         nn.ReLU(),
                         nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
@@ -158,11 +180,12 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                         nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
                         nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
                         nn.ReLU(),
+                        nn.MaxPool2d(2, stride=2, padding=1), # 32, 4, 6 # 1120
                         nn.Flatten()
                         )
         
         
-        self.mlp = nn.Sequential(nn.Linear((12+3072), 512),
+        self.mlp = nn.Sequential(nn.Linear((12+1120), 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -190,6 +213,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
         pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         d_feture = self.d_feture_extractor(pp_d_imgs)
+        print(d_feture.shape)
 
         # dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
         # distance = self.depth_extractor(dist_d_imgs)
@@ -288,11 +312,11 @@ if __name__ == '__main__':
 
     path = None
     # path = '../../learning_data/DoorHook/skrl/0111_uni_pull_push_both/best_agent.pt'
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-16_17-45-53-591374_PPO_hand_up_some_open/checkpoints/best_agent.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/24-01-21_19-25-26-167408_PPO/checkpoints/agent_21000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

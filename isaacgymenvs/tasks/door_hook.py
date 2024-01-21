@@ -23,7 +23,7 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 300 # 300
+        self.max_episode_length = 150 # 300
 
         self.door_scale_param = 0.2
 
@@ -46,7 +46,7 @@ class DoorHook(VecTask):
 
         # self.distX_offset = 0.04 # 0.04 default
         
-        self.dt = 1/20
+        self.dt = 1/20  # edited
 
         # set camera properties for realsense now : 435 and 405
         self.camera_props = gymapi.CameraProperties()
@@ -218,8 +218,8 @@ class DoorHook(VecTask):
 
         # camera pose setting
         camera_tf = gymapi.Transform()
-        camera_tf.p = gymapi.Vec3(0.1, 0, 0.12)
-        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(20))
+        camera_tf.p = gymapi.Vec3(0.1, 0, 0.05)
+        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(0))
 
         self.camera_props.enable_tensors = True # when Vram larger
 

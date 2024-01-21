@@ -12,7 +12,7 @@ from skrl.models.torch import DeterministicMixin, GaussianMixin, Model
 from skrl.resources.preprocessors.torch import RunningStandardScaler
 from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
-from skrl.utils import set_seed
+# from skrl.utils import set_seed
 
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
@@ -22,111 +22,6 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
 
-        # # NW_v1
-        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=2),
-        #                                         nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=2),
-        #                                         nn.Flatten()
-        #                                         )
-        # self.mlp = nn.Sequential(nn.Linear(108, 256),
-        #                                  nn.ELU(),
-        #                                  nn.Linear(256, 64),
-        #                                  nn.ELU()
-        #                                 )
-
-        # NW_v2_Max pull push both
-        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=2), # (4,24,32) 3072
-        #                                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-        #                                         nn.ELU(),
-        #                                         nn.MaxPool2d(2, stride=2), # (8,12,16) 1536
-        #                                         nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1), # (16,6,8) 768
-        #                                         # nn.ELU(), # comment out 
-        #                                         # nn.MaxPool2d(2, stride=1), # (16,5,7) 560 # comment out
-        #                                         nn.Flatten()
-        #                                         )
-        # self.mlp = nn.Sequential(nn.Linear((12+768), 512),  # 560/768
-        #                          nn.ELU(),
-        #                          nn.Linear(512, 256),
-        #                          nn.ELU(),
-        #                          nn.Linear(256, 64),
-        #                          nn.ELU()
-        #                          )        
-        
-        # NW_v2_Avg
-        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-        #                                         nn.ELU(),
-        #                                         nn.AvgPool2d(2, stride=2), # (4,24,32) 3072
-        #                                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-        #                                         nn.ELU(),
-        #                                         nn.AvgPool2d(2, stride=2), # (8,12,16) 1536
-        #                                         nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1), # (16,6,8) 768
-        #                                         nn.ELU(),
-        #                                         nn.AvgPool2d(2, stride=1), # (16,5,7) 560
-        #                                         nn.Flatten()
-        #                                         )
-        # self.mlp = nn.Sequential(nn.Linear((12+560), 512),
-        #                          nn.ELU(),
-        #                          nn.Linear(512, 256),
-        #                          nn.ELU(),
-        #                          nn.Linear(256, 64),
-        #                          nn.ELU()
-        #                          )        
-        
-        # # NW_v2.2_Max
-        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-        #                              nn.ELU(),
-        #                              nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
-        #                              nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-        #                              nn.ELU(),
-        #                              nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
-        #                              nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
-        #                              nn.ELU(),
-        #                              nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
-        #                              nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
-        #                              nn.ELU(),
-        #                              nn.MaxPool2d(2, stride=2), # (24, 3, 4) # 288
-        #                              nn.Flatten()
-        #                              )
-        
-        # self.mlp = nn.Sequential(nn.Linear((12+288), 512),
-        #                     nn.ELU(),
-        #                     nn.Linear(512, 256),
-        #                     nn.ELU(),
-        #                     nn.Linear(256, 64),
-        #                     nn.ELU()
-        #                     )        
-
-        # # NW v3_Max
-        # self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1), # (2,48,64) 6144
-        #                         nn.ELU(),
-        #                         nn.MaxPool2d(4, stride=2, padding=1), # (4,24,32) 3072
-        #                         nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1), # (8,24,32) 6144
-        #                         nn.ELU(),
-        #                         nn.MaxPool2d(4, stride=2, padding=1), # (8,12,16) 1536
-        #                         nn.Conv2d(8, 24, kernel_size=3, stride=1, padding=1), # (24,12,16) 4608
-        #                         nn.ELU(),
-        #                         nn.MaxPool2d(4, stride=2), # (24,5,7) # 840
-        #                         nn.Conv2d(24, 24, kernel_size=4, stride=1, padding=2), # (24, 6, 8) 1152
-        #                         nn.ELU(),
-        #                         nn.Flatten()
-        #                         )
-        # self.mlp = nn.Sequential(nn.Linear((12+1152), 512),
-        #             nn.ELU(),
-        #             nn.Linear(512, 256),
-        #             nn.ELU(),
-        #             nn.Linear(256, 64),
-        #             nn.ELU()
-        #             )        
-        # self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
-        #                                 nn.Tanh())
-        # self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
-
-        # self.value_layer = nn.Linear(64, 1)
 
         # # NW v4 + silhouette
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
@@ -182,7 +77,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 class DoorHookTrainer(PPOnet):
     def __init__(self):
 
-        set_seed(210)
+        # set_seed(210)
         
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
@@ -266,12 +161,12 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    # path = '../../learning_data/DoorHook/skrl/0118_LEVORG_DEVEL/best_agent.pt'
-    path = 'skrl_runs/DoorHook/conv_ppo/BEST_levorg_devel_additional/checkpoints/agent_38000.pt'
+    path = '../../learning_data/DoorHook/skrl/0118_LEVORG_DEVEL/best_agent.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/BEST_levorg_devel_additional/checkpoints/agent_38000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

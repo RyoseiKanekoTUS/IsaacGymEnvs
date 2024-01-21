@@ -23,13 +23,13 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 300 # 300
+        self.max_episode_length = 150 # 300
 
-        self.door_scale_param = 0.2
+        self.door_scale_param = 0.25
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.75 # 0.5
-        self.start_rot_noise_scale = 0.5  # 0.25
+        self.start_pos_noise_scale = 0.5 # 0.5
+        self.start_rot_noise_scale = 0.0  # 0.25
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -102,6 +102,7 @@ class DoorHook(VecTask):
     def create_sim(self):
         self.up_axis_idx = 2 # index of up axis: Y=1, Z=2
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
+
     
         self._create_ground_plane()
         # print(f'num envs {self.num_envs} env spacing {self.cfg["env"]["envSpacing"]}')
@@ -315,7 +316,7 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        for j in range(10):
+        for j in range(4):
             d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
@@ -372,7 +373,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -522,7 +523,7 @@ def compute_ur3_reward(
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
-    reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
+    # reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf

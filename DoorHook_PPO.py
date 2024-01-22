@@ -302,7 +302,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 1200, "headless": False}
+        self.cfg_trainer = {"timesteps": 120000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -312,7 +312,7 @@ if __name__ == '__main__':
 
     path = None
     # path = '../../learning_data/DoorHook/skrl/0111_uni_pull_push_both/best_agent.pt'
-    path = 'skrl_runs/DoorHook/conv_ppo/24-01-22_02-00-28-094075_PPO_camera_default_right_hinge/checkpoints/best_agent.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-22_18-33-09-487467_PPO_uni_devel_right_hinge/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.eval(path)

@@ -28,8 +28,8 @@ class DoorHook(VecTask):
         self.door_scale_param = 0.25
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.5
-        self.start_rot_noise_scale = 0.25
+        self.start_pos_noise_scale =  0.5
+        self.start_rot_noise_scale =   0.25
 
         self.aggregate_mode = 3
 
@@ -53,7 +53,7 @@ class DoorHook(VecTask):
         self.camera_props.width = 64
         self.camera_props.height = 48
         self.depth_min = -3.0
-        self.depth_max = -0.07
+        self.depth_max = -0.18
 
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
@@ -201,7 +201,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -315,8 +315,8 @@ class DoorHook(VecTask):
         im_list = []
 
         for j in range(self.num_envs):
-            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             reshape = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             im_list.append(reshape)

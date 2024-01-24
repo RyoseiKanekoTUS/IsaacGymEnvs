@@ -161,8 +161,8 @@ if __name__ == '__main__':
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.models['policy'].d_feture_extractor.requires_grad = False
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

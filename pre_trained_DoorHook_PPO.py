@@ -34,9 +34,9 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 #                                 nn.Flatten()
 #                                 )
         
-        self.d_feture_extractor = torch.load('../../depthnet/logs/2024-01-16 16:45:17.657086_best/encoder50.pt', map_location=self.device)
+        self.d_feture_extractor = torch.load('../../learning_data/depthnet/0124_v5_45/encoder45.pt', map_location=self.device)
         # self.d_feture_extractor.parameters().require_grad = False
-        self.mlp = nn.Sequential(nn.Linear((12+1536), 512),
+        self.mlp = nn.Sequential(nn.Linear((12+768), 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -86,10 +86,10 @@ class DoorHookTrainer(PPOnet):
         self.cfg = PPO_DEFAULT_CONFIG.copy()
         self.cfg["rollouts"] = 64  # memory_size
         self.cfg["learning_epochs"] = 8
-        self.cfg["mini_batches"] = 16  # 16 * 4096 / 8192
+        self.cfg["mini_batches"] = 64  # 16 * 4096 / 8192
         self.cfg["discount_factor"] = 0.99
         self.cfg["lambda"] = 0.95
-        self.cfg["learning_rate"] = 5e-3
+        self.cfg["learning_rate"] = 1e-6
         self.cfg["learning_rate_scheduler"] = KLAdaptiveRL
         self.cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
         self.cfg["random_timesteps"] = 0
@@ -161,8 +161,8 @@ if __name__ == '__main__':
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.models['policy'].d_feture_extractor.requires_grad = False
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

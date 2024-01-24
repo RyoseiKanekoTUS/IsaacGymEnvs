@@ -75,7 +75,7 @@ class DoorHook(VecTask):
         # create some wrapper tensors for different slices
         self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
         self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
-        self.ur3_default_dof_pos_mid = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device)
+        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
@@ -421,7 +421,7 @@ class DoorHook(VecTask):
 
         pos = torch.zeros(env_ids.shape[0], 6).to(self.device)
 
-        # # both side 
+        # # ----------------------- both side 
         # left_mask = (env_ids % 2 == 0)
         # right_mask = ~left_mask
 
@@ -435,12 +435,11 @@ class DoorHook(VecTask):
         # print(f'Left count: {left_mask.sum().item()}, Right count: {right_mask.sum().item()}')
 
 
-        # pos = self.ur3_default_dof_pos_right.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
-        # pos[0::2] = self.ur3_default_dof_pos_left + torch.cat([rand_pos[0::2], rand_rot[0::2]], dim=-1)
-
-        # mid
-        pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
-
+        # # ------------------------ mid
+        # pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        
+        # # ------------------------ left 
+        pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
         # with limit
         # pos = tensor_clamp(
         #     self.ur3_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),

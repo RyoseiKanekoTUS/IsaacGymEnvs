@@ -185,7 +185,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                         )
         
         
-        self.mlp = nn.Sequential(nn.Linear((12+1120), 512),
+        self.mlp = nn.Sequential(nn.Linear((6+1120), 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -209,9 +209,9 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
-        ee_states = states[:, :12]
+        ee_states = states[:, :6]
 
-        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
+        pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
         d_feture = self.d_feture_extractor(pp_d_imgs)
         # print(d_feture.shape)
 

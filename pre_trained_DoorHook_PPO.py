@@ -34,9 +34,10 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 #                                 nn.Flatten()
 #                                 )
         
-        self.d_feture_extractor = torch.load('../../learning_data/depthnet/0124_v5_45/encoder45.pt', map_location=self.device)
+        # self.d_feture_extractor = torch.load('../../learning_data/depthnet/0124_v5_45/encoder45.pt', map_location=self.device)
+        self.d_feture_extractor = torch.load('../../depthnet/logs/2024-01-24 15:29:24.691405/encoder60.pt', map_location=self.device)
         # self.d_feture_extractor.parameters().require_grad = False
-        self.mlp = nn.Sequential(nn.Linear((12+768), 512),
+        self.mlp = nn.Sequential(nn.Linear((6+768), 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -59,8 +60,8 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
-        ee_states = states[:, :12]
-        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
+        ee_states = states[:, :6]
+        pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
         fetures = self.d_feture_extractor(pp_d_imgs)
         # print('d_fetures:',fetures)
         combined = torch.cat([fetures, ee_states], dim=-1)

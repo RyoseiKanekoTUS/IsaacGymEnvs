@@ -27,7 +27,7 @@ class DoorHook(VecTask):
 
         self.door_scale_param = 0.25
 
-        self.action_scale = 1.5
+        self.action_scale = 1.0
         self.start_pos_noise_scale =  0.5
         self.start_rot_noise_scale =   0.25
 
@@ -58,7 +58,7 @@ class DoorHook(VecTask):
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
+        self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -192,16 +192,16 @@ class DoorHook(VecTask):
             ur3_dof_props['effort'][i] = 500
         print(ur3_dof_props)
 
-        self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
-        self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
-        self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
+        # self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
+        # self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
+        # self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
 
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_1_asset)
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -316,7 +316,7 @@ class DoorHook(VecTask):
 
         for j in range(self.num_envs):
             d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+            np.savetxt(f"./.test_data/d_img_{j}.csv",self.pp_d_imgs[j,...].cpu().reshape(48, 64), delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             reshape = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             im_list.append(reshape)
@@ -392,6 +392,8 @@ class DoorHook(VecTask):
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
+        # print(dof_pos_dt)
+        # print(hand_pos)
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
@@ -399,7 +401,7 @@ class DoorHook(VecTask):
 
         # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
 
-        self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.pp_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((dof_pos_dt,  self.pp_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
@@ -471,9 +473,11 @@ class DoorHook(VecTask):
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions)
         # self.actions = self.zero_actions()
-        # self.actions = self.uni_actions()
+        # self.actions = -1 * self.uni_actions()
+        # print(self.actions)
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
+        # print(targets)
         # -----------with clamp limit --------------------------------------
         # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
         #     targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)

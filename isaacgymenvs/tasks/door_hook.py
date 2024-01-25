@@ -201,7 +201,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -253,19 +253,19 @@ class DoorHook(VecTask):
             #     door_asset_count += 1
             # # -------------------------------------------------------------------------
                 
-            # # only left hinge ---------------------------------------------------------
-            # if i % 2 == 0:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
-            # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[3], door_start_pose, "door", i, 0, 0)
-            # # -------------------------------------------------------------------------
-                
-            # only rihgt hinge ---------------------------------------------------------
+            # only left hinge ---------------------------------------------------------
             if i % 2 == 0:
                 door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
             else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+                door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
             # -------------------------------------------------------------------------
+                
+            # # only rihgt hinge ---------------------------------------------------------
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            # # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
@@ -437,11 +437,11 @@ class DoorHook(VecTask):
         # print(f'Left count: {left_mask.sum().item()}, Right count: {right_mask.sum().item()}')
 
 
-        # # ------------------------ mid
-        # pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        # ------------------------ mid
+        pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         
-        # # ------------------------ left 
-        pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
+        # # # ------------------------ left 
+        # pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
         # with limit
         # pos = tensor_clamp(
         #     self.ur3_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),

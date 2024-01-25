@@ -23,7 +23,7 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 150 # 300
+        self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.25
 
@@ -201,7 +201,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.5, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.45, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -253,7 +253,7 @@ class DoorHook(VecTask):
             #     door_asset_count += 1
             # # -------------------------------------------------------------------------
                 
-            # only left hinge ---------------------------------------------------------
+            # only pull door ---------------------------------------------------------
             if i % 2 == 0:
                 door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
             else:

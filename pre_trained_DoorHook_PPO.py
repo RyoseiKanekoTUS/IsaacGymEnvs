@@ -163,12 +163,12 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = 'skrl_runs/DoorHook/conv_ppo/24-01-26_01-46-54-337408_PPO/checkpoints/best_agent.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-26_01-46-54-337408_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.models['policy'].d_feture_extractor.requires_grad = False
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

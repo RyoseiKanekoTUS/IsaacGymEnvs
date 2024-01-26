@@ -42,7 +42,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
         self.d_feture_extractor = torch.load('../../depthnet/logs/2024-01-24 15:29:24.691405/encoder60.pt', map_location=self.device)
         # self.d_feture_extractor.parameters().require_grad = False
-        self.mlp = nn.Sequential(nn.Linear((6+768), 512),
+        self.mlp = nn.Sequential(nn.Linear((12+768), 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -65,8 +65,8 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
-        ee_states = states[:, :6]
-        pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
+        ee_states = states[:, :12]
+        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         fetures = self.d_feture_extractor(pp_d_imgs)
         # print('d_fetures:',fetures)
         combined = torch.cat([fetures, ee_states], dim=-1)
@@ -163,12 +163,12 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-25_01-02-47-440979_PPO/checkpoints/best_agent.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/24-01-26_01-46-54-337408_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.models['policy'].d_feture_extractor.requires_grad = False
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

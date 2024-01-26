@@ -145,7 +145,7 @@
     </joint>
 
     <link name='door_latch'>
-        <visual>
+        <!-- <visual> -->
             <!-- <geometry>
                 <box size='0.001 0.13 0.01'/> 
                 

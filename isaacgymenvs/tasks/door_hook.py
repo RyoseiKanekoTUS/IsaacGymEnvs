@@ -23,9 +23,9 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 300 # 300
+        self.max_episode_length = 100 # 300
 
-        self.door_scale_param = 0.25
+        self.door_scale_param = 0.2
 
         self.action_scale = 1.0
         self.start_pos_noise_scale =  0.5
@@ -58,7 +58,7 @@ class DoorHook(VecTask):
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
+        self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -253,19 +253,19 @@ class DoorHook(VecTask):
             #     door_asset_count += 1
             # # -------------------------------------------------------------------------
                 
-            # only pull door ---------------------------------------------------------
-            if i % 2 == 0:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
-            else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
-            # -------------------------------------------------------------------------
-                
-            # # only rihgt hinge ---------------------------------------------------------
+            # # only pull door ---------------------------------------------------------
             # if i % 2 == 0:
             #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
             # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
             # # -------------------------------------------------------------------------
+                
+            # only rihgt hinge ---------------------------------------------------------
+            if i % 2 == 0:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            else:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
@@ -394,6 +394,9 @@ class DoorHook(VecTask):
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
         # print(dof_pos_dt)
         # print(hand_pos)
+        # print(self.ur3_dof_vel)
+        fake_dof_vel = dof_pos_dt/self.dt
+        # print(fake_dof_vel)
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
@@ -401,7 +404,7 @@ class DoorHook(VecTask):
 
         # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
 
-        self.obs_buf = torch.cat((dof_pos_dt,  self.pp_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((dof_pos_dt, fake_dof_vel, self.pp_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
@@ -437,11 +440,11 @@ class DoorHook(VecTask):
         # print(f'Left count: {left_mask.sum().item()}, Right count: {right_mask.sum().item()}')
 
 
-        # ------------------------ mid
-        pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        # # ------------------------ mid
+        # pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         
-        # # # ------------------------ left 
-        # pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
+        # # ------------------------ left 
+        pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
         # with limit
         # pos = tensor_clamp(
         #     self.ur3_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),

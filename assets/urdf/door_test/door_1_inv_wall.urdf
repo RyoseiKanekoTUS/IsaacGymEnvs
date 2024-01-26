@@ -145,15 +145,22 @@
     </joint>
 
     <link name='door_latch'>
+        <visual>
+            <!-- <geometry>
+                <box size='0.001 0.13 0.01'/> 
+                
+            </geometry>
+            <origin xyz = '0.046 0.11 0' rpy = '0 0 0'/>
+        </visual> -->
+
         <collision>
             <geometry>
-                <box size='0.001 0.14 0.01'/>
+                <box size='0.001 0.13 0.01'/> 
+                <!-- 0.14 -->
             </geometry>
-            <origin xyz = '0.043 0.1 0' rpy = '0 0 0'/>
+            <origin xyz = '0.046 0.11 0' rpy = '0 0 0'/>
         </collision>
+
     </link>
-    <!-- <gazebo reference="world">
-        <material>Gazebo/Red</material>
-    </gazebo> -->
 
 </robot>

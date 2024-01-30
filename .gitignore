@@ -32,6 +32,6 @@ outputs/
 /isaacgymenvs/wandb
 
 .test_data
-/recorded_frames
+recorded_frames/
 
 

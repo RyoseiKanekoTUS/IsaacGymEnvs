@@ -24,6 +24,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
 
         # # NW v4 + silhouette
+
         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
                                 nn.ReLU(),
                                 nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
@@ -32,10 +33,9 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
                                 nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
                                 nn.ReLU(),
-                                nn.Flatten()
+                                nn.Flatten() # 3072
                                 )
         
-        # self.depth_extractor = self.silhouette_extractor
         
         self.mlp = nn.Sequential(nn.Linear((12+3072), 512),
                     nn.ELU(),

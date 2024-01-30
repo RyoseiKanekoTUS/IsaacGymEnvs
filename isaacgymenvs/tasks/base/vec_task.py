@@ -299,8 +299,19 @@ class VecTask(Env):
         #     self.gym.viewer_camera_look_at(
         #         self.viewer, None, cam_pos, cam_target)
                 
-        # custom viewer                                       # camera position       # pose for origin 
-            self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(2, 2, 1.5), gymapi.Vec3(0, 0, 1.0))
+        # # 4 doors ##############################################################################################
+        #     self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(6, 1.7, 5), gymapi.Vec3(0, 1.7, 1.0))
+        # ########################################################################################################
+        # type1 door ##############################################################################################
+            # self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 1.0, 1.5), gymapi.Vec3(0, -0.2, 0.85))
+        #     self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(6, 1.7, 5), gymapi.Vec3(0, 1.7, 1.0))
+        # ########################################################################################################
+        # # type3 doors ##############################################################################################
+            # self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 2.5, 1.5), gymapi.Vec3(0, 3.0, 1.0))
+        # ########################################################################################################
+        # # 4 doors ##############################################################################################
+            self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 2.5, 1.5), gymapi.Vec3(0, 3.0, 1.0))
+        # ########################################################################################################
 
 
     def allocate_buffers(self):
@@ -380,7 +391,7 @@ class VecTask(Env):
         # print('action_tensor:', action_tensor)
         # apply actions
         self.pre_physics_step(action_tensor)
-
+        # self.gym.write_viewer_image_to_file
         # step physics and render each frame
         for i in range(self.control_freq_inv):
             if self.force_render:
@@ -517,11 +528,11 @@ class VecTask(Env):
             else:
                 self.gym.poll_viewer_events(self.viewer)
 
-            if self.record_frames:
-                if not os.path.isdir(self.record_frames_dir):
-                    os.makedirs(self.record_frames_dir, exist_ok=True)
+            # if self.record_frames:
+            if not os.path.isdir(self.record_frames_dir):
+                os.makedirs(self.record_frames_dir, exist_ok=True)
 
-                self.gym.write_viewer_image_to_file(self.viewer, join(self.record_frames_dir, f"frame_{self.control_steps}.png"))
+            self.gym.write_viewer_image_to_file(self.viewer, join(self.record_frames_dir, f"frame_{self.control_steps}.png"))
 
             if self.virtual_display and mode == "rgb_array":
                 img = self.virtual_display.grab()

@@ -98,7 +98,7 @@ pose = gymapi.Transform()
 pose.p.z = 0.0
 
 # set up the env grid
-num_envs = 10
+num_envs = 4
 num_per_row = int(np.sqrt(num_envs))
 env_spacing = 2.0
 env_lower = gymapi.Vec3(-env_spacing, -env_spacing, 0.0)
@@ -129,7 +129,7 @@ for i in range(num_envs):
     gym.set_actor_dof_properties(env, ahandle, door_dof_props)
 
     handles.append(ahandle)
-    gym.set_rigid_body_color(env, ahandle, 0, gymapi.MESH_VISUAL_AND_COLLISION, color)
+    # gym.set_rigid_body_color(env, ahandle, 0, gymapi.MESH_VISUAL_AND_COLLISION, color)
 
 gym.viewer_camera_look_at(viewer, None, gymapi.Vec3(20, 20, 5), gymapi.Vec3(0, 0, 1))
 
@@ -146,7 +146,7 @@ while not gym.query_viewer_has_closed(viewer):
         # set forces and torques for the ant root bodies
         torques = torch.zeros((num_envs, 2), device=device, dtype=torch.float)
         indexes = torch.zeros((num_envs), device=device, dtype=torch.int)
-        indexes = torch.tensor([0,1,2,3,4,5,6,7,8,9], device=device, dtype=torch.int)
+        indexes = torch.tensor([0,1,2,3], device=device, dtype=torch.int)
         # indexes = gymapi.DOMAIN_ACTOR
         print('indexex',indexes)
         # forces[:, 0, 2] = 300
@@ -160,7 +160,7 @@ while not gym.query_viewer_has_closed(viewer):
         # set forces and torques for the ant root bodies
         torques = torch.zeros((num_envs, 2), device=device, dtype=torch.float)
         indexes = torch.zeros((num_envs), device=device, dtype=torch.int)
-        indexes = torch.tensor([0,1,2,3,4,5,6,7,8,9], device=device, dtype=torch.int)
+        indexes = torch.tensor([0,1,2,3], device=device, dtype=torch.int)
         print('indexes shape',indexes.shape)
         # forces[:, 0, 2] = 300
         torques[:,0] = -50
@@ -175,7 +175,7 @@ while not gym.query_viewer_has_closed(viewer):
         # set forces and torques for the ant root bodies
         torques = torch.zeros((num_envs, 2), device=device, dtype=torch.float)
         indexes = torch.zeros((num_envs), device=device, dtype=torch.int)
-        indexes = torch.tensor([0,1,2,3,4,5,6,7,8,9], device=device, dtype=torch.int)
+        indexes = torch.tensor([0,1,2,3], device=device, dtype=torch.int)
         print('indexes shape',indexes.shape)
         # forces[:, 0, 2] = 300
         torques[:,0] = -50

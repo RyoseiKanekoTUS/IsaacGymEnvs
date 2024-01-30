@@ -316,12 +316,14 @@ class DoorHook(VecTask):
         
         import cv2
         for j in range(10):
-            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow(f'rgb{j}', rgb_img)
             cv2.waitKey(1)
+
+            torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
 
     def d_img_process(self):
 

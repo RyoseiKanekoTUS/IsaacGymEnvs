@@ -25,11 +25,11 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 150 # 300
 
-        self.door_scale_param = 0.25
+        self.door_scale_param = 0.0
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.5 # 0.5
-        self.start_rot_noise_scale = 0.0  # 0.25
+        self.start_pos_noise_scale = 0 # 0.5
+        self.start_rot_noise_scale = 0  # 0.25
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -316,13 +316,15 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        for j in range(4):
-            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+        for j in range(self.num_envs):
+            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow(f'rgb{j}', rgb_img)
             cv2.waitKey(1)
+            torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+
 
     def d_img_process(self):
 
@@ -373,7 +375,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

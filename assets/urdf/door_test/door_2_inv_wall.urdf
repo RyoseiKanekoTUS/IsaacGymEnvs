@@ -122,13 +122,13 @@
         </visual>
         <collision name="door_handles_collision">
             <geometry>
-                <mesh filename="./meshes/door_handle.dae" scale='1.0 0.75 0.75'/>
+                <mesh filename="./meshes/door_handle_collision.dae" scale='1.0 0.75 0.75'/>
             </geometry>
             <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>
         </collision>
         <collision name="door_handles_collision">
             <geometry>
-                <mesh filename="./meshes/door_handle.dae" scale='1.0 0.75 0.75'/>
+                <mesh filename="./meshes/door_handle_collision.dae" scale='1.0 0.75 0.75'/>
             </geometry>
             <origin xyz = '0.045 0 0' rpy = '0 0 -1.57'/>
         </collision>

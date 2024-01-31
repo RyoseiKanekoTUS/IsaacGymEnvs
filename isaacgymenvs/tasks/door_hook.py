@@ -28,8 +28,8 @@ class DoorHook(VecTask):
         self.door_scale_param = 0.0
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0 # 0.5
-        self.start_rot_noise_scale = 0  # 0.25
+        self.start_pos_noise_scale = 0.5 # 0.5
+        self.start_rot_noise_scale = 0.25  # 0.25
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -493,9 +493,7 @@ def compute_ur3_reward(
     # print(open_reward_scale, handle_reward_scale, dist_reward_scale, action_penalty_scale)
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
-    # handle_reward=torch.zeros(1,num_envs)
-    # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0] * open_reward_scale
-    # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
+
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
     # print(hand_dist)
@@ -505,27 +503,33 @@ def compute_ur3_reward(
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
     dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
 
+    rewards = open_reward + dist_reward + handle_reward + action_penalty
 
 
-    # print(hand_dist)
-    print('----------------open_reward max:',torch.max(open_reward))
-    print('--------------handle_reward max:', torch.max(handle_reward))
-    print('----------------dist_min:', torch.min(hand_dist))
-    print('-------------action_penalty max:', torch.min(action_penalty))
+    
+    open_or_not = torch.where(door_dof_pos[:,0] > 0.785, 1, 0)
+    print(open_or_not)
+
+    # # print(hand_dist)
+    # print('----------------open_reward max:',torch.max(open_reward))
+    # print('--------------handle_reward max:', torch.max(handle_reward))
+    # print('----------------dist_min:', torch.min(hand_dist))
+    # print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
     # rewards = dist_reward_no_thresh + action_penalty
 
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    # rewards = dist_reward
-    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
-    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    # # rewards = dist_reward
+    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     # reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
+
+
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf

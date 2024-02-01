@@ -152,7 +152,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 3000, "headless": False}
+        self.cfg_trainer = {"timesteps": 30000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -161,7 +161,7 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = '../../learning_data/DoorHook/skrl/0118_LEVORG_DEVEL/best_agent.pt'
+    path = '../../learning_data/DoorHook/skrl/0119_LEVORG_DEVEL_additional_2/best_agent.pt'
     # path = 'skrl_runs/DoorHook/conv_ppo/BEST_levorg_devel_additional/checkpoints/agent_38000.pt'
     
     DoorHookTrainer = DoorHookTrainer()

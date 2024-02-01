@@ -3,6 +3,7 @@
 
 import numpy as np
 import os
+import random
 # import torch
 
 from isaacgym import gymtorch
@@ -21,9 +22,14 @@ class DoorHook(VecTask):
 
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
+        # for stochastic data
+
+        self.data_count = 0
+
+
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 150 # 300
+        self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.0
 
@@ -62,6 +68,8 @@ class DoorHook(VecTask):
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
+        # for experimental data
+        self.hinge_max_in_episode = torch.zeros(self.num_envs)
 
         # get gym GPU state tensors
         actor_root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
@@ -127,7 +135,9 @@ class DoorHook(VecTask):
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
         door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
 
-        
+        wood_texture = self.gym.create_texture_from_file(self.sim, './assets/textures/wood_3.jpg')
+        # wood_texture  = 'textures/wood_1.png'
+
         # load ur3 asset
         asset_options = gymapi.AssetOptions()
         vh_options = gymapi.VhacdParams()
@@ -155,6 +165,7 @@ class DoorHook(VecTask):
         door_1_inv_asset = self.gym.load_asset(self.sim, asset_root, door_1_inv_asset_file, asset_options)
         door_2_inv_asset = self.gym.load_asset(self.sim, asset_root, door_2_inv_asset_file, asset_options)
         door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
+        
 
         ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
         ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
@@ -275,6 +286,10 @@ class DoorHook(VecTask):
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
             self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
+            # door color
+            # self.gym.set_rigid_body_color(env_ptr, door_actor, 1, gymapi.MESH_VISUAL, gymapi.Vec3(0.1, 0.1, 0.1))
+            # door texture
+            self.gym.set_rigid_body_texture(env_ptr, door_actor, 1, gymapi.MESH_VISUAL, wood_texture)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -290,6 +305,11 @@ class DoorHook(VecTask):
             self.camera_handles.append(camera_handle)
             camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
             self.gym.attach_camera_to_body(camera_handle, self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
+
+            # l_color = gymapi.Vec3(1,1,1)
+            # l_ambient = gymapi.Vec3(1,1,1)
+            # l_direction = gymapi.Vec3(1,1,1)
+            # self.gym.set_light_parameters(self.sim, 0, l_color, l_ambient, l_direction)
 
         # handles definition : index
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook_finger")
@@ -413,7 +433,7 @@ class DoorHook(VecTask):
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_pos[:,1:] += 0.5
         rand_rot += 0.5
-        rand_rot[:,1] *= 0.5 # smallen pitch
+        # rand_rot[:,1] *= 0.5 # smallen pitch
         rand_pos = rand_pos * self.start_pos_noise_scale
         rand_rot = rand_rot * self.start_rot_noise_scale
 
@@ -474,10 +494,35 @@ class DoorHook(VecTask):
 
         self.compute_observations()
         self.compute_reward(self.actions)
+        # self.compute_data()
         self.door_dof_pos_prev = self.door_dof_pos.clone()
         self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
         
         # print('prev_pos:',self.ur3_dof_pos_prev)
+
+
+    def compute_data(self):
+        
+        for env in range(self.num_envs):
+            if self.door_dof_pos[env, 0] > self.hinge_max_in_episode[env]:
+                self.hinge_max_in_episode[env] = self.door_dof_pos[env, 0]
+            else:
+                pass
+        # print(self.hinge_max_in_episode)
+
+        if self.progress_buf[0] == (self.max_episode_length-1):
+        # if self.progress_buf[0] == 10:
+            print(self.hinge_max_in_episode.shape)
+            import time
+            with open('./.test_data/door_hinges.csv', 'ab') as fd:
+                
+                np.savetxt(fd, 57.296*self.hinge_max_in_episode.view(1,-1).detach().cpu().numpy(), delimiter=',')
+            self.hinge_max_in_episode = torch.zeros(self.num_envs)
+            self.data_count += 1
+        else:
+            pass
+
+
 
 #####################################################################
 ###=========================jit functions=========================###
@@ -504,11 +549,6 @@ def compute_ur3_reward(
     dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
 
     rewards = open_reward + dist_reward + handle_reward + action_penalty
-
-
-    
-    open_or_not = torch.where(door_dof_pos[:,0] > 0.785, 1, 0)
-    print(open_or_not)
 
     # # print(hand_dist)
     # print('----------------open_reward max:',torch.max(open_reward))

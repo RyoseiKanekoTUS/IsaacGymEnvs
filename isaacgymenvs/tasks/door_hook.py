@@ -289,7 +289,7 @@ class DoorHook(VecTask):
             # door color
             # self.gym.set_rigid_body_color(env_ptr, door_actor, 1, gymapi.MESH_VISUAL, gymapi.Vec3(0.1, 0.1, 0.1))
             # door texture
-            self.gym.set_rigid_body_texture(env_ptr, door_actor, 1, gymapi.MESH_VISUAL, wood_texture)
+            # self.gym.set_rigid_body_texture(env_ptr, door_actor, 1, gymapi.MESH_VISUAL, wood_texture)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)

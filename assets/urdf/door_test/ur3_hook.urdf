@@ -299,8 +299,65 @@
   <link name="tool0"/>
   <joint name="flange-tool0" type="fixed">
     <!-- default toolframe: X+ left, Y+ up, Z+ front -->
-    <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
+    <origin rpy="-3.141592653589793 0 0" xyz="0 0 0"/>
     <parent link="flange"/>
     <child link="tool0"/>
   </joint>
+
+    <joint name="ee_rz" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="tool0"/>
+        <child link="ee_rz_link"/>
+    </joint>
+    <link name="ee_rz_link"/>
+    <joint name="ee2hand_joint" type="fixed">
+        <origin rpy="0 1.57 0" xyz="0 0 0"/>
+        <parent link="ee_rz_link"/>
+        <child link="hand_base"/>
+    </joint>
+    <link name="hand_base">
+        <visual>
+            <geometry>
+                <cylinder length="0.065" radius="0.033"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder length="0.065" radius="0.033"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="hand2hook" type="fixed">
+        <origin rpy="-1.57 0 -1.57" xyz="-0.031 0.031 0.0425"/>
+        <parent link="hand_base"/>
+        <child link="hook"/>
+    </joint>
+    <link name="hook">
+        <visual>
+            <geometry>
+                <mesh filename="./meshes/ur3/collision/hook4door_v3.obj"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="./meshes/ur3/visual/hook4door_v3.obj"/>
+            </geometry>
+            <origin rpy="1.57 0 0" xyz="0 0 0"/>
+        </collision>
+    </link>
+    <joint name='hook_finger' type='fixed'>
+        <origin rpy="0 0 0" xyz="0.08 0 0.17"/>
+        <parent link='hand_base'/>
+        <child link='hook_finger'/>
+    </joint >
+    <link name='hook_finger'>
+        <visual>
+            <geometry>
+                <sphere radius='0.007'/>
+            </geometry>
+        </visual>
+    </link>
+
+
+
 </robot>

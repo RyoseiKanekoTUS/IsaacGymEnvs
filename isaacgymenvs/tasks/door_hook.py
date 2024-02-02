@@ -321,7 +321,7 @@ class DoorHook(VecTask):
             # self.gym.set_light_parameters(self.sim, 0, l_color, l_ambient, l_direction)
 
         # handles definition : index
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "ee_rz_link")
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "tool0")
         # print(self.hand_handle)
         # self.hook_pose = self.dof_state
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
@@ -334,7 +334,7 @@ class DoorHook(VecTask):
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
 
         # ur3 information
-        self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ee_rz_link")
+        self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "tool0")
 
         hand_pose = self.gym.get_rigid_transform(self.envs[0], self.hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
 
@@ -516,7 +516,7 @@ class DoorHook(VecTask):
         self.actions = actions.clone().to(self.device)
         self.actions = self.dt * self.actions * self.action_scale
         print('self.actions',self.actions)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
 

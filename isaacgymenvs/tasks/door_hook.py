@@ -106,11 +106,6 @@ class DoorHook(VecTask):
         self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
 
-        # jacobian_tensor = self.gym.acquire_jacobian_tensor(self.sim, 'ur3')
-        # self.jacobian = gymtorch.wrap_tensor(jacobian_tensor)
-        # self.jacobian_end_effector = self.jacobian[:, self.gym.find_actor_rigid_body_handle(self.envs[i], , "ee_rz_link")]
-        # self.jacobian_end_effector = self.jacobian[:, self.gym.find_actor_rigid_body_handle(self.envs[0], ur3_actor, "ee_rz_link")-1, :, :]
-
     
     def create_sim(self):
         self.up_axis_idx = 2 # index of up axis: Y=1, Z=2
@@ -217,7 +212,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.65, -0.15, 0.55) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.65, -0.20, 0.57) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
 
         door_start_pose = gymapi.Transform()
@@ -514,6 +509,9 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
+        # self.actions[:,0]*=-1
+        # self.actions[:,1]*=-1
+        # self.actions[:,2]*=-1
         self.actions = self.dt * self.actions * self.action_scale
         print('self.actions',self.actions)
         # self.actions = self.zero_actions()
@@ -549,10 +547,10 @@ class DoorHook(VecTask):
         # goal_orientation = torch.tensor([goal_quat[:, ], goal_quat[1], goal_quat[2], goal_quat[3]])
 
         d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat)
-        # print(d_theta)
+        print(d_theta)
 
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + d_theta
-        print(targets)
+        # print(targets)
 
 
 

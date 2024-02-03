@@ -81,7 +81,9 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
+        # self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device)
         self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device)
+
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
@@ -168,8 +170,8 @@ class DoorHook(VecTask):
         door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
         
 
-        ur3_dof_stiffness = to_torch([100, 100, 100, 100, 100, 100], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
+        ur3_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([1.5, 1.5, 1.5, 1.5, 1.5, 1.5], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -178,7 +180,7 @@ class DoorHook(VecTask):
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,7] = -10
+        self.handle_torque_tensor[:,7] = -5
 
         print('----------------------------------------------- num properties ----------------------------------------')
         print("num ur3 bodies: ", self.num_ur3_bodies)
@@ -199,8 +201,10 @@ class DoorHook(VecTask):
             ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
             ur3_dof_props['lower'][i] = -10
             ur3_dof_props['upper'][i] = 10
+            ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+            
 
-            ur3_dof_props['effort'][i] = 500
+            ur3_dof_props['effort'][i] = 1000
         print(ur3_dof_props)
 
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
@@ -212,7 +216,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.65, -0.20, 0.57) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.66, -0.1, 0.55) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
 
         door_start_pose = gymapi.Transform()
@@ -288,8 +292,12 @@ class DoorHook(VecTask):
             # # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
-            #door size randomization
-            self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
+            #door size randomization ###########################################################################
+            # self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
+            ####################################################################################################
+            self.gym.set_actor_scale(env_ptr, door_actor, 0.9)
+
+
             # door color
             # self.gym.set_rigid_body_color(env_ptr, door_actor, 1, gymapi.MESH_VISUAL, gymapi.Vec3(0.1, 0.1, 0.1))
             # door texture
@@ -509,12 +517,12 @@ class DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
-        # self.actions[:,0]*=-1
-        # self.actions[:,1]*=-1
+        self.actions[:,0]*=-1
+        self.actions[:,1]*=-1
         # self.actions[:,2]*=-1
         self.actions = self.dt * self.actions * self.action_scale
         print('self.actions',self.actions)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
 

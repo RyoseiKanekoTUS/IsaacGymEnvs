@@ -4,7 +4,6 @@
 import numpy as np
 import os
 import random
-# import torch
 
 from isaacgym import gymtorch
 from isaacgym import gymapi
@@ -33,9 +32,9 @@ class DoorHook(VecTask):
 
         self.door_scale_param = 0.0
 
-        self.action_scale = 1.0
-        self.start_pos_noise_scale = 0.5 # 0.5
-        self.start_rot_noise_scale = 0.25  # 0.25
+        self.action_scale = 1.5
+        self.start_pos_noise_scale = 0 # 0.5
+        self.start_rot_noise_scale = 0  # 0.25
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -211,7 +210,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.75, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.9, 0.0, 1.1) # initial position of the robot # 0.75 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -336,14 +335,44 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        from io import BytesIO
+        buf = BytesIO()
+
+        cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
+
         for j in range(self.num_envs):
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-            cv2.imshow(f'rgb{j}', rgb_img)
+            cv2.imshow('rgb', rgb_img)
+            # cv2.waitKey(1)
+
+            # torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+
+            plt.axis('off')
+
+            plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+            plt.colorbar()
+
+            plt.savefig(buf, format = 'png')
+            buf.seek(0)
+
+            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+            buf.close()
+
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            cv2.imshow('depth', img)
             cv2.waitKey(1)
-            torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+
+            # plt.colorbar()
+            plt.close()
+
 
 
     def d_img_process(self):
@@ -395,7 +424,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

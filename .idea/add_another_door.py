@@ -137,7 +137,7 @@ gym.prepare_sim(sim)
 
 door_handle_idx = gym.get_actor_dof_handle(envs[0], ahandle, 1)
 
-torque_amt = 100
+torque_amt = 0
 
 frame_count = 0
 while not gym.query_viewer_has_closed(viewer):
@@ -150,8 +150,8 @@ while not gym.query_viewer_has_closed(viewer):
         # indexes = gymapi.DOMAIN_ACTOR
         print('indexex',indexes)
         # forces[:, 0, 2] = 300
-        torques[:,1] = 50
-        torques[:,0] = 100
+        torques[:,1] = 0 # 50
+        torques[:,0] = 0 # 100
         print(torques)
         # gym.apply_rigid_body_force_tensors(sim, gymtorch.unwrap_tensor(forces), gymtorch.unwrap_tensor(torques), gymapi.ENV_SPACE)
         gym.set_dof_actuation_force_tensor_indexed(sim, gymtorch.unwrap_tensor(torques) ,gymtorch.unwrap_tensor(indexes) , num_envs)
@@ -163,7 +163,7 @@ while not gym.query_viewer_has_closed(viewer):
         indexes = torch.tensor([0,1,2,3], device=device, dtype=torch.int)
         print('indexes shape',indexes.shape)
         # forces[:, 0, 2] = 300
-        torques[:,0] = -50
+        torques[:,0] = 0 # -50
         # time.sleep(1)
         # torques[:,1] = -50
         print(torques)
@@ -178,9 +178,9 @@ while not gym.query_viewer_has_closed(viewer):
         indexes = torch.tensor([0,1,2,3], device=device, dtype=torch.int)
         print('indexes shape',indexes.shape)
         # forces[:, 0, 2] = 300
-        torques[:,0] = -50
+        torques[:,0] =  0 #-50
         # time.sleep(1)
-        torques[:,1] = -50
+        torques[:,1] = 0  # -50
         print(torques)
         # gym.apply_rigid_body_force_tensors(sim, gymtorch.unwrap_tensor(forces), gymtorch.unwrap_tensor(torques), gymapi.ENV_SPACE)
         gym.set_dof_actuation_force_tensor_indexed(sim, gymtorch.unwrap_tensor(torques) , gymtorch.unwrap_tensor(indexes), num_envs)

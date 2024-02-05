@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import torch
 
 from isaacgym import gymtorch, gymapi
 
@@ -11,6 +10,9 @@ sys.path.append(list(isaacgymenvs.__path__)[0])
 from tasks.base.vec_task import VecTask
 
 from skrl.utils import isaacgym_utils
+
+import torch
+
 
 
 TASK_CFG = {"name": "ReachingFranka",

@@ -18,7 +18,7 @@ import torch
 from skrl.utils.isaacgym_utils import ik
 
 
-class DoorHook(VecTask):
+class Franka_DoorHook(VecTask):
 
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
@@ -29,11 +29,11 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 200 # 300
+        self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.0
 
-        self.action_scale =  0.35
+        self.action_scale =  0.2 # left 0.2 # right_pull 0.4
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -81,17 +81,17 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        # self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device) # best
-        self.ur3_default_dof_pos = to_torch([0, -1.8, -2.5, 1.2, 1.57, 0], device=self.device)
+        # self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # left_best
+        self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right_best
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
-        self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
-        # print(self.ur3_dof_state.shape)
-        self.ur3_dof_pos = self.ur3_dof_state[..., 0]
-        self.hand_pose_euler_prev = torch.zeros_like(self.ur3_dof_pos, device=self.device)
-        self.ur3_dof_vel = self.ur3_dof_state[..., 1]
-        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
+        self.franka_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_franka_dofs]  # (num_envs, 6, 2)
+        # print(self.franka_dof_state.shape)
+        self.franka_dof_pos = self.franka_dof_state[..., 0]
+        self.hand_pose_euler_prev = torch.zeros(self.num_envs, 6 , device=self.device)
+        self.franka_dof_vel = self.franka_dof_state[..., 1]
+        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_franka_dofs:] # (num_envs, 2, 2)
         # print(self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)        
@@ -103,7 +103,7 @@ class DoorHook(VecTask):
         self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(self.num_envs, -1, 13)
 
         self.num_dofs = self.gym.get_sim_dof_count(self.sim) // self.num_envs
-        self.ur3_dof_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
+        self.franka_dof_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
 
         self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
@@ -132,7 +132,7 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        ur3_asset_file = "urdf/door_test/ur3_hook.urdf"
+        franka_asset_file = "urdf/franka_description/robots/franka_hook.urdf"
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
@@ -141,7 +141,7 @@ class DoorHook(VecTask):
         wood_texture = self.gym.create_texture_from_file(self.sim, './assets/textures/wood_3.jpg')
         # wood_texture  = 'textures/wood_1.png'
 
-        # load ur3 asset
+        # load franka asset
         asset_options = gymapi.AssetOptions()
         vh_options = gymapi.VhacdParams()
 
@@ -155,7 +155,7 @@ class DoorHook(VecTask):
         asset_options.thickness = 0.1
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
         asset_options.use_mesh_materials = True
-        ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
+        franka_asset = self.gym.load_asset(self.sim, asset_root, franka_asset_file, asset_options)
 
         # load door asset
         asset_options.flip_visual_attachments = False
@@ -170,68 +170,69 @@ class DoorHook(VecTask):
         door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
         
 
-        ur3_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([1.5, 1.5, 1.5, 1.5, 1.5, 1.5], dtype=torch.float, device=self.device)
+        franka_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
+        franka_dof_damping = to_torch([1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5], dtype=torch.float, device=self.device)
 
-        self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
-        self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
+        self.num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
+        self.num_franka_dofs = self.gym.get_asset_dof_count(franka_asset)
         self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
         self.num_door_dofs = self.gym.get_asset_dof_count(door_1_asset)
 
         # torque tensor for door handle
-        self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,7] = -5
+        self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_franka_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
+        self.handle_torque_tensor[:,8] = -5
 
         print('----------------------------------------------- num properties ----------------------------------------')
-        print("num ur3 bodies: ", self.num_ur3_bodies)
-        # print("num ur3 dofs: ", self.num_ur3_dofs)
-        # print("num door bodies: ", self.num_door_bodies)
-        # print("num door dofs: ", self.num_door_dofs)
+        print("num franka bodies: ", self.num_franka_bodies)
+        print("num franka dofs: ", self.num_franka_dofs)
+        print("num door bodies: ", self.num_door_bodies)
+        print("num door dofs: ", self.num_door_dofs)
         print('----------------------------------------------- num properties ----------------------------------------')
 
-        # set ur3 dof properties
-        ur3_dof_props = self.gym.get_asset_dof_properties(ur3_asset)
-        self.ur3_dof_lower_limits = []
-        self.ur3_dof_upper_limits = []
+        # set franka dof properties
+        franka_dof_props = self.gym.get_asset_dof_properties(franka_asset)
+        self.franka_dof_lower_limits = []
+        self.franka_dof_upper_limits = []
 
-        for i in range(self.num_ur3_dofs):
-            ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
-            # ur3_dof_props['hasLimits'][i] = False
-                # print(f'############### feed back ####################\n{ur3_dof_props}')
-            ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            ur3_dof_props['lower'][i] = -10
-            ur3_dof_props['upper'][i] = 10
-            ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+        for i in range(self.num_franka_dofs):
+            franka_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            # franka_dof_props['hasLimits'][i] = False
+                # print(f'############### feed back ####################\n{franka_dof_props}')
+            franka_dof_props['stiffness'][i] = franka_dof_stiffness[i]
+            franka_dof_props['lower'][i] = -10
+            franka_dof_props['upper'][i] = 10
+            franka_dof_props['damping'][i] = franka_dof_damping[i]
             
 
-            ur3_dof_props['effort'][i] = 1000
-        print(ur3_dof_props)
+            franka_dof_props['effort'][i] = 1000
+        print(franka_dof_props)
 
-        self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
-        self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
-        self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
+        self.franka_dof_lower_limits = to_torch(self.franka_dof_lower_limits, device=self.device)
+        self.franka_dof_upper_limits = to_torch(self.franka_dof_upper_limits, device=self.device)
+        self.franka_dof_speed_scales = torch.ones_like(self.franka_dof_lower_limits)
 
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_1_asset)
     
         # start pose
-        ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.7, -0.28, 0.65) # initial position of the robot # 0.55, -0.35, 0.55 best
-        # ur3_start_pose.p = gymapi.Vec3(0.55, -0.35, 0.55) # initial position of the robot #  best
+        franka_start_pose = gymapi.Transform()
+        franka_start_pose.p = gymapi.Vec3(0.7, -0.3, 0) # left_pull_best 
+        # franka_start_pose.p = gymapi.Vec3(0.7, 0, 0) # right_best_pull
+        # franka_start_pose.p = gymapi.Vec3(0.7, 0, 0) # right_trash
 
-        ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
+        franka_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
 
         door_start_pose = gymapi.Transform()
         door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
 
         # compute aggregate size
-        num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
-        num_ur3_shapes = self.gym.get_asset_rigid_shape_count(ur3_asset)
+        num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
+        num_franka_shapes = self.gym.get_asset_rigid_shape_count(franka_asset)
         num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
         num_door_shapes = self.gym.get_asset_rigid_shape_count(door_1_asset)
 
-        max_agg_bodies = num_ur3_bodies + num_door_bodies
-        max_agg_shapes = num_ur3_shapes + num_door_shapes
+        max_agg_bodies = num_franka_bodies + num_door_bodies
+        max_agg_shapes = num_franka_shapes + num_door_shapes
 
         # camera pose setting
         camera_tf = gymapi.Transform()
@@ -241,10 +242,10 @@ class DoorHook(VecTask):
         self.camera_props.enable_tensors = True # when Vram larger
 
         print('#############################################################################################################')
-        print(f'num_ur3_bodies : {num_ur3_bodies}, num_ur3_shapes : {num_ur3_shapes}, \nnum_door_bodies : {num_door_bodies}, num_door_shapes : {num_door_shapes}')
+        print(f'num_franka_bodies : {num_franka_bodies}, num_franka_shapes : {num_franka_shapes}, \nnum_door_bodies : {num_door_bodies}, num_door_shapes : {num_door_shapes}')
         print('#############################################################################################################')
 
-        self.ur3s = []
+        self.frankas = []
         self.doors = []
         self.envs = []
         self.camera_handles = []
@@ -260,38 +261,38 @@ class DoorHook(VecTask):
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             # create robot hand actor name as "robot_hand"
-            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "ur3", i, 0, 0)
+            franka_actor = self.gym.create_actor(env_ptr, franka_asset, franka_start_pose, "franka", i, 0, 0)
                                                                                                 # ↑self collision ON
-            self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
+            self.gym.set_actor_dof_properties(env_ptr, franka_actor, franka_dof_props)
 
-            self.gym.set_rigid_body_color(env_ptr, ur3_actor, 12, gymapi.MESH_VISUAL, gymapi.Vec3(0.1, 0.1, 0.1))
+            self.gym.set_rigid_body_color(env_ptr, franka_actor, 12, gymapi.MESH_VISUAL, gymapi.Vec3(0.1, 0.1, 0.1))
 
 
             if self.aggregate_mode == 2:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            # create door actors # all doors ------------------------------------------
-            if door_asset_count == 3:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-                door_asset_count = 0
-            else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-                door_asset_count += 1
-            # -------------------------------------------------------------------------
+            # # create door actors # all doors ------------------------------------------
+            # if door_asset_count == 3:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+            #     door_asset_count = 0
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+            #     door_asset_count += 1
+            # # -------------------------------------------------------------------------
                 
             # # only left hinge ---------------------------------------------------------
             # if i % 2 == 0:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
-            # else:
             #     door_actor = self.gym.create_actor(env_ptr, door_assets[3], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
             # # -------------------------------------------------------------------------
                 
-            # # only rihgt hinge ---------------------------------------------------------
-            # if i % 2 == 0:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
-            # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
-            # # -------------------------------------------------------------------------
+            # only rihgt hinge ---------------------------------------------------------
+            if i % 2 == 0:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            else:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization ###########################################################################
@@ -312,12 +313,12 @@ class DoorHook(VecTask):
                 self.gym.end_aggregate(env_ptr)
 
             self.envs.append(env_ptr)
-            self.ur3s.append(ur3_actor)
+            self.frankas.append(franka_actor)
             self.doors.append(door_actor)
 
             camera_handle = self.gym.create_camera_sensor(self.envs[i], self.camera_props)
             self.camera_handles.append(camera_handle)
-            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
+            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], franka_actor, "ee_rz_link")
             self.gym.attach_camera_to_body(camera_handle, self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
 
             # l_color = gymapi.Vec3(1,1,1)
@@ -326,7 +327,7 @@ class DoorHook(VecTask):
             # self.gym.set_light_parameters(self.sim, 0, l_color, l_ambient, l_direction)
 
         # handles definition : index
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "tool0")
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, franka_actor, "panda_handle")
         # print(self.hand_handle)
         # self.hook_pose = self.dof_state
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
@@ -338,8 +339,8 @@ class DoorHook(VecTask):
         rigid_body_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
 
-        # ur3 information
-        self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "tool0")
+        # franka information
+        self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.frankas[0], "panda_handle")
 
         hand_pose = self.gym.get_rigid_transform(self.envs[0], self.hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
 
@@ -356,7 +357,7 @@ class DoorHook(VecTask):
         # self.ee_eular = torch.tensor([self.ee_eular[0], self.ee_eular[1], self.ee_eular[2]])
         # print(len(self.ee_eular))
 
-        jacobian_tensor = self.gym.acquire_jacobian_tensor(self.sim, 'ur3')
+        jacobian_tensor = self.gym.acquire_jacobian_tensor(self.sim, 'franka')
         self.jacobian = gymtorch.wrap_tensor(jacobian_tensor)
         # self.jacobian_end_effector = self.jacobian[:, self.gym.find_actor_rigid_body_handle(self.envs[i], , "ee_rz_link")]
         self.jacobian_end_effector = self.jacobian[:, self.hand_handle-1, :, :]
@@ -365,7 +366,7 @@ class DoorHook(VecTask):
         
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
-        self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
+        self.rew_buf[:], self.reset_buf[:] = compute_franka_reward(
             self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hand_dist, 
             self.num_envs, 
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
@@ -438,14 +439,15 @@ class DoorHook(VecTask):
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
-        # ur3 rigid body states
+        # franka rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
         # print(hand_pos.shape)
         hand_rot_quat = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation --quat
         hand_rot_euler = self.quat_to_eular(hand_rot_quat[0,...]).view(1, -1).to(self.device)
         # print(hand_rot_euler.shape)
         self.hand_pose_euler = torch.cat([hand_pos, hand_rot_euler], dim=-1)
-        # print(self.hand_pose_euler.shape)
+        # print('hand_pose_euler_prev', self.hand_pose_euler_prev.shape)
+        # print('hand_pose_euler',self.hand_pose_euler.shape)
 
         # hand_pose = self.rigid_body_states[:, self.hand_handle][:, 0:7] # hand_pose
         # print(hand_pose.shape)
@@ -458,12 +460,12 @@ class DoorHook(VecTask):
 
         dof_pos_dt = self.hand_pose_euler - self.hand_pose_euler_prev
         # print(dof_pos_dt)
-        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
+        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_franka_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
         # self.door_dof_vel = self.door_dof_state[..., 1] 
 
-        # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
+        # self.obs_buf = torch.cat((dof_pos_dt, self.franka_dof_vel, self.dist_d_imgs), dim = -1)
 
         self.obs_buf = torch.cat((dof_pos_dt, hand_vel, self.pp_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
@@ -474,7 +476,7 @@ class DoorHook(VecTask):
     def reset_idx(self, env_ids):
         # env_ids_int32 = env_ids.to(dtype=torch.int32)
 
-        # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
+        # reset franka ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
 
         # with no limit
@@ -487,17 +489,17 @@ class DoorHook(VecTask):
         rand_rot = rand_rot * self.start_rot_noise_scale
 
         # print(rand_pos)
-        # pos = self.ur3_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5)
-        pos = self.ur3_default_dof_pos.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        # pos = self.franka_default_dof_pos.unsqueeze(0) + 0.75 * (torch.rand((len(env_ids), self.num_franka_dofs), device=self.device) - 0.5)
+        # pos = self.franka_default_dof_pos.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         # print(pos)
         # with limit
         # pos = tensor_clamp(
-        #     self.ur3_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
-        #     self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)            
+        #     self.franka_default_dof_pos.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_franka_dofs), device=self.device) - 0.5),
+        #     self.franka_dof_lower_limits, self.franka_dof_upper_limits)            
 
-        self.ur3_dof_pos[env_ids, :] = pos
-        self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
-        self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos
+        self.franka_dof_pos[env_ids, :] = self.franka_default_dof_pos
+        self.franka_dof_vel[env_ids, :] = torch.zeros_like(self.franka_dof_vel[env_ids])
+        self.franka_dof_targets[env_ids, :self.num_franka_dofs] = self.franka_default_dof_pos
 
         # reset door dof state
         self.door_dof_state[env_ids, :] = torch.zeros_like(self.door_dof_state[env_ids])
@@ -506,7 +508,7 @@ class DoorHook(VecTask):
 
         multi_env_ids_int32 = self.global_indices[env_ids, :2].flatten()
         self.gym.set_dof_position_target_tensor_indexed(self.sim,
-                                                        gymtorch.unwrap_tensor(self.ur3_dof_targets),
+                                                        gymtorch.unwrap_tensor(self.franka_dof_targets),
                                                         gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
 
         self.gym.set_dof_state_tensor_indexed(self.sim,
@@ -547,7 +549,7 @@ class DoorHook(VecTask):
             for env in range(self.num_envs)], dim = 0).to(self.device)
 
 
-        # targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
+        # targets = self.franka_dof_targets[:, :self.num_franka_dofs] +   self.dt * self.actions * self.action_scale
         # print(self.actions.device)
         # print(self.ee_pose.device)
         goal_position = self.ee_pose + self.actions[:, :3]
@@ -560,20 +562,20 @@ class DoorHook(VecTask):
         d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat)
         print(d_theta)
 
-        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + d_theta
+        targets = self.franka_dof_targets[:, :self.num_franka_dofs] + d_theta
         # print(targets)
 
 
 
 
         # -----------with clamp limit --------------------------------------
-        # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
-        #     targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
+        # self.franka_dof_targets[:, :self.num_franka_dofs] = tensor_clamp(
+        #     targets, self.franka_dof_lower_limits, self.franka_dof_upper_limits)
         # ------------------------------------------------------------------
         # -----------without clamp limit------------------------------------
-        self.ur3_dof_targets[:, :self.num_ur3_dofs] = targets 
+        self.franka_dof_targets[:, :self.num_franka_dofs] = targets 
         # ------------------------------------------------------------------
-        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.ur3_dof_targets))    
+        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.franka_dof_targets))    
         # self.gym.set_rigid_body_state()
 
     def post_physics_step(self):
@@ -587,9 +589,11 @@ class DoorHook(VecTask):
         self.compute_reward(self.actions)
         # self.compute_data()
         self.door_dof_pos_prev = self.door_dof_pos.clone()
+
+        print(self.hand_pose_euler.shape)
         self.hand_pose_euler_prev = self.hand_pose_euler.clone()
         
-        # print('prev_pos:',self.ur3_dof_pos_prev)
+        # print('prev_pos:',self.franka_dof_pos_prev)
 
 
     def compute_data(self):
@@ -637,7 +641,7 @@ class DoorHook(VecTask):
 
 
 @torch.jit.script
-def compute_ur3_reward(
+def compute_franka_reward(
     reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hand_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):

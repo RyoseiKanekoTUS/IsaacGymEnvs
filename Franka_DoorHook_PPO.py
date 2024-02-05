@@ -79,7 +79,7 @@ class DoorHookTrainer(PPOnet):
 
         # set_seed(210)
         
-        self.env = load_isaacgym_env_preview4(task_name="DoorHook")
+        self.env = load_isaacgym_env_preview4(task_name="Franka_DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
         self.memory = RandomMemory(memory_size=8, num_envs=self.env.num_envs, device=self.device)

@@ -4,63 +4,9 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="ur3_robot">
-  <transmission name="shoulder_pan_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="shoulder_pan_joint">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="shoulder_pan_motor">
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-  <transmission name="shoulder_lift_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="shoulder_lift_joint">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="shoulder_lift_motor">
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-  <transmission name="elbow_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="elbow_joint">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="elbow_motor">
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-  <transmission name="wrist_1_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="wrist_1_joint">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="wrist_1_motor">
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-  <transmission name="wrist_2_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="wrist_2_joint">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="wrist_2_motor">
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-  <transmission name="wrist_3_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="wrist_3_joint">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="wrist_3_motor">
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
   <!-- links: main serial chain -->
   <link name="base_link">
-    <!-- <origin rpy="0 0 3.141592653589793" xyz="0 0 0.8"/> -->
+    <origin rpy="0 0 3.141592653589793" xyz="0 0 0.8"/>
   </link>
   <link name="base_link_inertia">
     <visual>
@@ -226,7 +172,7 @@
            Use the joint between 'base_link' and 'base_link_inertia' (a dummy
            link/frame) to introduce the necessary rotation over Z (of pi rad).
       -->
-    <origin rpy="0 0 -4.712389" xyz="0 0 0"/>  
+    <!-- <origin rpy="0 0 -4.712389" xyz="0 0 0"/>   -->
   </joint>
   <joint name="shoulder_pan_joint" type="revolute">
     <parent link="base_link_inertia"/>
@@ -284,7 +230,7 @@
            to correctly align 'base' with the 'Base' coordinate system of
            the UR controller.
       -->
-    <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
+    <!-- <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/> -->
     <parent link="base_link"/>
     <child link="base"/>
   </joint>

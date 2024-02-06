@@ -382,7 +382,8 @@ class Franka_DoorHook(VecTask):
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow(f'rgb{j}', cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR))
             cv2.waitKey(1)
-            torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+            torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
+            torch.save(self.th_n_d_imgs[0, :], f'./.test_data/th_n_.d_img')
 
 
     def d_img_process(self):
@@ -526,7 +527,7 @@ class Franka_DoorHook(VecTask):
         # self.actions[:,5]*=-1
         # self.actions[:,2]*=-1
         self.actions = self.dt * self.actions * self.action_scale
-        print('self.actions',self.actions)
+        # print('self.actions',self.actions)
         # self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
@@ -559,7 +560,7 @@ class Franka_DoorHook(VecTask):
             for env in range(self.num_envs)], dim = 0).to(self.device)
         # goal_orientation = torch.tensor([goal_quat[:, ], goal_quat[1], goal_quat[2], goal_quat[3]])
 
-        d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat)
+        d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat, 0.01)
         print(d_theta)
 
         targets = self.franka_dof_targets[:, :self.num_franka_dofs] + d_theta

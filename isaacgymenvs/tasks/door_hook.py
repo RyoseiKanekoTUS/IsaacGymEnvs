@@ -29,11 +29,11 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 200 # 300
+        self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.0
 
-        self.action_scale =  0.35
+        self.action_scale =  0.25
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -557,7 +557,7 @@ class DoorHook(VecTask):
             for env in range(self.num_envs)], dim = 0).to(self.device)
         # goal_orientation = torch.tensor([goal_quat[:, ], goal_quat[1], goal_quat[2], goal_quat[3]])
 
-        d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat)
+        d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat, 0.001)
         print(d_theta)
 
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + d_theta

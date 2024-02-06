@@ -63,7 +63,7 @@
     <link name="hand_base">
         <visual>
             <geometry>
-                <cylinder length="0.065" radius="0.031"/>
+                <cylinder length="0.065" radius="0.02"/>
             </geometry>
         </visual>
         <collision>
@@ -79,11 +79,11 @@
     </joint>
     <link name="hook">
         <visual>
-            <geometry>
-                <mesh filename="./meshes/ur3/collision/hook4door_v3.obj"/>
-            </geometry>
-        </visual>
-        <collision>
+          <origin xyz="0.031 0.01 0.031" rpy="3.14159265 0 1.57"/>
+          <geometry>
+              <mesh filename="./meshes/ur3/visual/hook4door_sagano_san.dae" scale="0.001 0.001 0.001" />
+          </geometry>
+      </visual>        <collision>
             <geometry>
                 <mesh filename="./meshes/ur3/visual/hook4door_v3.obj"/>
             </geometry>

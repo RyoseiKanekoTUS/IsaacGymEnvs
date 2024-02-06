@@ -341,7 +341,7 @@ class DoorHook(VecTask):
         buf = BytesIO()
 
         cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
+        # cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
 
         for j in range(self.num_envs):
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
@@ -354,20 +354,15 @@ class DoorHook(VecTask):
 
             # torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
 
-            plt.axis('off')
-
-            plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-            plt.colorbar()
-
-            plt.savefig(buf, format = 'png')
-            buf.seek(0)
-
-            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
-            buf.close()
-
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-            cv2.imshow('depth', img)
+            # plt.axis('off')
+            # plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+            # plt.colorbar()
+            # plt.savefig(buf, format = 'png')
+            # buf.seek(0)
+            # img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+            # buf.close()
+            # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # cv2.imshow('depth', img)
             cv2.waitKey(1)
 
             # plt.colorbar()

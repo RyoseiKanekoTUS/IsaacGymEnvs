@@ -25,7 +25,7 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 150 # 300
 
-        self.door_scale_param = 0.25
+        self.door_scale_param = 0.20
 
         self.action_scale = 1.5
         self.start_pos_noise_scale =  0.5
@@ -75,7 +75,7 @@ class DoorHook(VecTask):
         # create some wrapper tensors for different slices
         self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
         self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
-        self.ur3_default_dof_pos_mid = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device)
+        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
@@ -201,7 +201,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.3, 0.0, 1.02) # initial position of the robot # 0.5 0.0 1.02 right + left -
+        ur3_start_pose.p = gymapi.Vec3(0.7, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.02 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -244,14 +244,14 @@ class DoorHook(VecTask):
                                                                                                 # ↑self collision ON
             self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
 
-            # # create door actors # all doors ------------------------------------------
-            # if door_asset_count == 3:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-            #     door_asset_count = 0
-            # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-            #     door_asset_count += 1
-            # # -------------------------------------------------------------------------
+            # create door actors # all doors ------------------------------------------
+            if door_asset_count == 3:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count = 0
+            else:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count += 1
+            # -------------------------------------------------------------------------
                 
             # # only left hinge ---------------------------------------------------------
             # if i % 2 == 0:
@@ -260,12 +260,12 @@ class DoorHook(VecTask):
             #     door_actor = self.gym.create_actor(env_ptr, door_assets[3], door_start_pose, "door", i, 0, 0)
             # # -------------------------------------------------------------------------
                 
-            # only rihgt hinge ---------------------------------------------------------
-            if i % 2 == 0:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
-            else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
-            # -------------------------------------------------------------------------
+            # # only rihgt hinge ---------------------------------------------------------
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            # # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization

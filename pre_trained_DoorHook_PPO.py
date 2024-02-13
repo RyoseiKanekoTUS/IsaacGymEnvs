@@ -21,6 +21,28 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         Model.__init__(self, observation_space, action_space, device)
         DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
+# 5
+        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=5, stride=1, padding=2), # 4, 48, 64
+                                     nn.Conv2d(4, 4, kernel_size=5, stride=1, padding=2), # 4, 48, 64
+                                     nn.ReLU(),
+                                     nn.MaxPool2d(2, stride=2, padding=1), #  8, 25, 33
+                                     nn.Conv2d(4, 8, kernel_size=5, stride=1, padding=2), # 16, 18, 26
+                                     nn.Conv2d(8, 8, kernel_size=5, stride=1, padding=2), # 8, 25, 33
+                                     nn.ReLU(),
+                                     nn.MaxPool2d(2, stride=2, padding=1), # 8, 13, 17
+                                     nn.Conv2d(8, 16, kernel_size=3, padding=1), # 32, 13, 17
+                                     nn.Conv2d(16, 16, kernel_size=3, padding=1), # 16, 13, 17
+                                     nn.MaxPool2d(2, stride=2), # 16, 6, 8
+                                     nn.ReLU(),
+                                     nn.Flatten()
+                                     )
+        self.mlp = nn.Sequential(nn.Linear((12+768), 512),
+            nn.ELU(),
+            nn.Linear(512, 256),
+            nn.ELU(),
+            nn.Linear(256, 64),
+            nn.ELU()
+            )        
 
 # # NW 4_1
 #         self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=9, stride=1, padding=1), # 4, 42, 58 
@@ -34,15 +56,15 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 #                                 nn.Flatten()
 #                                 )
         
-        self.d_feture_extractor = torch.load('../../depthnet/logs/2024-01-16 16:45:17.657086_best/encoder50.pt', map_location=self.device)
-        # self.d_feture_extractor.parameters().require_grad = False
-        self.mlp = nn.Sequential(nn.Linear((12+1536), 512),
-                    nn.ELU(),
-                    nn.Linear(512, 256),
-                    nn.ELU(),
-                    nn.Linear(256, 64),
-                    nn.ELU()
-                    )  
+#         # self.d_feture_extractor = torch.load('../../depthnet/logs/2024-01-16 16:45:17.657086_best/encoder50.pt', map_location=self.device)
+#         # self.d_feture_extractor.parameters().require_grad = False
+#         self.mlp = nn.Sequential(nn.Linear((12+1536), 512),
+#                     nn.ELU(),
+#                     nn.Linear(512, 256),
+#                     nn.ELU(),
+#                     nn.Linear(256, 64),
+#                     nn.ELU()
+#                     )  
               
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())
@@ -157,12 +179,12 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    # path = 'skrl_runs/DoorHook/conv_ppo/24-01-16_21-40-21-566265_PPO/checkpoints/best_agent.pt'
+    path = 'skrl_runs/DoorHook/conv_ppo/24-01-24_20-39-55-600582_PPO_ur3_pre_left_best/checkpoints/agent_114000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     # DoorHookTrainer.models['policy'].d_feture_extractor.requires_grad = False
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

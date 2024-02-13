@@ -295,8 +295,23 @@ class VecTask(Env):
                 cam_pos = gymapi.Vec3(20.0, 3.0, 25.0)
                 cam_target = gymapi.Vec3(10.0, 0.0, 15.0)
 
-            self.gym.viewer_camera_look_at(
-                self.viewer, None, cam_pos, cam_target)
+# # original viewer
+        #     self.gym.viewer_camera_look_at(
+        #         self.viewer, None, cam_pos, cam_target)
+                
+        # 4 doors ##############################################################################################
+            self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(6, 1.7, 5), gymapi.Vec3(0, 1.7, 1.0))
+        ########################################################################################################
+        # type1 door ##############################################################################################
+            # self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 1.0, 1.5), gymapi.Vec3(0, -0.2, 0.85))
+        #     self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(6, 1.7, 5), gymapi.Vec3(0, 1.7, 1.0))
+        # ########################################################################################################
+        # # type3 doors ##############################################################################################
+            # self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 2.5, 1.5), gymapi.Vec3(0, 3.0, 1.0))
+        # ########################################################################################################
+        # # # 4 doors ##############################################################################################
+        #     self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 2.5, 1.5), gymapi.Vec3(0, 3.0, 1.0))
+        # # ########################################################################################################
 
     def allocate_buffers(self):
         """Allocate the observation, states, etc. buffers.
@@ -512,16 +527,17 @@ class VecTask(Env):
             else:
                 self.gym.poll_viewer_events(self.viewer)
 
-            if self.record_frames:
-                if not os.path.isdir(self.record_frames_dir):
-                    os.makedirs(self.record_frames_dir, exist_ok=True)
 
-                self.gym.write_viewer_image_to_file(self.viewer, join(self.record_frames_dir, f"frame_{self.control_steps}.png"))
+# ################################ recording ########################
+#             if not os.path.isdir(self.record_frames_dir):
+#                 os.makedirs(self.record_frames_dir, exist_ok=True)
 
-            if self.virtual_display and mode == "rgb_array":
-                img = self.virtual_display.grab()
-                return np.array(img)
+#             self.gym.write_viewer_image_to_file(self.viewer, join(self.record_frames_dir, f"frame_{self.control_steps}.png"))
 
+#             if self.virtual_display and mode == "rgb_array":
+#                 img = self.virtual_display.grab()
+#                 return np.array(img)
+# ####################################################################
     def __parse_sim_params(self, physics_engine: str, config_sim: Dict[str, Any]) -> gymapi.SimParams:
         """Parse the config dictionary for physics stepping settings.
 

@@ -33,8 +33,8 @@ class DoorHook(VecTask):
         self.door_scale_param = 0.0
 
         self.action_scale = 1.5
-        self.start_pos_noise_scale = 0.5 # 0.5
-        self.start_rot_noise_scale = 0.25  # 0.25
+        self.start_pos_noise_scale = 0 # 0.5
+        self.start_rot_noise_scale = 0  # 0.25
 
         self.aggregate_mode = self.cfg["env"]["aggregateMode"]
 
@@ -210,7 +210,8 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.75, 0.0, 1.1) # initial position of the robot # 0.75 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(1.4, 0.0, 1.1) # initial position of the robot # 0.75 0.0 1.1 right + left -
+        # test near 0.325, -0.25, 1.0
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -352,7 +353,9 @@ class DoorHook(VecTask):
             cv2.imshow('rgb', rgb_img)
             # cv2.waitKey(1)
 
-            # torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+            torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
+            torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
+            torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
 
             # plt.axis('off')
             # plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
@@ -419,7 +422,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -495,7 +498,7 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale

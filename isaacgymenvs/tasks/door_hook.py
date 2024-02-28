@@ -27,7 +27,7 @@ class DoorHook(VecTask):
 
         self.door_scale_param = 0.2
 
-        self.action_scale = 1.0
+        self.action_scale = 1.5
         self.start_pos_noise_scale =  0.5
         self.start_rot_noise_scale =   0.25
 
@@ -37,7 +37,9 @@ class DoorHook(VecTask):
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 50.0
         self.dist_reward_scale = 1.0
-        self.action_penalty_scale = 0.001
+        self.o_dist_reward_scale = 0.25
+
+        self.action_penalty_scale = 0.01
 
         self.debug_viz = False
 
@@ -58,7 +60,7 @@ class DoorHook(VecTask):
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 12 + self.camera_props.width*self.camera_props.height
+        self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -86,7 +88,10 @@ class DoorHook(VecTask):
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         # print(self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0]
-        self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)        
+        self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
+
+        self.hand_o_dist = None
+
         self.door_dof_vel = self.door_dof_state[..., 1]
 
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
@@ -303,9 +308,9 @@ class DoorHook(VecTask):
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
         self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hand_dist, 
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hand_dist, self.hand_o_dist,  
             self.num_envs, 
-            self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
+            self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
 
     def debug_camera_imgs(self):
@@ -391,6 +396,8 @@ class DoorHook(VecTask):
         # door handle rigid body states
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
+        self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3], dim = -1)
+        print(self.hand_o_dist)
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
         # print(dof_pos_dt)
         # print(hand_pos)
@@ -404,7 +411,7 @@ class DoorHook(VecTask):
 
         # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
 
-        self.obs_buf = torch.cat((dof_pos_dt, fake_dof_vel, self.pp_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((dof_pos_dt, self.pp_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
@@ -512,10 +519,10 @@ class DoorHook(VecTask):
 
 @torch.jit.script
 def compute_ur3_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hand_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hand_dist, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
     # print(open_reward_scale, handle_reward_scale, dist_reward_scale, action_penalty_scale)
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
@@ -524,33 +531,33 @@ def compute_ur3_reward(
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
-    # print(hand_dist)
+
     hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
 
     # dist_reward = -1 * hand_dist * dist_reward_scale
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+
+    o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
+    # print(o_dist_reward)
+
     # dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
+    # dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
 
-
-
-    # print(hand_dist)
-    print('----------------open_reward max:',torch.max(open_reward))
-    print('--------------handle_reward max:', torch.max(handle_reward))
-    print('----------------dist_min:', torch.min(hand_dist))
-    print('-------------action_penalty max:', torch.min(action_penalty))
+    print(hand_o_dist)
+    # print('----------------open_reward max:',torch.max(open_reward))
+    # print('--------------handle_reward max:', torch.max(handle_reward))
+    # print('----------------dist_min:', torch.min(hand_dist))
+    # print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    rewards = open_reward + dist_reward + handle_reward + action_penalty
-    # rewards = open_reward + handle_reward + dist_reward_no_thresh + action_penalty
-    # rewards = open_reward + handle_reward + action_penalty
-
+    rewards = open_reward + dist_reward + o_dist_reward + handle_reward + action_penalty
+    # rewards = open_reward + dist_reward + handle_reward + action_penalty
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    # rewards = dist_reward
-    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
-    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

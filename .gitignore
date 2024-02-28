@@ -1,4 +1,6 @@
 videos
+
+/recorded_frames
 /isaacgymenvs/logs
 *train_dir*
 *wandb*

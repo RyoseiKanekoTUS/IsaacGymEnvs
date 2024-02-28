@@ -10,7 +10,7 @@
         
     <joint name = 'base_joint' type = 'fixed'>
         <parent link = 'base_link'/>
-        <origin xyz = '0 -0.5 0.0' rpy='0 0 0'/>
+        <origin xyz = '0 0.5 0.0' rpy='0 0 3.14159'/>
         <!-- if move y : the door will slide -->
         <child link = 'door_wall'/>
     </joint>
@@ -20,44 +20,44 @@
             <geometry>
                 <box size='0.08 1.5 2.04'/>
             </geometry>
-            <origin xyz = '-0.03 -0.69 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 -0.67 1.02' rpy = '0 0 0'/>
         </visual>
         <visual>
             <geometry>
                 <box size='0.08 1.5 2.04'/>
             </geometry>
-            <origin xyz = '-0.03 1.72 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 1.74 1.02' rpy = '0 0 0'/>
         </visual>
         <visual>
             <geometry>
                 <box size='0.08 3.91 0.3'/>
             </geometry>
-            <origin xyz = '-0.03 0.512 2.19' rpy = '0 0 0'/>
+            <origin xyz = '0 0.532 2.19' rpy = '0 0 0'/>
         </visual>
 
-        <collision name="side_1">
+        <collision name="side_1_:hinge_side">
+            <geometry>
+                <box size='0.08 1.5 2.04'/>
+            </geometry>
+            <origin xyz = '0 -0.67 1.02' rpy = '0 0 0'/>
+        </collision>
+        <collision name="side_2">
             <geometry>
                 <box size = '0.05029 0.06858 2.10820'/>
             </geometry>
-            <origin xyz = '-0.02 0.02 1.05' rpy = '0 0 0'/>
+            <origin xyz="-0.02 1.02 1.05" rpy="0 0 0"/>
         </collision>
         <collision>
             <geometry>
                 <box size='0.08 1.5 2.04'/>
             </geometry>
-            <origin xyz = '-0.03 -0.72 1.02' rpy = '0 0 0'/>
-        </collision>
-        <collision name="side_2_hinge_side">
-            <geometry>
-                <box size='0.08 1.5 2.04'/>
-            </geometry>
-            <origin xyz = '-0.03 1.72 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 1.8 1.02' rpy = '0 0 0'/>
         </collision>
         <collision name="top">
             <geometry>
                 <box size='0.08 3.91 0.3'/>
             </geometry>
-            <origin xyz = '-0.03 0.512 2.19' rpy = '0 0 0'/>
+            <origin xyz = '0 0.532 2.19' rpy = '0 0 0'/>
         </collision>
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -67,10 +67,10 @@
     </link>
 
     <joint name = 'door_hinge' type = 'revolute'>
-        <axis xyz = '0 0 1'/>
-        <origin xyz = '-0.07 0.972 0' rpy = '3.14159 0 0'/>
+        <axis xyz = '0 0 -1' rpy = '0 0 0 '/>
+        <origin xyz = '-0.07 0.06858 2.040'/>
         <limit lower = '0' upper = '1.57' effort='10000' velocity="100.00"/>
-        <dynamics damping="10.0" friction="0.0"/>
+        <dynamics damping="25.0" friction="0.0"/>
         <parent link = 'door_wall'/>
         <child link = 'door'/>
     </joint>
@@ -97,11 +97,11 @@
     </link>
 
     <joint name = 'door_handle' type = 'revolute'>
-        <axis xyz = '-1 0 0' rpy = '0 0 0 '/>
+        <axis xyz = '1 0 0' rpy = '0 0 0 '/>
         <parent link = 'door'/>
         <origin xyz = '0.035 0.75 -1.02'/>
         <limit lower = '0' upper = '0.5236' effort='100' velocity="1000.00"/>
-        <dynamics damping="0.0" friction="0.0"/>
+        <dynamics damping="0.01" friction="0.0"/>
         <child link = 'door_handles'/>
     </joint>
 
@@ -147,10 +147,9 @@
     <link name='door_latch'>
         <collision>
             <geometry>
-                <box size='0.001 0.13 0.01'/> 
-                <!-- 0.14 -->
+                <box size='0.001 0.5 0.01'/>
             </geometry>
-            <origin xyz = '0.046 0.11 0' rpy = '0 0 0'/>
+            <origin xyz = '-0.014 0.2 0.9' rpy = '0 0 0'/>
         </collision>
     </link>
     <!-- <gazebo reference="world">

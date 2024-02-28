@@ -130,8 +130,8 @@ class DoorHook(VecTask):
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_2.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall_2.urdf'
 
         
         # load ur3 asset
@@ -249,14 +249,14 @@ class DoorHook(VecTask):
                                                                                                 # ↑self collision ON
             self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
 
-            # # create door actors # all doors ------------------------------------------
-            # if door_asset_count == 3:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-            #     door_asset_count = 0
-            # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-            #     door_asset_count += 1
-            # # -------------------------------------------------------------------------
+            # create door actors # all doors ------------------------------------------
+            if door_asset_count == 3:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count = 0
+            else:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count += 1
+            # -------------------------------------------------------------------------
                 
             # # only pull door ---------------------------------------------------------
             # if i % 2 == 0:
@@ -265,12 +265,12 @@ class DoorHook(VecTask):
             #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
             # # -------------------------------------------------------------------------
                 
-            # only rihgt hinge ---------------------------------------------------------
-            if i % 2 == 0:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
-            else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
-            # -------------------------------------------------------------------------
+            # # only rihgt hinge ---------------------------------------------------------
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[2], door_start_pose, "door", i, 0, 0)
+            # # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization

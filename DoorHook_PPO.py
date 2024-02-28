@@ -209,6 +209,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
+        # print('$$$$$$$$$$$$$$$$$$$$$$$$$$ states shape $$$$$$$$$$$$$$$$$$$$$$$$$$$$$',states.shape)
         ee_states = states[:, :6]
 
         pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
@@ -312,7 +313,7 @@ if __name__ == '__main__':
 
     path = None
     # path = '../../learning_data/DoorHook/skrl/0111_uni_pull_push_both/best_agent.pt'
-    path = 'skrl_runs/DoorHook/conv_ppo/0124_ur3_pull_push_both_best/checkpoints/agent_145000.pt'
+    # path = 'skrl_runs/DoorHook/conv_ppo/0124_ur3_pull_push_both_best/checkpoints/agent_145000.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

@@ -25,7 +25,7 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.2
+        self.door_scale_param = 0.1
 
         self.action_scale = 1.5
         self.start_pos_noise_scale =  0.5
@@ -36,8 +36,8 @@ class DoorHook(VecTask):
         # reward parameters
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 50.0
-        self.dist_reward_scale = 1.0
-        self.o_dist_reward_scale = 0.25
+        self.dist_reward_scale = 5.0
+        self.o_dist_reward_scale = 1.0
 
         self.action_penalty_scale = 0.01
 
@@ -55,7 +55,7 @@ class DoorHook(VecTask):
         self.camera_props.width = 64
         self.camera_props.height = 48
         self.depth_min = -3.0
-        self.depth_max = -0.18
+        self.depth_max = -0.07
 
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
@@ -191,8 +191,8 @@ class DoorHook(VecTask):
             # ur3_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{ur3_dof_props}')
             ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            ur3_dof_props['lower'][i] = -10
-            ur3_dof_props['upper'][i] = 10
+            ur3_dof_props['lower'][i] = -2
+            ur3_dof_props['upper'][i] = 2
 
             ur3_dof_props['effort'][i] = 500
         print(ur3_dof_props)
@@ -206,7 +206,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.4, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.15) # initial position of the robot # 0.5 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()
@@ -396,8 +396,10 @@ class DoorHook(VecTask):
         # door handle rigid body states
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
-        self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3], dim = -1)
-        print(self.hand_o_dist)
+        # print(self.ur3_dof_pos)
+        # print(self.ur3_dof_pos[:,3:])
+        self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3:], dim = -1)
+        # print(self.hand_o_dist)
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
         # print(dof_pos_dt)
         # print(hand_pos)
@@ -425,7 +427,7 @@ class DoorHook(VecTask):
         # with no limit
         rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device) 
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
-        rand_pos[:,1:] += 0.5
+        rand_pos += 0.5
         rand_rot += 0.5
         # rand_rot[:,1] *= 0.5 # smallen pitch rand
         rand_pos = rand_pos * self.start_pos_noise_scale
@@ -447,11 +449,11 @@ class DoorHook(VecTask):
         # print(f'Left count: {left_mask.sum().item()}, Right count: {right_mask.sum().item()}')
 
 
-        # # ------------------------ mid
-        # pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        # ------------------------ mid
+        pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         
-        # # ------------------------ left 
-        pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
+        # # # ------------------------ left 
+        # pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
         # with limit
         # pos = tensor_clamp(
         #     self.ur3_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
@@ -542,8 +544,8 @@ def compute_ur3_reward(
 
     # dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
     # dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
-
-    print(hand_o_dist)
+    # print(hand_dist.shape)
+    # print('hand_o_dist.shape', hand_o_dist.shape)
     # print('----------------open_reward max:',torch.max(open_reward))
     # print('--------------handle_reward max:', torch.max(handle_reward))
     # print('----------------dist_min:', torch.min(hand_dist))
@@ -555,8 +557,8 @@ def compute_ur3_reward(
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
     # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)

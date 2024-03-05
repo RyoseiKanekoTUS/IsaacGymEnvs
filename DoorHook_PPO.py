@@ -36,7 +36,9 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                         )
         
         
-        self.mlp = nn.Sequential(nn.Linear((6+3072), 512),
+        self.mlp = nn.Sequential(nn.Linear((6+3072), 1024),
+                    nn.ELU(),
+                    nn.Linear(1024, 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),

@@ -35,8 +35,8 @@ class DoorHook(VecTask):
 
         # reward parameters
         self.open_reward_scale = 100.0
-        self.handle_reward_scale = 100.0
-        self.dist_reward_scale = 2.5
+        self.handle_reward_scale = 75.0
+        self.dist_reward_scale = 5.0
         self.o_dist_reward_scale = 1.0
 
         self.action_penalty_scale = 0.01
@@ -194,7 +194,7 @@ class DoorHook(VecTask):
             ur3_dof_props['lower'][i] = -2
             ur3_dof_props['upper'][i] = 2
 
-            ur3_dof_props['effort'][i] = 500
+            ur3_dof_props['effort'][i] = 400
         print(ur3_dof_props)
 
         # self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
@@ -206,7 +206,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.15) # initial position of the robot # 0.5 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()

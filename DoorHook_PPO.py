@@ -86,13 +86,13 @@ class DoorHookTrainer(PPOnet):
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
-        self.memory = RandomMemory(memory_size=256, num_envs=self.env.num_envs, device=self.device)
+        self.memory = RandomMemory(memory_size=300, num_envs=self.env.num_envs, device=self.device)
         self.models = {}
         self.models["policy"] = PPOnet(self.env.observation_space, self.env.action_space, self.device)
         self.models["value"] = self.models["policy"]  # same instance: shared model
 
         self.cfg = PPO_DEFAULT_CONFIG.copy()
-        self.cfg["rollouts"] = 256  # memory_size
+        self.cfg["rollouts"] = 300  # memory_size
         self.cfg["learning_epochs"] = 24
         self.cfg["mini_batches"] = 128  # 16 * 4096 / 8192
         self.cfg["discount_factor"] = 0.99
@@ -166,7 +166,7 @@ if __name__ == '__main__':
 
     path = None
     # path = '../../learning_data/DoorHook/skrl/0111_uni_pull_push_both/best_agent.pt'
-    path = 'skrl_runs/DoorHook/non_vel/24-03-01_non_vel_007_open/checkpoints/agent_124000.pt'
+    path = 'skrl_runs/DoorHook/non_vel/24-03-01_non_vel_007_BEST/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

@@ -33,7 +33,7 @@ class Franka_DoorHook(VecTask):
 
         self.door_scale_param = 0.75
 
-        self.action_scale =  0.3 # left 0.2 # right_pull 0.4
+        self.action_scale =  0.4 # left 0.2 # right_pull 0.4
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -136,8 +136,8 @@ class Franka_DoorHook(VecTask):
         franka_asset_file = "urdf/franka_description/robots/franka_hook.urdf"
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_2.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall_2.urdf'
 
         # wood_texture = self.gym.create_texture_from_file(self.sim, './assets/textures/wood_3.jpg')
         # wood_texture  = 'textures/wood_1.png'
@@ -171,8 +171,8 @@ class Franka_DoorHook(VecTask):
         door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
         
 
-        franka_dof_stiffness = to_torch([50, 50, 50, 50, 50, 50, 50], dtype=torch.float, device=self.device)
-        franka_dof_damping = to_torch([1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5], dtype=torch.float, device=self.device)
+        franka_dof_stiffness = to_torch([5000, 5000, 5000, 5000, 5000, 5000, 5000], dtype=torch.float, device=self.device)
+        franka_dof_damping = to_torch([400, 400, 400, 400, 400, 400, 400], dtype=torch.float, device=self.device)
 
         self.num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
         self.num_franka_dofs = self.gym.get_asset_dof_count(franka_asset)
@@ -181,7 +181,7 @@ class Franka_DoorHook(VecTask):
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_franka_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,8] = -5
+        self.handle_torque_tensor[:,8] = -15
 
         print('----------------------------------------------- num properties ----------------------------------------')
         print("num franka bodies: ", self.num_franka_bodies)
@@ -199,7 +199,7 @@ class Franka_DoorHook(VecTask):
             franka_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
             # franka_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{franka_dof_props}')
-            # franka_dof_props['stiffness'][i] = franka_dof_stiffness[i]
+            franka_dof_props['stiffness'][i] = franka_dof_stiffness[i]
             franka_dof_props['lower'][i] = -10
             franka_dof_props['upper'][i] = 10
             franka_dof_props['damping'][i] = franka_dof_damping[i]

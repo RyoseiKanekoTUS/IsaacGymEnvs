@@ -31,9 +31,9 @@ class Franka_DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.75
+        self.door_scale_param = 0.8
 
-        self.action_scale =  0.4 # left 0.2 # right_pull 0.4
+        self.action_scale =  0.4 # left 0.4 # right_pull 0.4
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -82,7 +82,7 @@ class Franka_DoorHook(VecTask):
 
         # create some wrapper tensors for different slices
         self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # left_best
-        # self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right_best
+        self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right_best
         # self.franka_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
@@ -134,7 +134,7 @@ class Franka_DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         franka_asset_file = "urdf/franka_description/robots/franka_hook.urdf"
-        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
+        door_1_asset_file = 'urdf/door_test/door_2_inv_wall_2.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_2.urdf'
         door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall_2.urdf'
@@ -172,7 +172,8 @@ class Franka_DoorHook(VecTask):
         
 
         franka_dof_stiffness = to_torch([5000, 5000, 5000, 5000, 5000, 5000, 5000], dtype=torch.float, device=self.device)
-        franka_dof_damping = to_torch([400, 400, 400, 400, 400, 400, 400], dtype=torch.float, device=self.device)
+        # franka_dof_damping = to_torch([400, 400, 400, 400, 400, 400, 400], dtype=torch.float, device=self.device)  # left
+        franka_dof_damping = to_torch([300, 300, 300, 300, 300, 300, 300], dtype=torch.float, device=self.device)   # right
 
         self.num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
         self.num_franka_dofs = self.gym.get_asset_dof_count(franka_asset)
@@ -217,8 +218,8 @@ class Franka_DoorHook(VecTask):
     
         # start pose
         franka_start_pose = gymapi.Transform()
-        franka_start_pose.p = gymapi.Vec3(0.75, -0.2, 0) # left_pull_best 
-        # franka_start_pose.p = gymapi.Vec3(0.7, 0, 0) # right_best_pull
+        # franka_start_pose.p = gymapi.Vec3(0.75, -0.2, 0) # left_pull_best 
+        franka_start_pose.p = gymapi.Vec3(0.65, 0, 0) # right_best_pull
         # franka_start_pose.p = gymapi.Vec3(0.6, 0.0, 0) # right_better?
 
         franka_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)

@@ -34,9 +34,9 @@ class DoorHook(VecTask):
         self.aggregate_mode = 3
 
         # reward parameters
-        self.open_reward_scale = 100.0
-        self.handle_reward_scale = 75.0
-        self.dist_reward_scale = 5.0
+        self.open_reward_scale = 75.0
+        self.handle_reward_scale = 50.0
+        self.dist_reward_scale = 3.0
         self.o_dist_reward_scale = 1.0
 
         self.action_penalty_scale = 0.01

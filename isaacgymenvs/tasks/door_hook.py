@@ -34,10 +34,10 @@ class DoorHook(VecTask):
         self.aggregate_mode = 3
 
         # reward parameters
-        self.open_reward_scale = 75.0
-        self.handle_reward_scale = 50.0
-        self.dist_reward_scale = 3.0
-        self.o_dist_reward_scale = 1.0
+        self.open_reward_scale = 100.0
+        self.handle_reward_scale = 75.0
+        self.dist_reward_scale = 5.0
+        self.o_dist_reward_scale = 2.0
 
         self.action_penalty_scale = 0.01
 
@@ -206,7 +206,7 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.05) # initial position of the robot # 0.5 0.0 1.1 right + left -
+        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
 
         door_start_pose = gymapi.Transform()

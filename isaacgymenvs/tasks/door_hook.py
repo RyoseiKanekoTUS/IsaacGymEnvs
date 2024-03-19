@@ -37,7 +37,7 @@ class DoorHook(VecTask):
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 75.0
         self.dist_reward_scale = 5.0
-        self.o_dist_reward_scale = 2.0
+        self.o_dist_reward_scale = 1.5
 
         self.action_penalty_scale = 0.01
 

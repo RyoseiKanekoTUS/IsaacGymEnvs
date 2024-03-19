@@ -137,7 +137,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 500000, "headless": False}
+        self.cfg_trainer = {"timesteps": 250000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.train()

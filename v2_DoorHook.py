@@ -16,28 +16,37 @@ from skrl.utils import set_seed
 
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
-    def __init__(self, d_img_width, d_img_heigt,  observation_space, action_space, device, clip_actions=False,
+    def __init__(self, observation_space, action_space, device, clip_actions=False,
                  clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
         Model.__init__(self, observation_space, action_space, device)
         DeterministicMixin.__init__(self, clip_actions)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
-        self.d_img_width = d_img_width
-        self.d_img_heigt = d_img_heigt
 
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 4, kernel_size=4, stride=2, padding=2),
-                                                nn.ELU(),
-                                                nn.AvgPool2d(2, stride=2),
-                                                nn.Conv2d(4, 8, kernel_size=4, stride=2, padding=2),
-                                                nn.ELU(),
-                                                nn.AvgPool2d(2, stride=2),
-                                                nn.Flatten()
-                                                )
-        self.mlp = nn.Sequential(nn.Linear(108, 256),
-                                         nn.ELU(),
-                                         nn.Linear(256, 64),
-                                         nn.ELU()
-                                        )
-                                         
+        # # NW v4_4
+        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
+                        nn.ReLU(),
+                        nn.MaxPool2d(2, stride=2), #  8, 21, 29
+                        nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 17, 25
+                        nn.ReLU(),
+                        nn.MaxPool2d(2, stride=2), # 16, 8, 12
+                        nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 6, 10
+                        nn.ReLU(),
+                        # nn.MaxPool2d(2, stride=2, padding=1), # 32, 4, 6
+                        nn.Flatten() # 1920
+                        )
+        
+        
+        self.mlp = nn.Sequential(nn.Linear((6+1920), 1024),
+                    nn.ELU(),
+                    nn.Linear(1024, 512),
+                    nn.ELU(),
+                    nn.Linear(512, 256),
+                    nn.ELU(),
+                    nn.Linear(256, 64),
+                    nn.ELU()
+                    )        
+        
+        
         self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
                                         nn.Tanh())
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
@@ -53,11 +62,16 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
-        ee_states = states[:, :12]
-        pp_d_imgs = states[:, 12:].view(-1, 1, self.d_img_heigt, self.d_img_width)
-        fetures = self.d_feture_extractor(pp_d_imgs)
-        print('d_fetures:',fetures)
-        combined = torch.cat([fetures, ee_states], dim=-1)
+        # print('$ states shape $$$$$$$$$$$$$$$$$$$$$$$$$$$$$',states.shape)
+        ee_states = states[:, :6]
+
+        pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
+        d_feture = self.d_feture_extractor(pp_d_imgs)
+        # print("$$$$$$$$$$$$$$$$$$$$$$$$$", d_feture.shape)
+
+        # dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
+        # distance = self.depth_extractor(dist_d_imgs)
+        combined = torch.cat([ee_states, d_feture], dim=-1)
         if role == 'policy':
             return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
         elif role == 'value':
@@ -72,15 +86,13 @@ class DoorHookTrainer(PPOnet):
         self.env = load_isaacgym_env_preview4(task_name="DoorHook")
         self.env = wrap_env(self.env)
         self.device = self.env.device
-        self.d_img_width = self.env.camera_props.width
-        self.d_img_heigt = self.env.camera_props.height
-        self.memory = RandomMemory(memory_size=256, num_envs=self.env.num_envs, device=self.device)
+        self.memory = RandomMemory(memory_size=300, num_envs=self.env.num_envs, device=self.device)
         self.models = {}
-        self.models["policy"] = PPOnet(self.d_img_width, self.d_img_heigt, self.env.observation_space, self.env.action_space, self.device)
+        self.models["policy"] = PPOnet(self.env.observation_space, self.env.action_space, self.device)
         self.models["value"] = self.models["policy"]  # same instance: shared model
 
         self.cfg = PPO_DEFAULT_CONFIG.copy()
-        self.cfg["rollouts"] = 256  # memory_size
+        self.cfg["rollouts"] = 300  # memory_size
         self.cfg["learning_epochs"] = 24
         self.cfg["mini_batches"] = 128  # 16 * 4096 / 8192
         self.cfg["discount_factor"] = 0.99
@@ -112,7 +124,7 @@ class DoorHookTrainer(PPOnet):
         # logging to TensorBoard and write checkpoints (in timesteps)
         self.cfg["experiment"]["write_interval"] = 20
         self.cfg["experiment"]["checkpoint_interval"] = 1000
-        self.cfg["experiment"]["directory"] = "dev_skrl_runs/DoorHook/conv_ppo"
+        self.cfg["experiment"]["directory"] = "skrl_runs/DoorHook/non_vel"
 
         self.agent = PPO(models=self.models,
                         memory=self.memory,
@@ -125,7 +137,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 500000, "headless": False}
+        self.cfg_trainer = {"timesteps": 250000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.train()
@@ -144,7 +156,7 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 10000, "headless": False}
+        self.cfg_trainer = {"timesteps": 120000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
         self.trainer.eval()
@@ -153,7 +165,8 @@ class DoorHookTrainer(PPOnet):
 if __name__ == '__main__':
 
     path = None
-    path = 'skrl_runs/DoorHook/conv_ppo/0112_pull_push_both_add_V2.1/checkpoints/agent_45000.pt'
+    path = '../../learning_data/DoorHook_POST_GRADUATION/non_vel_new_CNN_0319/agent_250000.pt'
+    # path = 'skrl_runs/DoorHook/non_vel/24-03-19_13-04-08-617586_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
     DoorHookTrainer.eval(path)

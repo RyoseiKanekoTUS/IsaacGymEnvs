@@ -363,10 +363,10 @@ class DoorHook(VecTask):
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         # print(torch.max(d_imgs), torch.min(d_imgs))
 
-        thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
-        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+        self.thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
+        # print('thresh_raw', torch.max(self.thresh_d_imgs), torch.min(self.thresh_d_imgs))
 
-        self.th_n_d_imgs = (thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 
@@ -433,7 +433,7 @@ class DoorHook(VecTask):
 
         # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
 
-        self.obs_buf = torch.cat((dof_pos_dt, self.pp_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((dof_pos_dt, self.th_n_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 

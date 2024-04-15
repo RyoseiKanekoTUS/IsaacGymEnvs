@@ -37,7 +37,7 @@ class DoorHook(VecTask):
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 75.0
         self.dist_reward_scale = 5.0
-        self.o_dist_reward_scale = 1.5
+        self.o_dist_reward_scale = 1.0
 
         self.action_penalty_scale = 0.01
 
@@ -316,41 +316,21 @@ class DoorHook(VecTask):
     def debug_camera_imgs(self):
         
         import cv2
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import Normalize
-        from io import BytesIO
-        buf = BytesIO()
-
-        cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
-        # cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
+        # combined_img = np.zeros((3, self.camera_props.width, self.camera_props.height))
+        im_list = []
 
         for j in range(self.num_envs):
-            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
-
+            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            np.savetxt(f"./.test_data/d_img_{j}.csv",self.pp_d_imgs[j,...].cpu().reshape(48, 64), delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
-            rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-            cv2.imshow('rgb', rgb_img)
-            # cv2.waitKey(1)
-
-            # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
-            # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
-            # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
-
-            plt.axis('off')
-            plt.imshow(self.th_n_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-            plt.colorbar()
-            plt.savefig(buf, format = 'png')
-            buf.seek(0)
-            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
-            buf.close()
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            cv2.imshow('depth', img)
-            cv2.waitKey(1)
-
-            # plt.colorbar()
-            plt.close()
-
+            reshape = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+            im_list.append(reshape)
+            # cv2.imshow(f'rgb{j}', rgb_img)
+        im_all = cv2.hconcat(im_list)
+        cv2.namedWindow('hand camera images',cv2.WINDOW_GUI_NORMAL)
+        cv2.imshow('hand camera images', im_all)
+        # cv2.waitKey(200)
+        cv2.waitKey(1)
 
 
     def d_img_process(self):
@@ -363,10 +343,10 @@ class DoorHook(VecTask):
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         # print(torch.max(d_imgs), torch.min(d_imgs))
 
-        self.thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
-        # print('thresh_raw', torch.max(self.thresh_d_imgs), torch.min(self.thresh_d_imgs))
+        thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
+        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
 
-        self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        self.th_n_d_imgs = (thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 

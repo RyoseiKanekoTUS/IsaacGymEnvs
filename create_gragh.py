@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     # CSVファイルの読み込み
-    csv_file = '/home/salmon/isaacgym/python/IsaacGymEnvs/statistic_data/output_20240523_192741.csv'
+    csv_file = '/home/uni/kaneko_ws/isaac/IsaacGymEnvs/statistic_data/output_20240523_192741.csv'
     data = pd.read_csv(csv_file, header=None, names=['Index', 'Success'])
 
     # 実験ラベルを計算

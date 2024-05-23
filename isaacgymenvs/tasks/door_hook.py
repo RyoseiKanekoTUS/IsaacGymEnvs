@@ -25,7 +25,7 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.1
+        self.door_scale_param = 0.0
 
         self.action_scale = 1.5
         self.start_pos_noise_scale =  0.5
@@ -401,7 +401,7 @@ class DoorHook(VecTask):
         self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3:], dim = -1)
         # print(self.hand_o_dist)
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
-        # print(dof_pos_dt)
+        print(dof_pos_dt)
         # print(hand_pos)
         # print(self.ur3_dof_vel)
         fake_dof_vel = dof_pos_dt/self.dt
@@ -485,6 +485,9 @@ class DoorHook(VecTask):
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions)
         # self.actions = self.zero_actions()
+        # self.actions[:,0] = 1.0
+        # print(self.actions)
+        # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()
         # print(self.actions)
         # print('self.actions', self.actions) # for debug

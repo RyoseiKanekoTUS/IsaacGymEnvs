@@ -104,6 +104,10 @@ class DoorHook(VecTask):
 
         self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
+        
+        self.statistics = []
+        self.knob_range = 0.01
+        self.reaching_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     
     def create_sim(self):
@@ -500,11 +504,30 @@ class DoorHook(VecTask):
         self.gym.set_dof_position_target_tensor(self.sim,
                                                 gymtorch.unwrap_tensor(self.ur3_dof_targets))    
 
+    def statistical_data_acquisition(self,env_ids):
+        reaching = self.reaching_swich[env_ids].cpu().tolist()
+        index_list = env_ids.cpu().tolist()
+        statis = [[index_list[i],reaching[i]] for i in range(len(index_list))]
+        self.statistics.append(statis)
+        self.reaching_swich[env_ids] = False
+
+    
+    def data_acquisition(self):
+        knob_range_tensor = torch.full_like(self.door_dof_pos[:, 1], self.knob_range)
+        abs_knob_tensor = self.door_dof_pos[:, 1]- knob_range_tensor
+                
+        indices = (abs_knob_tensor >= 0).nonzero(as_tuple=True)[0]
+        self.reaching_swich[indices] = True
+
+
+
+
     def post_physics_step(self):
         self.progress_buf += 1
-
         env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        self.data_acquisition()
         if len(env_ids) > 0:
+            self.statistical_data_acquisition(env_ids)
             self.reset_idx(env_ids)
 
         self.compute_observations()
@@ -557,8 +580,9 @@ def compute_ur3_reward(
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+
     # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)

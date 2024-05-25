@@ -348,6 +348,7 @@ class DoorHook(VecTask):
 
 
         self.ee_states = self.rigid_body_states[:, self.hand_handle][:, :7]
+        # print('self.ee_states', self.ee_states)
         self.ee_pose = self.ee_states[:, :3]
         self.ee_quat = self.ee_states[:, 3:]
         # self.ee_eular = torch.stack([
@@ -373,16 +374,51 @@ class DoorHook(VecTask):
 
     def debug_camera_imgs(self):
         
+        # import cv2
+        # for j in range(self.num_envs):
+        #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+        #     np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+        #     rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
+        #     rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+        #     cv2.imshow(f'rgb{j}', cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR))
+        #     cv2.waitKey(1)
+        #     torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+
         import cv2
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        from io import BytesIO
+        buf = BytesIO()
+
+        cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
+        # cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
+
         for j in range(self.num_envs):
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-            cv2.imshow(f'rgb{j}', cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR))
-            cv2.waitKey(1)
-            torch.save(self.pp_d_imgs[0, :], f'./.test_data/tensor.d_img')
+            cv2.imshow('rgb', rgb_img)
+            # cv2.waitKey(1)
 
+            # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
+            # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
+            # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
+
+            plt.axis('off')
+            plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+            plt.colorbar()
+            plt.savefig(buf, format = 'png')
+            buf.seek(0)
+            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+            buf.close()
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            cv2.imshow('depth', img)
+            cv2.waitKey(1)
+
+            # plt.colorbar()
+            plt.close()
 
     def d_img_process(self):
 
@@ -468,6 +504,7 @@ class DoorHook(VecTask):
         self.obs_buf = torch.cat((dof_pos_dt, hand_vel, self.pp_d_imgs), dim = -1)
         # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
+        print('self.ee_states', self.ee_states)
 
         return self.obs_buf    
         
@@ -525,7 +562,7 @@ class DoorHook(VecTask):
         # self.actions[:,2]*=-1
         self.actions = self.dt * self.actions * self.action_scale
         print('self.actions',self.actions)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
 

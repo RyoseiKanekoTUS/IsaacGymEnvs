@@ -241,8 +241,8 @@ class UR3_DoorHook(VecTask):
         ur3_start_pose = gymapi.Transform()
         # ur3_start_pose.p = gymapi.Vec3(0.64, -0.25, 0.6) # left_pull_best 
         # ur3_start_pose.p = gymapi.Vec3(0.64, -0.225, 0.52) # left_pull_best 
-        # ur3_start_pose.p = gymapi.Vec3(0.6, -0.15, 0.4) 
-        ur3_start_pose.p = gymapi.Vec3(0.59, -0.1, 0.36) 
+        ur3_start_pose.p = gymapi.Vec3(0.6, -0.15, 0.4) 
+        # ur3_start_pose.p = gymapi.Vec3(0.59, -0.1, 0.36) 
 
         # ur3_start_pose.p = gymapi.Vec3(0.65, 0, 0.5) # right_best_pull
         # ur3_start_pose.p = gymapi.Vec3(0.6, 0.0, 0) # right_better?
@@ -354,7 +354,7 @@ class UR3_DoorHook(VecTask):
             # self.gym.set_light_parameters(self.sim, 0, l_color, l_ambient, l_direction)
 
         # handles definition : index
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "panda_handle")
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "ur3_handle")
         # print(self.hand_handle)
         # self.hook_pose = self.dof_state
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
@@ -367,7 +367,7 @@ class UR3_DoorHook(VecTask):
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
 
         # ur3 information
-        self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "panda_handle")
+        self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ur3_handle")
 
         hand_pose = self.gym.get_rigid_transform(self.envs[0], self.hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
 
@@ -563,15 +563,18 @@ class UR3_DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
+        print('self.actions', self.actions) # for debug
+
+        self.actions = self.zero_actions()
+        self.actions[:,5] = 1.0
+
         self.actions[:,0]*=-1
         self.actions[:,1]*=-1
         # self.actions[:,5]*=-1
         # self.actions[:,2]*=-1
         self.actions = self.actions * self.action_scale
         # print('self.actions',self.actions)
-        # self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
-        # print('self.actions', self.actions) # for debug
 
         # current_hand = self.rigid_body_states[;, self.hand]
 
@@ -602,7 +605,7 @@ class UR3_DoorHook(VecTask):
         # goal_orientation = torch.tensor([goal_quat[:, ], goal_quat[1], goal_quat[2], goal_quat[3]])
 
         d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat, 0.01)
-        print(d_theta)
+        # print(d_theta)
 
         targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + d_theta
         # print(targets)

@@ -46,7 +46,7 @@ class UR3_DoorHook(VecTask):
 
         # self.door_scale_param = 1.0 # when manipulatored, it may become small
         # self.door_scale_param = 0.9 # when manipulatored, it may become small
-        self.door_scale_param = 0.5 # when manipulatored, it may become small
+        self.door_scale_param = 0.55 # when manipulatored, it may become small
 
         self.action_scale =  0.009 # left 0.4 # right_pull 0.4
         # self.action_scale =  0.012 # left 0.4 # right_pull 0.4
@@ -244,7 +244,7 @@ class UR3_DoorHook(VecTask):
         # ur3_start_pose.p = gymapi.Vec3(0.64, -0.25, 0.6) # left_pull_best 
         # ur3_start_pose.p = gymapi.Vec3(0.64, -0.225, 0.52) # left_pull_best 
         # ur3_start_pose.p = gymapi.Vec3(0.6, -0.15, 0.4) 
-        ur3_start_pose.p = gymapi.Vec3(0.665, -0.15, 0.075) # real2sim 
+        ur3_start_pose.p = gymapi.Vec3(0.665, -0.12, 0.115) # real2sim 
 
         # ur3_start_pose.p = gymapi.Vec3(0.65, 0, 0.5) # right_best_pull
         # ur3_start_pose.p = gymapi.Vec3(0.6, 0.0, 0) # right_better?

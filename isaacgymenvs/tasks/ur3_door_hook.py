@@ -45,8 +45,8 @@ class UR3_DoorHook(VecTask):
         self.max_episode_length = 150 # 300
 
         # self.door_scale_param = 1.0 # when manipulatored, it may become small
-        self.door_scale_param = 0.9 # when manipulatored, it may become small
-        self.door_scale_param = 0.8 # when manipulatored, it may become small
+        # self.door_scale_param = 0.9 # when manipulatored, it may become small
+        self.door_scale_param = 0.5 # when manipulatored, it may become small
 
         self.action_scale =  0.009 # left 0.4 # right_pull 0.4
         # self.action_scale =  0.012 # left 0.4 # right_pull 0.4
@@ -103,7 +103,9 @@ class UR3_DoorHook(VecTask):
         # create some wrapper tensors for different slices
         # self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device) # best [0, -1.8, -2.5, 1.2, 1.57, 0]
         # self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -72.97, -115.46, 10.84, 89.29, 0.0]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
-        self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -72.97, -102.04, -5.57, 89.29, 0.0]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
+        # self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -72.97, -102.04, -5.57, 89.29, 0.0]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
+        self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([5.55, -71.55, -108.25, -3.83, 84.09, 359.81]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
+
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
@@ -241,8 +243,8 @@ class UR3_DoorHook(VecTask):
         ur3_start_pose = gymapi.Transform()
         # ur3_start_pose.p = gymapi.Vec3(0.64, -0.25, 0.6) # left_pull_best 
         # ur3_start_pose.p = gymapi.Vec3(0.64, -0.225, 0.52) # left_pull_best 
-        ur3_start_pose.p = gymapi.Vec3(0.6, -0.15, 0.4) 
-        # ur3_start_pose.p = gymapi.Vec3(0.59, -0.1, 0.36) 
+        # ur3_start_pose.p = gymapi.Vec3(0.6, -0.15, 0.4) 
+        ur3_start_pose.p = gymapi.Vec3(0.665, -0.15, 0.075) # real2sim 
 
         # ur3_start_pose.p = gymapi.Vec3(0.65, 0, 0.5) # right_best_pull
         # ur3_start_pose.p = gymapi.Vec3(0.6, 0.0, 0) # right_better?
@@ -407,7 +409,8 @@ class UR3_DoorHook(VecTask):
             # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-            cv2.imshow(f'rgb{j}', cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR))
+            cv2.namedWindow(f'RGB{j}', cv2.WINDOW_GUI_EXPANDED)
+            cv2.imshow(f'RGB{j}', cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR))
             cv2.waitKey(1)
             torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
             torch.save(self.th_n_d_imgs[0, :], f'./.test_data/th_n_.d_img')
@@ -419,7 +422,8 @@ class UR3_DoorHook(VecTask):
             img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
             buf.close()
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            cv2.imshow('depth', img)
+            cv2.namedWindow('ESDEpth', cv2.WINDOW_GUI_EXPANDED)
+            cv2.imshow('ESDEpth', img)
             # cv2.waitKey()
 
             # plt.colorbar()
@@ -566,7 +570,7 @@ class UR3_DoorHook(VecTask):
         print('self.actions', self.actions) # for debug
 
         self.actions = self.zero_actions()
-        self.actions[:,5] = 1.0
+        # self.actions[:,5] = 1.0
 
         self.actions[:,0]*=-1
         self.actions[:,1]*=-1

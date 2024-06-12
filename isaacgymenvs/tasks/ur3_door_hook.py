@@ -104,7 +104,7 @@ class UR3_DoorHook(VecTask):
         # self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device) # best [0, -1.8, -2.5, 1.2, 1.57, 0]
         # self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -72.97, -115.46, 10.84, 89.29, 0.0]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
         # self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -72.97, -102.04, -5.57, 89.29, 0.0]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
-        self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([5.55, -71.55, -108.25, -3.83, 84.09, 359.81]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
+        self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([5.55, -71.55, -108.25, -3.83, 84.09, -0.0019]), device=self.device)        # self.ur3_default_dof_pos = to_torch([-0.2, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right
 
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
@@ -570,7 +570,9 @@ class UR3_DoorHook(VecTask):
         print('self.actions', self.actions) # for debug
 
         self.actions = self.zero_actions()
-        # self.actions[:,5] = 1.0
+        # self.actions[:,3] = 2.0
+        # self.actions[:,5] = 2.0
+
 
         self.actions[:,0]*=-1
         self.actions[:,1]*=-1

@@ -365,7 +365,8 @@ class DoorHook(VecTask):
                     img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
                     buf.close()
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    cv2.imshow('depth', img)
+                    cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
+                    cv2.imshow('ESDEpth', img)
                     cv2.waitKey(1)
 
                     # plt.colorbar()
@@ -420,7 +421,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -522,8 +523,8 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        self.actions = self.zero_actions()
-        self.actions[:,0] = 1.0
+        # self.actions = self.zero_actions()
+        # self.actions[:,0] = 1.0
         print('action', self.actions*self.action_scale*self.dt, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()

@@ -25,13 +25,14 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 150 # 300
 
-        self.door_scale_param = 0.0
+        self.door_scale_param = 0.55
+        self.door_scale_rand_param = 0.0
 
         self.action_scale = 1.5
         # self.action_scale = 0.1
 
-        self.start_pos_noise_scale =  0.5
-        self.start_rot_noise_scale =   0.25
+        self.start_pos_noise_scale = 0 # 0.5 
+        self.start_rot_noise_scale =  0 # 0.25
 
         self.aggregate_mode = 3
 
@@ -208,8 +209,8 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
-        ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
+        ur3_start_pose.p = gymapi.Vec3(0.4315, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        ur3_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
 
         door_start_pose = gymapi.Transform()
         door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
@@ -247,7 +248,7 @@ class DoorHook(VecTask):
             self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             # create robot hand actor name as "robot_hand"
-            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "robot_hand", i, 0, 0)
+            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "robot_hook", i, 0, 0)
                                                                                                 # ↑self collision ON
             self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
 
@@ -276,7 +277,7 @@ class DoorHook(VecTask):
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
-            self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
+            self.gym.set_actor_scale(env_ptr, door_actor, self.door_scale_param + (torch.rand(1) - 0.5) * self.door_scale_rand_param)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -335,42 +336,42 @@ class DoorHook(VecTask):
         # # cv2.waitKey(200)
         # cv2.waitKey(1)
         # -----------------------------------------------------------------------------------------------------------------
-                import cv2
-                import matplotlib.pyplot as plt
-                from matplotlib.colors import Normalize
-                from io import BytesIO
-                buf = BytesIO()
+        import cv2
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        from io import BytesIO
+        buf = BytesIO()
 
-                cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
-                # cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
+        # cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
 
-                for j in range(self.num_envs):
-                    # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-                    # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+        for j in range(self.num_envs):
+            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
 
-                    rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
-                    rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-                    cv2.imshow('rgb', rgb_img)
-                    # cv2.waitKey(1)
+            rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
+            rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+            cv2.imshow('rgb', rgb_img)
+            # cv2.waitKey(1)
 
-                    # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
-                    # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
-                    # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
+            # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
+            # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
+            # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
 
-                    plt.axis('off')
-                    plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-                    plt.colorbar()
-                    plt.savefig(buf, format = 'png')
-                    buf.seek(0)
-                    img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
-                    buf.close()
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
-                    cv2.imshow('ESDEpth', img)
-                    cv2.waitKey(1)
+            plt.axis('off')
+            plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+            plt.colorbar()
+            plt.savefig(buf, format = 'png')
+            buf.seek(0)
+            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+            buf.close()
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
+            cv2.imshow('ESDEpth', img)
+            cv2.waitKey(1)
 
-                    # plt.colorbar()
-                    plt.close()
+            # plt.colorbar()
+            plt.close()
 
     def d_img_process(self):
 
@@ -523,9 +524,9 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # self.actions[:,0] = 1.0
-        print('action', self.actions*self.action_scale*self.dt, '\n')
+        # print('action', self.actions*self.action_scale*self.dt, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()
         # print(self.actions)

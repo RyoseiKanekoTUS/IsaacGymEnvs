@@ -356,8 +356,8 @@ class UR3_DoorHook(VecTask):
             # self.gym.set_light_parameters(self.sim, 0, l_color, l_ambient, l_direction)
 
         # handles definition : index
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "ur3_handle")
-        # print(self.hand_handle)
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "ee_rz_link")
+        print(self.hand_handle)
         # self.hook_pose = self.dof_state
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
         # print('------------self.door_handle',self.door_handle)
@@ -487,10 +487,11 @@ class UR3_DoorHook(VecTask):
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
-        # print(hand_pos.shape)
+        print('hand_pos', hand_pos)
         hand_rot_quat = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation --quat
+        print('hand_rot', hand_rot_quat)
         hand_rot_euler = self.quat_to_eular(hand_rot_quat[0,...]).view(1, -1).to(self.device)
-        # print(hand_rot_euler.shape)
+        print('hand_rot_euler', hand_rot_euler)
         self.hand_pose_euler = torch.cat([hand_pos, hand_rot_euler], dim=-1)
         # print('hand_pose_euler_prev', self.hand_pose_euler_prev.shape)
         # print('hand_pose_euler',self.hand_pose_euler.shape)
@@ -567,7 +568,7 @@ class UR3_DoorHook(VecTask):
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
-        print('self.actions', self.actions) # for debug
+        # print('self.actions', self.actions) # for debug
 
         self.actions = self.zero_actions()
         # self.actions[:,3] = 2.0

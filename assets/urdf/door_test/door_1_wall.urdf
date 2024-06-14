@@ -124,7 +124,7 @@
         <collision>
             <geometry>
                 <!-- <mesh filename="./meshes/door_handle_collision.dae" scale='1.23 1.27 0.7'/> -->
-                <mesh filename="./meshes/door_handle_collision.dae" scale='1.23 1.27 0.7'/>
+                <mesh filename='./meshes/door_handle_collision.dae' scale='1.23 1.27 0.7'/>
 
             </geometry>
             <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>

@@ -27,13 +27,13 @@ class DoorHook(VecTask):
         self.max_episode_length = 150 # 300
 
         self.door_scale_param = 0.55
-        self.door_scale_rand_param = 0.0
+        self.door_scale_rand_param = 0.2
 
         self.action_scale = 0.05 # without dt 0.075
         # self.action_scale = 0.1
 
-        self.start_pos_noise_scale = 0 # 0.5 
-        self.start_rot_noise_scale =  0 # 0.25
+        self.start_pos_noise_scale = 0.25 # 0.5 
+        self.start_rot_noise_scale =  0.25 # 0.25
 
         self.aggregate_mode = 3
 
@@ -396,9 +396,9 @@ class DoorHook(VecTask):
         print(self.d_imgs.shape)
         for i in range(self.num_envs):
             # self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width)
-            cropped_d_img_i = ((self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width))[start_y:start_y + self.img_crop_height, start_x:start_x + self.img_crop_width])
+            cropped_d_img_i = ((self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width))[start_y:start_y + self.img_crop_height, start_x:start_x + self.img_crop_width]).reshape(self.img_crop_height*self.img_crop_width)
             # .view(1,self.img_crop_height*self.img_crop_width)
-            print('in loop, single d_img', cropped_d_img_i.shape)
+            # print('in loop, single d_img', cropped_d_img_i.shape)
             self.cropped_d_imgs = torch.stack([cropped_d_img_i.reshape(self.img_crop_height*self.img_crop_width)])
         
         print('cropped, stacked', self.cropped_d_imgs.shape)
@@ -456,7 +456,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

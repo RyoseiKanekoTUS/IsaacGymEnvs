@@ -15,6 +15,7 @@ from .base.vec_task import VecTask
 # from base.vec_task import VecTask
 
 import torch
+import cv2
 
 
 class DoorHook(VecTask):
@@ -28,7 +29,7 @@ class DoorHook(VecTask):
         self.door_scale_param = 0.55
         self.door_scale_rand_param = 0.0
 
-        self.action_scale = 1.5
+        self.action_scale = 0.05 # without dt 0.075
         # self.action_scale = 0.1
 
         self.start_pos_noise_scale = 0 # 0.5 
@@ -51,22 +52,35 @@ class DoorHook(VecTask):
 
         # self.distX_offset = 0.04 # 0.04 default
         
-        self.dt = 1/20  # edited
+        # self.dt = 1/20  # edited
 
         # set camera properties for realsense now : 435 [0.18, 3.0] and 405 [0.07, 0.5]
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 64
-        self.camera_props.height = 48
+        # before cropping
+        self.img_crop_width =  64
+        self.img_crop_height = 48
+        # after cropping 
+        self.camera_props.width = 92
+        self.camera_props.height = 70
         self.depth_min = -3.0 
-        self.depth_max = -0.07
+        self.depth_max = -0.1 # -0.07
 
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
 
+
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
+        # self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
+        # TODO
+        # make sure to delete this after new camera resolutions
+        self.cfg["env"]["numObservations"] = 6 + 48*64
+
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
+        # TODO
+        # make sure to delete this after new camera resolutions
+        self.fake_d_img_48_64 = torch.zeros(self.num_envs, 48*64, device=self.device)
+        # print(self.fake_d_img_48_64.shape)
 
         # get gym GPU state tensors
         actor_root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
@@ -336,7 +350,7 @@ class DoorHook(VecTask):
         # # cv2.waitKey(200)
         # cv2.waitKey(1)
         # -----------------------------------------------------------------------------------------------------------------
-        import cv2
+        # import cv2
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
         from io import BytesIO
@@ -357,10 +371,11 @@ class DoorHook(VecTask):
             # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
             # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
             # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
-
+            # np.savetxt(f"./.test_data/48_64_thresh_d_img.csv",self.thresh_d_imgs[j,...].cpu().view(self.camera_props.height, self.camera_props.width), delimiter=',')
+            print(self.thresh_d_imgs.shape)
             plt.axis('off')
-            plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-            plt.colorbar()
+            plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+            # plt.colorbar()
             plt.savefig(buf, format = 'png')
             buf.seek(0)
             img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
@@ -373,20 +388,39 @@ class DoorHook(VecTask):
             # plt.colorbar()
             plt.close()
 
+    def d_img_cropper(self):
+
+        start_y = (self.camera_props.height - self.img_crop_height) // 2
+        start_x = (self.camera_props.width - self.img_crop_width) // 2
+        print(start_y, start_x)
+        print(self.d_imgs.shape)
+        for i in range(self.num_envs):
+            # self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width)
+            cropped_d_img_i = ((self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width))[start_y:start_y + self.img_crop_height, start_x:start_x + self.img_crop_width])
+            # .view(1,self.img_crop_height*self.img_crop_width)
+            print('in loop, single d_img', cropped_d_img_i.shape)
+            self.cropped_d_imgs = torch.stack([cropped_d_img_i.reshape(self.img_crop_height*self.img_crop_width)])
+        
+        print('cropped, stacked', self.cropped_d_imgs.shape)
+
+
     def d_img_process(self):
 
         self.gym.render_all_camera_sensors(self.sim)
         self.gym.start_access_image_tensors(self.sim)
 
-        d_imgs = torch.stack([
+        self.d_imgs = torch.stack([
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         # print(torch.max(d_imgs), torch.min(d_imgs))
 
-        thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
-        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+        self.d_img_cropper()
 
-        self.th_n_d_imgs = (thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        self.thresh_d_imgs = torch.where(torch.logical_or(self.cropped_d_imgs <= self.depth_min, self.cropped_d_imgs >= self.depth_max), 0, self.cropped_d_imgs)
+        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+        print(self.thresh_d_imgs.shape)
+
+        self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 
@@ -444,7 +478,7 @@ class DoorHook(VecTask):
         # print(dof_pos_dt)
         # print(hand_pos)
         # print(self.ur3_dof_vel)
-        fake_dof_vel = dof_pos_dt/self.dt
+        # fake_dof_vel = dof_pos_dt/self.dt
         # print(fake_dof_vel)
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
@@ -460,7 +494,6 @@ class DoorHook(VecTask):
         return self.obs_buf    
         
     def reset_idx(self, env_ids):
-        # env_ids_int32 = env_ids.to(dtype=torch.int32)
         # print(env_ids)
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
@@ -524,14 +557,14 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
         # self.actions[:,0] = 1.0
         # print('action', self.actions*self.action_scale*self.dt, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()
         # print(self.actions)
         # print('self.actions', self.actions) # for debug
-        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
+        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.actions * self.action_scale
         # print(targets)
         # -----------with clamp limit --------------------------------------
         # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
@@ -556,6 +589,8 @@ class DoorHook(VecTask):
         self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
         
         # print('prev_pos:',self.ur3_dof_pos_prev)
+
+    
 
 #####################################################################
 ###=========================jit functions=========================###

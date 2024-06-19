@@ -58,10 +58,10 @@ class DoorHook(VecTask):
 
         # set camera properties for realsense now : 435 [0.18, 3.0] and 405 [0.07, 0.5]
         self.camera_props = gymapi.CameraProperties()
-        # before cropping
+        # after cropping
         self.img_crop_width =  64
         self.img_crop_height = 48
-        # after cropping 
+        # before cropping 
         self.camera_props.width = 92
         self.camera_props.height = 70
         self.depth_min = -3.0 

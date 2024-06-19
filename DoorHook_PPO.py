@@ -16,65 +16,28 @@ from skrl.utils import set_seed
 
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
-        ############################################################################################
-    def __init__(self, observation_space, action_space, device, clip_actions=False,
-                 clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
-        Model.__init__(self, observation_space, action_space, device)
-        DeterministicMixin.__init__(self, clip_actions)
-        GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
-
-        # # NW v4_4
-        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
-                        nn.ReLU(),
-                        nn.MaxPool2d(2, stride=2), #  8, 21, 29
-                        nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 17, 25
-                        nn.ReLU(),
-                        nn.MaxPool2d(2, stride=2), # 16, 8, 12
-                        nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 6, 10
-                        nn.ReLU(),
-                        # nn.MaxPool2d(2, stride=2, padding=1), # 32, 4, 6
-                        nn.Flatten() # 1920
-                        )
-        
-        
-        self.mlp = nn.Sequential(nn.Linear((6+1920), 1024),
-                    nn.ELU(),
-                    nn.Linear(1024, 512),
-                    nn.ELU(),
-                    nn.Linear(512, 256),
-                    nn.ELU(),
-                    nn.Linear(256, 64),
-                    nn.ELU()
-                    )        
-        self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
-                                        nn.Tanh())
-        self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
-
-        self.value_layer = nn.Linear(64, 1)
-
-    ################################################################################################
+    #     ############################################################################################
     # def __init__(self, observation_space, action_space, device, clip_actions=False,
     #              clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
     #     Model.__init__(self, observation_space, action_space, device)
     #     DeterministicMixin.__init__(self, clip_actions)
     #     GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
 
-
-    #     # # NW v4 + silhouette
-
+    #     # # NW v4_4
     #     self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
-    #                             nn.ReLU(),
-    #                             nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
-    #                             nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 18, 26
-    #                             nn.ReLU(),
-    #                             nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
-    #                             nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
-    #                             nn.ReLU(),
-    #                             nn.Flatten() # 3072
-    #                             )
+    #                     nn.ReLU(),
+    #                     nn.MaxPool2d(2, stride=2), #  8, 21, 29
+    #                     nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 17, 25
+    #                     nn.ReLU(),
+    #                     nn.MaxPool2d(2, stride=2), # 16, 8, 12
+    #                     nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 6, 10
+    #                     nn.ReLU(),
+    #                     # nn.MaxPool2d(2, stride=2, padding=1), # 32, 4, 6
+    #                     nn.Flatten() # 1920
+    #                     )
         
         
-    #     self.mlp = nn.Sequential(nn.Linear((6+3072), 1024),
+    #     self.mlp = nn.Sequential(nn.Linear((6+1920), 1024),
     #                 nn.ELU(),
     #                 nn.Linear(1024, 512),
     #                 nn.ELU(),
@@ -83,12 +46,49 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     #                 nn.Linear(256, 64),
     #                 nn.ELU()
     #                 )        
-        
     #     self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
     #                                     nn.Tanh())
     #     self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
 
     #     self.value_layer = nn.Linear(64, 1)
+
+    ###############################################################################################
+    def __init__(self, observation_space, action_space, device, clip_actions=False,
+                 clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
+        Model.__init__(self, observation_space, action_space, device)
+        DeterministicMixin.__init__(self, clip_actions)
+        GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
+
+
+        # # NW v4 + silhouette
+
+        self.d_feture_extractor = nn.Sequential(nn.Conv2d(1, 8, kernel_size=9, stride=1, padding=1), # 8, 42, 58
+                                nn.ReLU(),
+                                nn.MaxPool2d(2, stride=2, padding=1), #  8, 22, 30
+                                nn.Conv2d(8, 16, kernel_size=7, stride=1, padding=1), # 16, 18, 26
+                                nn.ReLU(),
+                                nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
+                                nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
+                                nn.ReLU(),
+                                nn.Flatten() # 3072
+                                )
+        
+        
+        self.mlp = nn.Sequential(nn.Linear((6+3072), 1024),
+                    nn.ELU(),
+                    nn.Linear(1024, 512),
+                    nn.ELU(),
+                    nn.Linear(512, 256),
+                    nn.ELU(),
+                    nn.Linear(256, 64),
+                    nn.ELU()
+                    )        
+        
+        self.mean_layer = nn.Sequential(nn.Linear(64, self.num_actions),
+                                        nn.Tanh())
+        self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
+
+        self.value_layer = nn.Linear(64, 1)
 
 
     def act(self, inputs, role):

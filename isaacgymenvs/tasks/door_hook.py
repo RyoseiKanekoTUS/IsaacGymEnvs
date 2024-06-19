@@ -24,12 +24,14 @@ class DoorHook(VecTask):
 
         self.cfg = cfg
         self.n = 0
-        self.max_episode_length = 150 # 300
+        self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.55
         self.door_scale_rand_param = 0.2
 
-        self.action_scale = 0.05 # without dt 0.075
+        # rand param for action scales
+        self.action_scale_base = 0.05 # base
+        self.action_scale_rand = 0.01
         # self.action_scale = 0.1
 
         self.start_pos_noise_scale = 0.25 # 0.5 
@@ -43,7 +45,7 @@ class DoorHook(VecTask):
         self.dist_reward_scale = 5.0
         self.o_dist_reward_scale = 1.0
 
-        self.action_penalty_scale = 0.01
+        self.action_penalty_scale = 0.1 # 0.01
 
         self.debug_viz = False
 
@@ -69,18 +71,11 @@ class DoorHook(VecTask):
 
 
         # set observation space and action space
-        # self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
-        # TODO
-        # make sure to delete this after new camera resolutions
-        self.cfg["env"]["numObservations"] = 6 + 48*64
+        self.cfg["env"]["numObservations"] = 6 + self.img_crop_height*self.img_crop_width
 
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
-        # TODO
-        # make sure to delete this after new camera resolutions
-        self.fake_d_img_48_64 = torch.zeros(self.num_envs, 48*64, device=self.device)
-        # print(self.fake_d_img_48_64.shape)
 
         # get gym GPU state tensors
         actor_root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
@@ -108,6 +103,8 @@ class DoorHook(VecTask):
         self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
 
         self.hand_o_dist = None
+
+        self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
 
         self.door_dof_vel = self.door_dof_state[..., 1]
 
@@ -392,16 +389,16 @@ class DoorHook(VecTask):
 
         start_y = (self.camera_props.height - self.img_crop_height) // 2
         start_x = (self.camera_props.width - self.img_crop_width) // 2
-        print(start_y, start_x)
-        print(self.d_imgs.shape)
-        for i in range(self.num_envs):
-            # self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width)
-            cropped_d_img_i = ((self.d_imgs[i,...].view(self.camera_props.height, self.camera_props.width))[start_y:start_y + self.img_crop_height, start_x:start_x + self.img_crop_width]).reshape(self.img_crop_height*self.img_crop_width)
-            # .view(1,self.img_crop_height*self.img_crop_width)
-            # print('in loop, single d_img', cropped_d_img_i.shape)
-            self.cropped_d_imgs = torch.stack([cropped_d_img_i.reshape(self.img_crop_height*self.img_crop_width)])
+        # print(start_y, start_x)
+        # print('before cropping', self.d_imgs.shape)
+        self.cropped_d_imgs = torch.stack([
+                self.d_imgs[i, ...]
+                    .view(self.camera_props.height, self.camera_props.width)[start_y:start_y + self.img_crop_height, start_x:start_x + self.img_crop_width]
+                    .reshape(self.img_crop_height * self.img_crop_width)
+                for i in range(self.num_envs)
+            ])            
         
-        print('cropped, stacked', self.cropped_d_imgs.shape)
+        # print('cropped, stacked', self.cropped_d_imgs.shape)
 
 
     def d_img_process(self):
@@ -418,7 +415,7 @@ class DoorHook(VecTask):
 
         self.thresh_d_imgs = torch.where(torch.logical_or(self.cropped_d_imgs <= self.depth_min, self.cropped_d_imgs >= self.depth_max), 0, self.cropped_d_imgs)
         # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
-        print(self.thresh_d_imgs.shape)
+        # print('thresh_d_imgs shape', self.thresh_d_imgs.shape)
 
         self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
         # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
@@ -475,6 +472,7 @@ class DoorHook(VecTask):
         self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3:], dim = -1)
         # print(self.hand_o_dist)
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
+
         # print(dof_pos_dt)
         # print(hand_pos)
         # print(self.ur3_dof_vel)
@@ -483,12 +481,8 @@ class DoorHook(VecTask):
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
-        # self.door_dof_vel = self.door_dof_state[..., 1] 
-
-        # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
-        print('ee_states', dof_pos_dt, '\n')
+        # print('ee_states', dof_pos_dt, '\n')
         self.obs_buf = torch.cat((dof_pos_dt, self.pp_d_imgs), dim = -1)
-        # print(self.dist_d_imgs)
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    
@@ -498,7 +492,7 @@ class DoorHook(VecTask):
         # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
         # -0.25 - 0.25 noise
         # with no limit
-        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device) 
+        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
         rand_pos += 0.5
         rand_rot += 0.5
@@ -550,6 +544,7 @@ class DoorHook(VecTask):
                                               gymtorch.unwrap_tensor(self.dof_state),
                                               gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
 
+        self.action_scale_vec[env_ids] = self.action_scale_rand * (torch.rand(len(env_ids), 1, device=self.device) - 0.5) + self.action_scale_base
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
 
@@ -562,9 +557,8 @@ class DoorHook(VecTask):
         # print('action', self.actions*self.action_scale*self.dt, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()
-        # print(self.actions)
         # print('self.actions', self.actions) # for debug
-        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.actions * self.action_scale
+        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] + self.actions * self.action_scale_vec
         # print(targets)
         # -----------with clamp limit --------------------------------------
         # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
@@ -586,8 +580,8 @@ class DoorHook(VecTask):
         self.compute_observations()
         self.compute_reward(self.actions)
         self.door_dof_pos_prev = self.door_dof_pos.clone()
-        self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
         
+        self.ur3_dof_pos_prev = self.ur3_dof_pos.detach().clone()
         # print('prev_pos:',self.ur3_dof_pos_prev)
 
     
@@ -635,9 +629,9 @@ def compute_ur3_reward(
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
-    # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

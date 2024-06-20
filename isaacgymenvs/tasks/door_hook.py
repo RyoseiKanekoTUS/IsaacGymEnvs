@@ -400,25 +400,25 @@ class DoorHook(VecTask):
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow('rgb', rgb_img)
-            # cv2.waitKey(1)
+            cv2.waitKey(1)
 
             # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
             # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
             # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
 
-            plt.axis('off')
-            plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-            plt.colorbar()
-            plt.savefig(buf, format = 'png')
-            buf.seek(0)
-            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
-            buf.close()
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            cv2.imshow('depth', img)
-            cv2.waitKey(1)
-
+            # plt.axis('off')
+            # plt.imshow(self.pp_d_imgs[0].view(48, 64).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
             # plt.colorbar()
-            plt.close()
+            # plt.savefig(buf, format = 'png')
+            # buf.seek(0)
+            # img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+            # buf.close()
+            # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # cv2.imshow('depth', img)
+            # cv2.waitKey(1)
+
+            # # plt.colorbar()
+            # plt.close()
 
     def d_img_process(self):
 
@@ -562,7 +562,7 @@ class DoorHook(VecTask):
         # self.actions[:,2]*=-1
         self.actions = self.dt * self.actions * self.action_scale
         print('self.actions',self.actions)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
         # self.actions = self.uni_actions()
         # print('self.actions', self.actions) # for debug
 

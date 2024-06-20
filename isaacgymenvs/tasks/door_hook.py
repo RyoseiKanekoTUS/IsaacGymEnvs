@@ -30,8 +30,8 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.2
 
         # rand param for action scales
-        self.action_scale_base = 0.05 # base
-        self.action_scale_rand = 0.01
+        self.action_scale_base = 0.01 # base
+        self.action_scale_rand = 0.001
         # self.action_scale = 0.1
 
         self.start_pos_noise_scale = 0.25 # 0.5 

@@ -172,7 +172,6 @@ class Franka_DoorHook(VecTask):
         
 
         franka_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
-        franka_dof_damping = to_torch([1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5], dtype=torch.float, device=self.device)
 
         self.num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
         self.num_franka_dofs = self.gym.get_asset_dof_count(franka_asset)
@@ -203,8 +202,6 @@ class Franka_DoorHook(VecTask):
             franka_dof_props['lower'][i] = -10
             franka_dof_props['upper'][i] = 10
             franka_dof_props['damping'][i] *= 2.0 
-            
-
             franka_dof_props['effort'][i] = 1000
         print(franka_dof_props)
 
@@ -344,10 +341,6 @@ class Franka_DoorHook(VecTask):
         self.hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.frankas[0], "panda_handle")
 
         hand_pose = self.gym.get_rigid_transform(self.envs[0], self.hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
-
-
-        #moriya change
-
 
         self.ee_states = self.rigid_body_states[:, self.hand_handle][:, :7]
         self.ee_pose = self.ee_states[:, :3]
@@ -566,10 +559,6 @@ class Franka_DoorHook(VecTask):
 
         targets = self.franka_dof_targets[:, :self.num_franka_dofs] + d_theta
         # print(targets)
-
-
-
-
         # -----------with clamp limit --------------------------------------
         # self.franka_dof_targets[:, :self.num_franka_dofs] = tensor_clamp(
         #     targets, self.franka_dof_lower_limits, self.franka_dof_upper_limits)

@@ -32,8 +32,9 @@ class DoorHook(VecTask):
 
         self.door_scale_param = 0.0
 
-        # self.action_scale =  0.25
-        self.action_scale = 0.4
+        # self.action_scale = 0.4 # left best
+        self.action_scale =  0.3
+
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -82,7 +83,8 @@ class DoorHook(VecTask):
 
         # create some wrapper tensors for different slices
         # self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device) # best
-        self.ur3_default_dof_pos = to_torch([0, -1.8, -2.5, 1.2, 1.57, 0], device=self.device)
+        # self.ur3_default_dof_pos = to_torch([0, -1.8, -2.5, 1.2, 1.57, 0], device=self.device) # left best
+        self.ur3_default_dof_pos = to_torch([-0.1, -1.8, -2.5, 1.2, 1.57, 0], device=self.device) # right test?
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
@@ -113,8 +115,6 @@ class DoorHook(VecTask):
         self.up_axis_idx = 2 # index of up axis: Y=1, Z=2
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
         
-        
-    
         self._create_ground_plane()
         # print(f'num envs {self.num_envs} env spacing {self.cfg["env"]["envSpacing"]}')
         self._create_envs(self.num_envs, self.cfg["env"]['envSpacing'], int(np.sqrt(self.num_envs)))
@@ -167,9 +167,9 @@ class DoorHook(VecTask):
         door_2_asset = self.gym.load_asset(self.sim, asset_root, door_2_asset_file, asset_options)
         door_1_inv_asset = self.gym.load_asset(self.sim, asset_root, door_1_inv_asset_file, asset_options)
         door_2_inv_asset = self.gym.load_asset(self.sim, asset_root, door_2_inv_asset_file, asset_options)
-        door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
-        
 
+        # door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset] # left ahead 
+        door_assets = [door_2_asset, door_1_asset, door_2_inv_asset, door_1_inv_asset] # right ahead
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
@@ -177,7 +177,7 @@ class DoorHook(VecTask):
         self.num_door_dofs = self.gym.get_asset_dof_count(door_1_asset)
 
         ur3_dof_stiffness = to_torch([250 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device) # left best
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
@@ -217,8 +217,8 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.7, -0.28, 0.65) # initial position of the robot # 0.55, -0.35, 0.55 best
-        # ur3_start_pose.p = gymapi.Vec3(0.55, -0.35, 0.55) # initial position of the robot #  best
+        # ur3_start_pose.p = gymapi.Vec3(0.7, -0.28, 0.65) # initial position of the robot # 0.55, -0.35, 0.55 left best
+        ur3_start_pose.p = gymapi.Vec3(0.58, -0.1, 0.67) # initial position of the robot #  best
 
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
 
@@ -470,7 +470,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

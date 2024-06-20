@@ -26,14 +26,14 @@ class DoorHook(VecTask):
 
         self.data_count = 0
 
-
         self.cfg = cfg
         self.n = 0
         self.max_episode_length = 300 # 300
 
         self.door_scale_param = 0.0
 
-        self.action_scale =  0.25
+        # self.action_scale =  0.25
+        self.action_scale = 0.4
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -170,13 +170,14 @@ class DoorHook(VecTask):
         door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
         
 
-        ur3_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([1.5, 1.5, 1.5, 1.5, 1.5, 1.5], dtype=torch.float, device=self.device)
 
         self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
         self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
         self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
         self.num_door_dofs = self.gym.get_asset_dof_count(door_1_asset)
+
+        ur3_dof_stiffness = to_torch([250 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device)
+        ur3_dof_damping = to_torch([10 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device)
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
@@ -199,8 +200,8 @@ class DoorHook(VecTask):
             # ur3_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{ur3_dof_props}')
             ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            ur3_dof_props['lower'][i] = -10
-            ur3_dof_props['upper'][i] = 10
+            # ur3_dof_props['lower'][i] = -10
+            # ur3_dof_props['upper'][i] = 10
             ur3_dof_props['damping'][i] = ur3_dof_damping[i]
             
 
@@ -469,7 +470,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

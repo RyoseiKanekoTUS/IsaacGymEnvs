@@ -300,10 +300,10 @@ class VecTask(Env):
         #         self.viewer, None, cam_pos, cam_target)
                 
         # 4 doors ##############################################################################################
-            self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(5.5, 1.65, 5), gymapi.Vec3(0.5, 1.65, 0.0))
+            # self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(5.5, 1.65, 5), gymapi.Vec3(0.5, 1.65, 0.0))
         # ########################################################################################################
         # type1 door ##############################################################################################
-            # self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 1.0, 1.5), gymapi.Vec3(0, -0.2, 0.85))
+            self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(1.0, 1.0, 1.5), gymapi.Vec3(0, -0.2, 0.85))
         #     self.gym.viewer_camera_look_at(self.viewer, None, gymapi.Vec3(6, 1.7, 5), gymapi.Vec3(0, 1.7, 1.0))
         # ########################################################################################################
         # # type3 doors ##############################################################################################

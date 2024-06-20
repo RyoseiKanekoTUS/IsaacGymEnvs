@@ -33,7 +33,8 @@ class Franka_DoorHook(VecTask):
 
         self.door_scale_param = 0.0
 
-        self.action_scale =  0.2 # left 0.2 # right_pull 0.4
+        # self.action_scale =  0.2 # left 0.2 # right_pull 0.4
+        self.action_scale = 0.3 # left pull best 0620
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -201,7 +202,7 @@ class Franka_DoorHook(VecTask):
             franka_dof_props['stiffness'][i] = franka_dof_stiffness[i]
             franka_dof_props['lower'][i] = -10
             franka_dof_props['upper'][i] = 10
-            franka_dof_props['damping'][i] = franka_dof_damping[i]
+            franka_dof_props['damping'][i] *= 2.0 
             
 
             franka_dof_props['effort'][i] = 1000

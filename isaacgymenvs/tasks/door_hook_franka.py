@@ -17,6 +17,11 @@ import torch
 
 from skrl.utils.isaacgym_utils import ik
 
+def deg2rad_joint_angles(deg_list):
+
+    rad_list = [np.radians(deg_list[i]) for i in range(len(deg_list))]
+
+    return rad_list
 
 class Franka_DoorHook(VecTask):
 
@@ -31,10 +36,11 @@ class Franka_DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
-        self.door_scale_param = 0.0
+        self.door_scale_param = 1.0
 
         # self.action_scale =  0.2 # left 0.2 # right_pull 0.4
-        self.action_scale = 0.3 # left pull best 0620
+        # self.action_scale = 0.3 # left pull best 0620
+        self.action_scale = 0.3
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -82,8 +88,8 @@ class Franka_DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        # self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # left_best
-        self.franka_default_dof_pos = to_torch([0, -1.2, 0, -2.2, 0, 2.7, 0], device=self.device) # right_best
+        # self.franka_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -68.756, 0.0, -126.103, 0.0, 154.745, 0.0]), device=self.device) # left_best
+        self.franka_default_dof_pos = to_torch(deg2rad_joint_angles([0.0+10, -68.756, 0.0, -126.103, 0.0, 154.745-5, 0.0]), device=self.device) # right
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
@@ -168,9 +174,8 @@ class Franka_DoorHook(VecTask):
         door_2_asset = self.gym.load_asset(self.sim, asset_root, door_2_asset_file, asset_options)
         door_1_inv_asset = self.gym.load_asset(self.sim, asset_root, door_1_inv_asset_file, asset_options)
         door_2_inv_asset = self.gym.load_asset(self.sim, asset_root, door_2_inv_asset_file, asset_options)
-        door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
-        
-
+        # door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset] # left ahead
+        door_assets = [door_2_asset, door_2_inv_asset, door_1_inv_asset, door_1_asset] # right ahead
         franka_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
 
         self.num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
@@ -199,10 +204,10 @@ class Franka_DoorHook(VecTask):
             # franka_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{franka_dof_props}')
             franka_dof_props['stiffness'][i] = franka_dof_stiffness[i]
-            franka_dof_props['lower'][i] = -10
-            franka_dof_props['upper'][i] = 10
+            # franka_dof_props['lower'][i] = -10
+            # franka_dof_props['upper'][i] = 10
             franka_dof_props['damping'][i] *= 2.0 
-            franka_dof_props['effort'][i] = 1000
+            franka_dof_props['effort'][i] = 2000
         print(franka_dof_props)
 
         self.franka_dof_lower_limits = to_torch(self.franka_dof_lower_limits, device=self.device)
@@ -214,8 +219,10 @@ class Franka_DoorHook(VecTask):
     
         # start pose
         franka_start_pose = gymapi.Transform()
-        franka_start_pose.p = gymapi.Vec3(0.7, -0.3, 0) # left_pull_best 
-        # franka_start_pose.p = gymapi.Vec3(0.7, 0, 0) # right_best_pull
+        # franka_start_pose.p = gymapi.Vec3(0.7, -0.3, 0) # left_pull_best 
+        franka_start_pose.p = gymapi.Vec3(0.65, 0.1, 0) # right_pull_best
+        # franka_start_pose.p = gymapi.Vec3(0.56, 0.35, 0) # right_pull
+        
         # franka_start_pose.p = gymapi.Vec3(0.7, 0, 0) # right_trash
 
         franka_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
@@ -429,7 +436,7 @@ class Franka_DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -555,7 +562,7 @@ class Franka_DoorHook(VecTask):
         # goal_orientation = torch.tensor([goal_quat[:, ], goal_quat[1], goal_quat[2], goal_quat[3]])
 
         d_theta = ik(jacobian, current_position, current_quat, goal_position, goal_quat, 0.01)
-        print(d_theta)
+        # print(d_theta)
 
         targets = self.franka_dof_targets[:, :self.num_franka_dofs] + d_theta
         # print(targets)
@@ -581,7 +588,7 @@ class Franka_DoorHook(VecTask):
         # self.compute_data()
         self.door_dof_pos_prev = self.door_dof_pos.clone()
 
-        print(self.hand_pose_euler.shape)
+        # print(self.hand_pose_euler.shape)
         self.hand_pose_euler_prev = self.hand_pose_euler.clone()
         
         # print('prev_pos:',self.franka_dof_pos_prev)

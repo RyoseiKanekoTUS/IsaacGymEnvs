@@ -17,6 +17,12 @@ import torch
 
 from skrl.utils.isaacgym_utils import ik
 
+def deg2rad_joint_angles(deg_list):
+
+    rad_list = [np.radians(deg_list[i]) for i in range(len(deg_list))]
+
+    return rad_list
+
 
 class DoorHook(VecTask):
 
@@ -84,7 +90,7 @@ class DoorHook(VecTask):
         # create some wrapper tensors for different slices
         # self.ur3_default_dof_pos = to_torch([1.6, -2.0, 2.3, -3.5, -1.5, 0], device=self.device) # best
         # self.ur3_default_dof_pos = to_torch([0, -1.8, -2.5, 1.2, 1.57, 0], device=self.device) # left best
-        self.ur3_default_dof_pos = to_torch([-0.1, -1.8, -2.5, 1.2, 1.57, 0], device=self.device) # right test?
+        self.ur3_default_dof_pos = to_torch(deg2rad_joint_angles([-2, -103.132, -143.239, 62.754, 89.954, 0.0]), device=self.device) # right test?
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
@@ -177,7 +183,7 @@ class DoorHook(VecTask):
         self.num_door_dofs = self.gym.get_asset_dof_count(door_1_asset)
 
         ur3_dof_stiffness = to_torch([250 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device) # left best
+        ur3_dof_damping = to_torch([15 for _ in range(self.num_ur3_dofs)], dtype=torch.float, device=self.device) # left best
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
@@ -203,9 +209,10 @@ class DoorHook(VecTask):
             # ur3_dof_props['lower'][i] = -10
             # ur3_dof_props['upper'][i] = 10
             ur3_dof_props['damping'][i] = ur3_dof_damping[i]
+            # ur3_dof_props['velocity'][i] *= 0.8
             
 
-            ur3_dof_props['effort'][i] = 1000
+            ur3_dof_props['effort'][i] = 2000
         print(ur3_dof_props)
 
         self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
@@ -218,7 +225,7 @@ class DoorHook(VecTask):
         # start pose
         ur3_start_pose = gymapi.Transform()
         # ur3_start_pose.p = gymapi.Vec3(0.7, -0.28, 0.65) # initial position of the robot # 0.55, -0.35, 0.55 left best
-        ur3_start_pose.p = gymapi.Vec3(0.58, -0.1, 0.67) # initial position of the robot #  best
+        ur3_start_pose.p = gymapi.Vec3(0.65, 0.1, 0.6) # initial position of the robot #  best
 
         ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159265)
 

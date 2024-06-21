@@ -34,7 +34,7 @@ class DoorHook(VecTask):
         self.action_scale_rand = 0.001
         # self.action_scale = 0.1
 
-        self.start_pos_noise_scale = 0.25 # 0.5 
+        self.start_pos_noise_scale = 0.5 # 0.5 
         self.start_rot_noise_scale =  0.25 # 0.25
 
         self.aggregate_mode = 3
@@ -220,8 +220,14 @@ class DoorHook(VecTask):
     
         # start pose
         ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(0.4315, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
-        ur3_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
+        # start pose for ur3
+        # ur3_start_pose.p = gymapi.Vec3(0.4315, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        # ur3_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
+
+        # start pose for learning
+        ur3_start_pose.p = gymapi.Vec3(0.65, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        ur3_start_pose.r = gymapi.Quat(0.0, 0.0, -1.0, 0.0)
+
 
         door_start_pose = gymapi.Transform()
         door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
@@ -608,8 +614,8 @@ def compute_ur3_reward(
 
     hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
 
-    # dist_reward = -1 * hand_dist * dist_reward_scale
-    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+    dist_reward = -1 * hand_dist * dist_reward_scale # no thlesh
+    # dist_reward = -1 * hand_dist_thresh * dist_reward_scale
 
     o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
     # print(o_dist_reward)

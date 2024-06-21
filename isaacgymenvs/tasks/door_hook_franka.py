@@ -39,8 +39,8 @@ class Franka_DoorHook(VecTask):
         self.door_scale_param = 1.0
 
         # self.action_scale =  0.2 # left 0.2 # right_pull 0.4
-        # self.action_scale = 0.3 # left pull best 0620
-        self.action_scale = 0.3
+        # self.action_scale = 0.3 # left pull best 0620, right best 0621
+        self.action_scale = 0.25
         self.start_pos_noise_scale = 0 # 0.5
         self.start_rot_noise_scale = 0  # 0.25
 
@@ -89,7 +89,8 @@ class Franka_DoorHook(VecTask):
 
         # create some wrapper tensors for different slices
         # self.franka_default_dof_pos = to_torch(deg2rad_joint_angles([0.0, -68.756, 0.0, -126.103, 0.0, 154.745, 0.0]), device=self.device) # left_best
-        self.franka_default_dof_pos = to_torch(deg2rad_joint_angles([0.0+10, -68.756, 0.0, -126.103, 0.0, 154.745-5, 0.0]), device=self.device) # right
+        self.franka_default_dof_pos = to_torch(deg2rad_joint_angles([5.0, -68.756, 0.0, -126.103, 0.0, 156.745, 0.0]), device=self.device) # right
+        # self.franka_default_dof_pos = to_torch(deg2rad_joint_angles([-15, -48.756, 0.0, -96.103, -160.0, 225, 165.0]), device=self.device) # test
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
@@ -144,6 +145,8 @@ class Franka_DoorHook(VecTask):
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
         door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        door_v4_asset_file = 'urdf/door_test/v4_door_left_1.urdf'
+        door_v2_asset_file = 'urdf/door_test/v2_door_left_1.urdf'
 
         wood_texture = self.gym.create_texture_from_file(self.sim, './assets/textures/wood_3.jpg')
         # wood_texture  = 'textures/wood_1.png'
@@ -174,7 +177,10 @@ class Franka_DoorHook(VecTask):
         door_2_asset = self.gym.load_asset(self.sim, asset_root, door_2_asset_file, asset_options)
         door_1_inv_asset = self.gym.load_asset(self.sim, asset_root, door_1_inv_asset_file, asset_options)
         door_2_inv_asset = self.gym.load_asset(self.sim, asset_root, door_2_inv_asset_file, asset_options)
-        # door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset] # left ahead
+        door_v4_asset = self.gym.load_asset(self.sim, asset_root, door_v4_asset_file, asset_options)
+        door_v2_asset = self.gym.load_asset(self.sim, asset_root, door_v2_asset_file, asset_options)
+
+        # door_assets = [door_v2_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset, door_v4_asset] # left ahead
         door_assets = [door_2_asset, door_2_inv_asset, door_1_inv_asset, door_1_asset] # right ahead
         franka_dof_stiffness = to_torch([200, 200, 200, 200, 200, 200, 200], dtype=torch.float, device=self.device)
 
@@ -204,9 +210,10 @@ class Franka_DoorHook(VecTask):
             # franka_dof_props['hasLimits'][i] = False
                 # print(f'############### feed back ####################\n{franka_dof_props}')
             franka_dof_props['stiffness'][i] = franka_dof_stiffness[i]
-            # franka_dof_props['lower'][i] = -10
-            # franka_dof_props['upper'][i] = 10
-            franka_dof_props['damping'][i] *= 2.0 
+            franka_dof_props['lower'][i] *= 2
+            franka_dof_props['upper'][i] *= 2 
+            # franka_dof_props['damping'][i] *= 2.0 # left
+            franka_dof_props['damping'][i] *= 1.5 # right
             franka_dof_props['effort'][i] = 2000
         print(franka_dof_props)
 
@@ -221,7 +228,7 @@ class Franka_DoorHook(VecTask):
         franka_start_pose = gymapi.Transform()
         # franka_start_pose.p = gymapi.Vec3(0.7, -0.3, 0) # left_pull_best 
         franka_start_pose.p = gymapi.Vec3(0.65, 0.1, 0) # right_pull_best
-        # franka_start_pose.p = gymapi.Vec3(0.56, 0.35, 0) # right_pull
+        # franka_start_pose.p = gymapi.Vec3(0.6, 0.05, 0) # right_pull
         
         # franka_start_pose.p = gymapi.Vec3(0.7, 0, 0) # right_trash
 
@@ -436,7 +443,7 @@ class Franka_DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

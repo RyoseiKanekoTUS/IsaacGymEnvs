@@ -152,7 +152,8 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        ur3_asset_file = "urdf/door_test/hook_test.urdf"
+        # ur3_asset_file = "urdf/door_test/hook_test.urdf"
+        ur3_asset_file = 'urdf/door_test/hook_test_2.urdf'
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_2.urdf'

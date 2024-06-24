@@ -37,6 +37,12 @@ class DoorHook(VecTask):
         self.start_pos_noise_scale = 0.5 # 0.5 
         self.start_rot_noise_scale =  0.25 # 0.25
 
+        ############################################################
+        self.start_pos_noise_scale = 0 # 0.5 
+        self.start_rot_noise_scale =  0 # 0.25
+
+        ############################################################
+
         self.aggregate_mode = 3
 
         # reward parameters
@@ -87,9 +93,14 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
-        self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
+        # self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
+        # self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
         self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
+
+        ############################################################################
+        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0.2, 0.2, 0.3])
+        ############################################################################
+
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
         self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
@@ -558,8 +569,11 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        # self.actions = self.zero_actions()
-        # self.actions[:,0] = 1.0
+        self.actions = self.zero_actions()
+        print(self.ur3_dof_pos)
+        # self.actions[:,4] = 1.0
+        # self.actions[:,5] = 1.0
+        self.actions[:,3] = 1.0
         # print('action', self.actions*self.action_scale*self.dt, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()

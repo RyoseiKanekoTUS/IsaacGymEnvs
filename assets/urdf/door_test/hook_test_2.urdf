@@ -41,7 +41,7 @@
     <link name = 'ee_rx_link'/>
     <joint name="ee_ry" type="revolute">
         <origin rpy="0 0 0" xyz="0 0 0"/>
-        <parent link="ee_z_link"/>
+        <parent link="ee_rx_link"/>
         <child link="ee_ry_link"/>
         <axis xyz="0 1 0"/>
         <limit effort="10.0" lower="-1.0" upper="1.0" velocity="5.0"/>
@@ -49,7 +49,7 @@
     <link name = 'ee_ry_link'/>
     <joint name="ee_rz" type="revolute">
         <origin rpy="0 0 0" xyz="0 0 0"/>
-        <parent link="ee_z_link"/>
+        <parent link="ee_ry_link"/>
         <child link="ee_rz_link"/>
         <axis xyz="0 0 1"/>
         <limit effort="10.0" lower="-1.0" upper="1.0" velocity="5.0"/>

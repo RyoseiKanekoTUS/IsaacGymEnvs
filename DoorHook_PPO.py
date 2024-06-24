@@ -137,7 +137,7 @@ class DoorHookTrainer(PPOnet):
         self.cfg["mini_batches"] = 128  # 16 * 4096 / 8192
         self.cfg["discount_factor"] = 0.99
         self.cfg["lambda"] = 0.95
-        self.cfg["learning_rate"] = 1e-3
+        self.cfg["learning_rate"] = 5e-3
         self.cfg["learning_rate_scheduler"] = KLAdaptiveRL
         self.cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
         self.cfg["random_timesteps"] = 0

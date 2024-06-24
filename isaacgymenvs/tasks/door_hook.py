@@ -156,8 +156,8 @@ class DoorHook(VecTask):
         # ur3_asset_file = 'urdf/door_test/hook_test_2.urdf'
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_2.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall_2.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
 
         
         # load ur3 asset

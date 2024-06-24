@@ -108,30 +108,32 @@
     <link name = 'door_handles'>
         <visual>
             <geometry>
-                <mesh filename = './meshes/shirokuma_scaled.stl'/> 
+                <mesh filename = './meshes/door_handle.dae' scale='1.23 1.27 0.7'/> 
                 <!-- original scaling 0.676 0.7 0.385 -->
             </geometry>
-            <origin xyz = '-0.0225 0 0' rpy = '0 0 3.14'/>
+            <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>
             <color rgba = '0.55 0.5 0.5 1.0'/>
         </visual>
         <visual>
             <geometry>
-                <mesh filename = './meshes/shirokuma_scaled.stl'/>
+                <mesh filename = './meshes/door_handle.dae' scale='1.23 1.27 0.7'/>
             </geometry>
-            <origin xyz = '0.055 0 0' rpy = '3.14 0 0'/>
+            <origin xyz = '0.04 0 0' rpy = '0 0 -1.57'/>
              <color rgba = '0.5 0.5 0.5 1.0'/>
         </visual>
         <collision>
             <geometry>
-                <mesh filename='./meshes/shirokuma_scaled_collision.stl'/>
+                <!-- <mesh filename="./meshes/door_handle_collision.dae" scale='1.23 1.27 0.7'/> -->
+                <mesh filename='./meshes/door_handle_collision.dae' scale='1.23 1.27 0.7'/>
+
             </geometry>
-            <origin xyz = '-0.0225 0 0' rpy = '0 0 3.14'/>
+            <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>
         </collision>
         <collision>
             <geometry>
-                <mesh filename="./meshes/shirokuma_scaled_collision.stl"/>
+                <mesh filename="./meshes/door_handle_collision.dae" scale='1.23 1.27 0.7'/>
             </geometry>
-            <origin xyz = '0.055 0 0' rpy = '3.14 0 0'/>
+            <origin xyz = '0.045 0 0' rpy = '0 0 -1.57'/>
         </collision>
         <inertial>
             <origin xyz="0.0 0.0 0.0" rpy="3.14159 0 1.57"/>

@@ -30,16 +30,16 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.2
 
         # rand param for action scales
-        self.action_scale_base = 0.01 # base
-        self.action_scale_rand = 0.001
+        self.action_scale_base = 0.02 # base
+        self.action_scale_rand = 0.002
         # self.action_scale = 0.1
 
         self.start_pos_noise_scale = 0.5 # 0.5 
         self.start_rot_noise_scale =  0.25 # 0.25
 
         ############################################################
-        self.start_pos_noise_scale = 0 # 0.5 
-        self.start_rot_noise_scale =  0 # 0.25
+        # self.start_pos_noise_scale = 0 # 0.5 
+        # self.start_rot_noise_scale =  0 # 0.25
 
         ############################################################
 
@@ -98,7 +98,7 @@ class DoorHook(VecTask):
         self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
 
         ############################################################################
-        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0.2, 0.2, 0.3])
+        # self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0.2, 0.2, 0.3])
         ############################################################################
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
@@ -387,7 +387,7 @@ class DoorHook(VecTask):
             # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
             # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
             # np.savetxt(f"./.test_data/48_64_thresh_d_img.csv",self.thresh_d_imgs[j,...].cpu().view(self.camera_props.height, self.camera_props.width), delimiter=',')
-            print(self.thresh_d_imgs.shape)
+            # print(self.thresh_d_imgs.shape)
             plt.axis('off')
             plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
             # plt.colorbar()
@@ -570,11 +570,11 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        self.actions = self.zero_actions()
-        print(self.ur3_dof_pos)
+        # self.actions = self.zero_actions()
+        # print(self.ur3_dof_pos)
         # self.actions[:,4] = 1.0
         # self.actions[:,5] = 1.0
-        self.actions[:,3] = 1.0
+        # self.actions[:,3] = 1.0
         # print('action', self.actions*self.action_scale*self.dt, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()

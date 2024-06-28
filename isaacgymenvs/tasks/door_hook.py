@@ -34,12 +34,12 @@ class DoorHook(VecTask):
         self.action_scale_rand = 0.002
         # self.action_scale = 0.1
 
-        self.start_pos_noise_scale = 0.5 # 0.5 
-        self.start_rot_noise_scale =  0.25 # 0.25
+        # self.start_pos_noise_scale = 0.5 # 0.5 
+        # self.start_rot_noise_scale =  0.25 # 0.25
 
         ############################################################
-        # self.start_pos_noise_scale = 0 # 0.5 
-        # self.start_rot_noise_scale =  0 # 0.25
+        self.start_pos_noise_scale = 0 # 0.5 
+        self.start_rot_noise_scale =  0 # 0.25
 
         ############################################################
 
@@ -491,7 +491,7 @@ class DoorHook(VecTask):
         # print(self.hand_o_dist)
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
 
-        # print(dof_pos_dt)
+        print('dof_pos', self.ur3_dof_pos)
         # print(hand_pos)
         # print(self.ur3_dof_vel)
         # fake_dof_vel = dof_pos_dt/self.dt
@@ -570,12 +570,12 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # print(self.ur3_dof_pos)
-        # self.actions[:,4] = 1.0
+        # self.actions[:,0] = 1.0
         # self.actions[:,5] = 1.0
         # self.actions[:,3] = 1.0
-        # print('action', self.actions*self.action_scale*self.dt, '\n')
+        print('action', self.actions*self.action_scale_vec, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()
         # print('self.actions', self.actions) # for debug
@@ -650,9 +650,9 @@ def compute_ur3_reward(
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
-    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

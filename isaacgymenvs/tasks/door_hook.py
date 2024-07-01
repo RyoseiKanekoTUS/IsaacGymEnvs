@@ -256,7 +256,7 @@ class DoorHook(VecTask):
         # camera pose setting
         camera_tf = gymapi.Transform()
         camera_tf.p = gymapi.Vec3(0.1, 0, 0.05)
-        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(0))
+        camera_tf.r = gymapi.Quat.from_euler_zyx(0, 0, 0)
 
         self.camera_props.enable_tensors = True # when Vram larger
 
@@ -471,14 +471,16 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
         # ur3 rigid body states
         hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
-        # hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
+        print('hand_pos : ', hand_pos)
+        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
+        print('hand_rot euler : ', self.quat_to_eular((hand_rot[0,0], hand_rot[0,1], hand_rot[0,2], hand_rot[0,3])))
         # hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
         # hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
 
@@ -504,6 +506,16 @@ class DoorHook(VecTask):
         # print('observation space size:', self.obs_buf.shape)
 
         return self.obs_buf    
+    
+    def quat_to_eular(self, quat):
+        quat = gymapi.Quat(quat[0], quat[1], quat[2], quat[3])
+        eular = quat.to_euler_zyx()
+
+        eular_tensor = torch.tensor([eular[0], eular[1], eular[2]])
+
+        eular_tensor = torch.nan_to_num(eular_tensor, nan=0)
+        return eular_tensor
+
         
     def reset_idx(self, env_ids):
         # print(env_ids)

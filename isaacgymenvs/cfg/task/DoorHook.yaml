@@ -29,7 +29,7 @@ env:
 sim:
   # dt: 0.0166
   # dt: 0.083
-  dt: 1.0
+  dt: 0.5
   substeps: 10
   # substeps: 50
   up_axis: "z"

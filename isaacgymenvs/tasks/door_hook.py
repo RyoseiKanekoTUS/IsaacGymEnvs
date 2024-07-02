@@ -95,7 +95,7 @@ class DoorHook(VecTask):
         # create some wrapper tensors for different slices
         # self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
         # self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
-        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
+        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0.4, 0, 0], device=self.device)
 
         ############################################################################
         # self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0.2, 0.2, 0.3])
@@ -152,8 +152,8 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        ur3_asset_file = "urdf/door_test/hook_test.urdf"
-        # ur3_asset_file = 'urdf/door_test/hook_test_2.urdf'
+        # ur3_asset_file = "urdf/door_test/hook_test.urdf" # rx ry rz
+        ur3_asset_file = 'urdf/door_test/hook_test_2.urdf' # rz ry rx
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
@@ -237,7 +237,7 @@ class DoorHook(VecTask):
         # ur3_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
 
         # start pose for learning
-        ur3_start_pose.p = gymapi.Vec3(0.65, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        ur3_start_pose.p = gymapi.Vec3(0.75, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         ur3_start_pose.r = gymapi.Quat(0.0, 0.0, -1.0, 0.0)
 
 
@@ -320,12 +320,17 @@ class DoorHook(VecTask):
 
             camera_handle = self.gym.create_camera_sensor(self.envs[i], self.camera_props)
             self.camera_handles.append(camera_handle)
-            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
+            # camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
+            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rx_link")
+
             self.gym.attach_camera_to_body(camera_handle, self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
 
         # handles definition : index
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook_finger")
-        # print(self.hand_handle)
+        self.hook_finger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook_finger")
+
+        self.ee_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, 'ee_rz_link')
+
+        # print(self.hook_finger_handle)
         # self.hook_pose = self.dof_state
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
         # print('------------self.door_handle',self.door_handle)
@@ -477,16 +482,18 @@ class DoorHook(VecTask):
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
         # ur3 rigid body states
-        hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
-        print('hand_pos : ', hand_pos)
-        hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
-        print('hand_rot euler : ', self.quat_to_eular((hand_rot[0,0], hand_rot[0,1], hand_rot[0,2], hand_rot[0,3])))
-        # hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
-        # hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
+        hook_pos = self.rigid_body_states[:, self.hook_finger_handle][:, 0:3] # hook finger position
+        # print('hook_pos : ', hook_pos)
+        hand_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hand orientation
+        ee_pos = self.rigid_body_states[:, self.ee_handle][:, 0:3]
+        ee_rot = self.rigid_body_states[:, self.ee_handle][:, 3:7]
+        
+        print('ee_pos : ',ee_pos )
+        print('ee_rot euler : ', self.quat_to_eular((ee_rot[0,0], ee_rot[0,1], ee_rot[0,2], ee_rot[0,3])))
 
-        # door handle rigid body states
+        # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
-        self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
+        self.hand_dist = torch.norm(door_handle_pos - hook_pos, dim = 1)
         # print(self.ur3_dof_pos)
         # print(self.ur3_dof_pos[:,3:])
         self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3:], dim = -1)
@@ -494,7 +501,7 @@ class DoorHook(VecTask):
         dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
 
         print('dof_pos', self.ur3_dof_pos)
-        # print(hand_pos)
+        # print(hook_pos)
         # print(self.ur3_dof_vel)
         # fake_dof_vel = dof_pos_dt/self.dt
         # print(fake_dof_vel)
@@ -509,7 +516,7 @@ class DoorHook(VecTask):
     
     def quat_to_eular(self, quat):
         quat = gymapi.Quat(quat[0], quat[1], quat[2], quat[3])
-        eular = quat.to_euler_zyx()
+        eular = quat.to_euler_zyx() # 順番変えたらxyz にでもできる
 
         eular_tensor = torch.tensor([eular[0], eular[1], eular[2]])
 
@@ -585,7 +592,7 @@ class DoorHook(VecTask):
         self.actions = self.zero_actions()
         # print(self.ur3_dof_pos)
         # self.actions[:,0] = 1.0
-        # self.actions[:,5] = 1.0
+        self.actions[:,5] = 1.0
         # self.actions[:,3] = 1.0
         print('action', self.actions*self.action_scale_vec, '\n')
         # print(self.actions.shape)

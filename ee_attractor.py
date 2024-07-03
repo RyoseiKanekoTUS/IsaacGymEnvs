@@ -87,7 +87,7 @@ franka_asset = gym.load_asset(
     sim, asset_root, franka_asset_file, asset_options)
 
 # Set up the env grid
-num_envs = 36
+num_envs = 1
 spacing = 1.0
 env_lower = gymapi.Vec3(-spacing, 0.0, -spacing)
 env_upper = gymapi.Vec3(spacing, spacing, spacing)
@@ -106,7 +106,7 @@ attractor_properties.damping = 5e3
 # Make attractor in all axes
 attractor_properties.axes = gymapi.AXIS_ALL
 pose = gymapi.Transform()
-pose.p = gymapi.Vec3(0, 0.0, 0)
+pose.p = gymapi.Vec3(0, 0.0, 0.5)
 pose.r = gymapi.Quat(-0.707107, 0.0, 0.0, 0.707107)
 
 # Create helper geometry used for visualization
@@ -148,8 +148,8 @@ for i in range(num_envs):
 
 # get joint limits and ranges for Franka
 franka_dof_props = gym.get_actor_dof_properties(envs[0], franka_handles[0])
-franka_lower_limits = franka_dof_props['lower']
-franka_upper_limits = franka_dof_props['upper']
+franka_lower_limits = 5*franka_dof_props['lower']
+franka_upper_limits = 5*franka_dof_props['upper']
 franka_ranges = franka_upper_limits - franka_lower_limits
 franka_mids = 0.5 * (franka_upper_limits + franka_lower_limits)
 franka_num_dofs = len(franka_dof_props)
@@ -164,7 +164,7 @@ franka_dof_props["driveMode"][0:2] = gymapi.DOF_MODE_POS
 
 franka_dof_props["driveMode"][7:] = gymapi.DOF_MODE_POS
 franka_dof_props['stiffness'][7:] = 1e10
-franka_dof_props['damping'][7:] = 1.0
+franka_dof_props['damping'][7:] = 0.0
 
 for i in range(num_envs):
     gym.set_actor_dof_properties(envs[i], franka_handles[i], franka_dof_props)
@@ -177,7 +177,7 @@ def update_franka(t):
         attractor_properties = gym.get_attractor_properties(envs[i], attractor_handles[i])
         pose = attractor_properties.target
         # pose.p.x += 0.001
-        pose.p.y += 0.001
+        # pose.p.y += 0.001
         # pose.p.z += 0.001
         # print(pose.r.x)
         rot_euler = list(gymapi.Quat.to_euler_zyx(pose.r))

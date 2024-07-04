@@ -106,8 +106,8 @@ attractor_properties.damping = 5e3
 # Make attractor in all axes
 attractor_properties.axes = gymapi.AXIS_ALL
 pose = gymapi.Transform()
-pose.p = gymapi.Vec3(0, 0.0, 0.5)
-pose.r = gymapi.Quat(-0.707107, 0.0, 0.0, 0.707107)
+pose.p = gymapi.Vec3(0, 0.0, 0.0)
+pose.r = gymapi.Quat(0.0, 0.0, 0.0, 1.0)
 
 # Create helper geometry used for visualization
 # Create an wireframe axis
@@ -181,7 +181,7 @@ def update_franka(t):
         # pose.p.z += 0.001
         # print(pose.r.x)
         rot_euler = list(gymapi.Quat.to_euler_zyx(pose.r))
-        rot_euler[2] += 0.001
+        # rot_euler[2] = 0.5
         pose.r = gymapi.Quat.from_euler_zyx(*rot_euler)
         print(rot_euler)
         gym.set_attractor_target(envs[i], attractor_handles[i], pose)

@@ -16,7 +16,10 @@ from .base.vec_task import VecTask
 
 import torch
 import cv2
+import time
 
+
+# Quat : (x, y, z, w)
 
 class DoorHook(VecTask):
 
@@ -26,8 +29,10 @@ class DoorHook(VecTask):
         self.n = 0
         self.max_episode_length = 300 # 300
 
+        self.timer = None
+
         self.door_scale_param = 0.55
-        self.door_scale_rand_param = 0.2
+        self.door_scale_rand_param = 0.0
 
         # rand param for action scales
         self.action_scale_base = 0.02 # base
@@ -38,9 +43,10 @@ class DoorHook(VecTask):
         # self.start_rot_noise_scale =  0.25 # 0.25
 
         ############################################################
-        self.start_pos_noise_scale = 0 # 0.5 
-        self.start_rot_noise_scale =  0 # 0.25
-
+        # test
+        self.start_pos_noise_scale = 0.0
+        self.start_rot_noise_scale =  0.0 
+        self.door_scale_rand_param = 0.0
         ############################################################
 
         self.aggregate_mode = 3
@@ -95,10 +101,10 @@ class DoorHook(VecTask):
         # create some wrapper tensors for different slices
         # self.hand_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
         # self.hand_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
-        self.hand_default_dof_pos_mid = to_torch([0, 0, 0, 0.4, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 1.0, 0, 0, 0], device=self.device)
 
         ############################################################################
-        # self.hand_default_dof_pos_mid = to_torch([0, 0, 0, 0.2, 0.2, 0.3])
+        # self.hand_default_dof_pose_mid = to_torch([0, 0, 0, 0.2, 0.2, 0.3])
         ############################################################################
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
@@ -237,12 +243,13 @@ class DoorHook(VecTask):
         # hand_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
 
         # start pose for learning
-        hand_start_pose.p = gymapi.Vec3(0.75, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
-        hand_start_pose.r = gymapi.Quat(0.0, 0.0, -1.0, 0.0)
+        hand_start_pose.p = gymapi.Vec3(0.00000, 0.0000, 0.00) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 3.1415926)
 
 
         door_start_pose = gymapi.Transform()
-        door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
+        door_start_pose.p = gymapi.Vec3(0.75, 0.0, 0.0)
+        door_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
         # compute aggregate size
         num_hand_bodies = self.gym.get_asset_rigid_body_count(hand_asset)
@@ -471,12 +478,13 @@ class DoorHook(VecTask):
 
     def compute_observations(self): 
         
+
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -484,7 +492,7 @@ class DoorHook(VecTask):
         # hand rigid body states
         hook_pos = self.rigid_body_states[:, self.hook_finger_handle][:, 0:3] # hook finger position
         # print('hook_pos : ', hook_pos)
-        hand_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hand orientation
+        hook_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hand orientation
         ee_pos = self.rigid_body_states[:, self.ee_handle][:, 0:3]
         ee_rot = self.rigid_body_states[:, self.ee_handle][:, 3:7]
         
@@ -554,7 +562,7 @@ class DoorHook(VecTask):
 
 
         # ------------------------ mid
-        pos = self.hand_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        pos = self.hand_default_dof_pose_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         
         # # # ------------------------ left 
         # pos = self.hand_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
@@ -592,9 +600,9 @@ class DoorHook(VecTask):
         self.actions = self.zero_actions()
         # print(self.hand_dof_pos)
         # self.actions[:,0] = 1.0
-        self.actions[:,5] = 1.0
+        # self.actions[:,5] = 1.0
         # self.actions[:,3] = 1.0
-        print('action', self.actions*self.action_scale_vec, '\n')
+        # print('action', self.actions*self.action_scale_vec, '\n')
         # print(self.actions.shape)
         # self.actions = -1 * self.uni_actions()
         # print('self.actions', self.actions) # for debug

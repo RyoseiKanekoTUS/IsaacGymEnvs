@@ -14,6 +14,8 @@ from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
+import time
+
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
     #     ############################################################################################
@@ -106,14 +108,15 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
         pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
         # print('from inputs', pp_d_imgs)
+        # start = time.time()
         d_feture = self.d_feture_extractor(pp_d_imgs)
         # print("$$$$$$$$$$$$$$$$$$$$$$$$$", d_feture.shape)
 
-        # dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
-        # distance = self.depth_extractor(dist_d_imgs)
         combined = torch.cat([ee_states, d_feture], dim=-1)
         if role == 'policy':
-            return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
+            actions_from_mlp = self.mean_layer(self.mlp(combined))
+            # print(time.time() - start)
+            return actions_from_mlp, self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
 

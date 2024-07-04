@@ -484,7 +484,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -496,8 +496,8 @@ class DoorHook(VecTask):
         ee_pos = self.rigid_body_states[:, self.ee_handle][:, 0:3]
         ee_rot = self.rigid_body_states[:, self.ee_handle][:, 3:7]
         
-        print('ee_pos : ',ee_pos )
-        print('ee_rot euler : ', self.quat_to_eular((ee_rot[0,0], ee_rot[0,1], ee_rot[0,2], ee_rot[0,3])))
+        # print('ee_pos : ',ee_pos )
+        # print('ee_rot euler : ', self.quat_to_eular((ee_rot[0,0], ee_rot[0,1], ee_rot[0,2], ee_rot[0,3])))
 
         # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
@@ -508,7 +508,7 @@ class DoorHook(VecTask):
         # print(self.hand_o_dist)
         dof_pos_dt = self.hand_dof_pos - self.hand_dof_pos_prev
 
-        print('dof_pos', self.hand_dof_pos)
+        # print('dof_pos', self.hand_dof_pos)
         # print(hook_pos)
         # print(self.hand_dof_vel)
         # fake_dof_vel = dof_pos_dt/self.dt
@@ -597,7 +597,7 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
         # print(self.hand_dof_pos)
         # self.actions[:,0] = 1.0
         # self.actions[:,5] = 1.0

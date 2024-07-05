@@ -12,7 +12,7 @@
         <parent link="ee_base"/>
         <child link="ee_x_link"/>
         <axis xyz="1 0 0"/>
-        <limit effort="100.0" lower="-1.0" upper="1.0" velocity="5.0"/>
+        <limit effort="100.0" lower="-1.0" upper="1.0" velocity="0.1"/>
     </joint>
     <link name = 'ee_x_link'/>
     <joint name="ee_y" type="prismatic">
@@ -20,7 +20,7 @@
         <parent link="ee_x_link"/>
         <child link="ee_y_link"/>
         <axis xyz="0 1 0"/>
-        <limit effort="100.0" lower="-1.0" upper="1.0" velocity="5.0"/>
+        <limit effort="100.0" lower="-1.0" upper="1.0" velocity="0.1"/>
     </joint>
     <link name = 'ee_y_link'/>
     <joint name="ee_z" type="prismatic">
@@ -28,7 +28,7 @@
         <parent link="ee_y_link"/>
         <child link="ee_z_link"/>
         <axis xyz="0 0 1"/>
-        <limit effort="100.0" lower="-1.0" upper="1.0" velocity="5.0"/>
+        <limit effort="100.0" lower="-1.0" upper="1.0" velocity="0.1"/>
     </joint>
     <link name = 'ee_z_link'/>
     <joint name="ee_rz" type="revolute">
@@ -36,7 +36,7 @@
         <parent link="ee_z_link"/>
         <child link="ee_rz_link"/>
         <axis xyz="0 0 1"/>
-        <limit effort="10.0" lower="-1.0" upper="1.0" velocity="5.0"/>
+        <limit effort="10.0" lower="-1.0" upper="1.0" velocity="0.1"/>
     </joint>
     <link name = 'ee_rz_link'/>
     <joint name="ee_ry" type="revolute">
@@ -44,7 +44,7 @@
         <parent link="ee_rz_link"/>
         <child link="ee_ry_link"/>
         <axis xyz="0 1 0"/>
-        <limit effort="10.0" lower="-1.0" upper="1.0" velocity="5.0"/>
+        <limit effort="10.0" lower="-1.0" upper="1.0" velocity="0.1"/>
     </joint>
     <link name = 'ee_ry_link'/>
     <joint name="ee_rx" type="revolute">
@@ -52,7 +52,7 @@
         <parent link="ee_ry_link"/>
         <child link="ee_rx_link"/>
         <axis xyz="1 0 0"/>
-        <limit effort="10.0" lower="-1.0" upper="1.0" velocity="5.0"/>
+        <limit effort="10.0" lower="-1.0" upper="1.0" velocity="0.1"/>
     </joint>
     <link name="ee_rx_link"/>
     <joint name="ee2hand_joint" type="fixed">

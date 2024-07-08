@@ -93,6 +93,7 @@ class DoorHook(VecTask):
         actor_root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         rigid_body_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
+        print(rigid_body_tensor.shape)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -335,6 +336,7 @@ class DoorHook(VecTask):
         self.hook_finger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, "hook_finger")
 
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, 'ee_rx_link')
+        self.robot_base = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, 'base_link')
 
         # print(self.hook_finger_handle)
         # self.hook_pose = self.dof_state
@@ -488,16 +490,17 @@ class DoorHook(VecTask):
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
-        # hand rigid body states
+        # hook finger rigid body states
         hook_pos = self.rigid_body_states[:, self.hook_finger_handle][:, 0:3] # hook finger position
-        # print('hook_pos : ', hook_pos)
         hook_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hook finger orientation
+        # hand finger rigid body states
         hand_pos_world = self.rigid_body_states[:, self.hand_handle][:, 0:3]
         hand_rot_world = self.rigid_body_states[:, self.hand_handle][:, 3:7]
+        hand_rot_world_euler = self.quat_to_eular(hand_rot_world.view(4,1))
         
         print('hand_dof_pos', self.hand_dof_pos)
         print('hand_pos_world : ',hand_pos_world )
-        print('hand_rot_world_euler_zyx : ', hand_rot_world.shape) # TODO function
+        print('hand_rot_world_euler_zyx : ', hand_rot_world_euler)
 
         # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
@@ -524,7 +527,7 @@ class DoorHook(VecTask):
     
     def quat_to_eular(self, quat):
         quat = gymapi.Quat(quat[0], quat[1], quat[2], quat[3])
-        eular = quat.to_euler_zyx() # 順番変えたらxyz にでもできる
+        eular = quat.to_euler_zyx() # can be changed xyz etc...
 
         eular_tensor = torch.tensor([eular[0], eular[1], eular[2]])
 
@@ -619,13 +622,20 @@ class DoorHook(VecTask):
         # self.gym.set_dof_position_target_tensor(self.sim,
         #                                         gymtorch.unwrap_tensor(self.dof_targets))
         #################################################################################################
-        test_targets = torch.ones(self.num_envs, self.num_hand_dofs) * 0.2
+        test_targets = torch.ones(self.num_envs, self.num_hand_dofs) * 0.5
         test_targets[:,3:] = 0.0
         test_targets[:,4] = 1.57
         self.dof_targets[:, :self.num_hand_dofs] = test_targets 
 
         self.gym.set_dof_position_target_tensor(self.sim,
                                                 gymtorch.unwrap_tensor(self.dof_targets)) # 謎振動
+        # #################################################################################################
+        # apply_action_tensor = self.rigid_body_states.clone().detach()
+        # print(apply_action_tensor.shape)
+
+        # self.gym.set_rigid_body_state_tensor(self.sim, gymtorch.unwrap_tensor(apply_action_tensor.view(self.num_envs*14, -1)))
+        # print()
+        # self.gym.set_actor_rigid_body_states()
         # #################################################################################################
 
     def post_physics_step(self):

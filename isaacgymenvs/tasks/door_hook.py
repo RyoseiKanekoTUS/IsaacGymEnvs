@@ -124,7 +124,7 @@ class DoorHook(VecTask):
         self.door_dof_vel = self.door_dof_state[..., 1]
 
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
-        self.hand_pose_world = torch.zeros(self.num_envs, 7)
+        self.hand_pose_world = torch.zeros(self.num_envs, 7, device=self.device)
         self.num_bodies = self.rigid_body_states.shape[1]
         # print(self.num_bodies)
         self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(self.num_envs, -1, 13)
@@ -627,7 +627,7 @@ class DoorHook(VecTask):
         # self.actions[:,0] = 1.0
 
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        self.actions = self.zero_actions()
+        # self.actions = self.zero_actions()
 
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)

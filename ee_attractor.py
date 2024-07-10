@@ -1,17 +1,4 @@
-"""
-Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 
-NVIDIA CORPORATION and its licensors retain all intellectual property
-and proprietary rights in and to this software, related documentation
-and any modifications thereto. Any use, reproduction, disclosure or
-distribution of this software and related documentation without an express
-license agreement from NVIDIA CORPORATION is strictly prohibited.
-
-
-Franka Attractor
-----------------
-Positional control of franka panda robot with a target attractor that the robot tries to reach
-"""
 
 import math
 import numpy as np
@@ -113,7 +100,7 @@ attractor_properties.damping = 0.0
 # Make attractor in all axes
 attractor_properties.axes = gymapi.AXIS_ALL
 pose = gymapi.Transform()
-pose.p = gymapi.Vec3(0, 0.0, 0)
+pose.p = gymapi.Vec3(0, 0.0, 0.5)
 pose.r = gymapi.Quat(0, 0, 0, 1)
 
 # Create helper geometry used for visualization
@@ -171,7 +158,7 @@ franka_dof_props["driveMode"][0:2] = gymapi.DOF_MODE_POS
 
 franka_dof_props["driveMode"][7:] = gymapi.DOF_MODE_POS
 franka_dof_props['stiffness'][7:] = 1e10
-franka_dof_props['damping'][7:] = 1.0
+franka_dof_props['damping'][7:] = 1e5
 
 for i in range(num_envs):
     gym.set_actor_dof_properties(envs[i], franka_handles[i], franka_dof_props)
@@ -184,21 +171,21 @@ def update_franka(t):
         attractor_properties = gym.get_attractor_properties(envs[i], attractor_handles[i])
         pose = attractor_properties.target
         # print(pose)
-        # pose.p.x = 0.2 * math.sin(1.5 * t - math.pi * float(i) / num_envs)
-        # pose.p.y = 0.7 + 0.2 * math.cos(2.5 * t - math.pi * float(i) / num_envs)
-        # pose.p.z = 0.2 * math.cos(1.5 * t - math.pi * float(i) / num_envs)
+        pose.p.x = 0.2 * math.sin(1.5 * t - math.pi * float(i) / num_envs)
+        pose.p.y = 0.2 * math.cos(2.5 * t - math.pi * float(i) / num_envs)
+        pose.p.z = 0.5 + 0.2 * math.cos(1.5 * t - math.pi * float(i) / num_envs)
 
-        pose.p.x = 0.0
-        pose.p.y = 0.2
-        pose.p.z = 0.8
+        # pose.p.x = 0.0
+        # pose.p.y = 0.2
+        # pose.p.z = 0.8
 
         # gym.set_attractor_target(envs[i], attractor_handles[i], pose)
         # print(pose.r.x)
-        # rot_euler = list(gymapi.Quat.to_euler_zyx(pose.r))
-        # rot_euler[2] = 0.0
-        # rot_euler[1] = 0.0
-        # rot_euler[0] = 0.0
-        # pose.r = gymapi.Quat.from_euler_zyx(*rot_euler)
+        rot_euler = list(gymapi.Quat.to_euler_zyx(pose.r))
+        # rot_euler[2] += 0.02
+        rot_euler[1] += 0.02
+        rot_euler[0] += 0.02
+        pose.r = gymapi.Quat.from_euler_zyx(*rot_euler)
         # print(rot_euler)
         gym.set_attractor_target(envs[i], attractor_handles[i], pose)
 

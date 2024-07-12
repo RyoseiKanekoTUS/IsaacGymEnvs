@@ -503,10 +503,11 @@ class DoorHook(VecTask):
         # hand finger rigid body states
         self.hand_pos_world = self.rigid_body_states[:, self.hand_handle][:, 0:3]
         self.hand_rot_world = self.rigid_body_states[:, self.hand_handle][:, 3:7]
-        self.hand_pose_world = self.rigid_body_states[:, self.hand_handle]
+        self.hand_pose_world = self.rigid_body_states[:, self.hand_handle][:, 0:7]
         # hand_rot_world_euler = self.quat_to_euler(self.hand_rot_world.view(4,1))
         
-        # print('hand_dof_pos', self.hand_dof_pos)
+        print('hand_pose_world', self.hand_pose_world)
+        print('hand_rot_world_euler', self.quat_to_euler_tensor(self.hand_rot_world))
         # print('hand_pos_world : ',self.hand_pos_world )
         # print('hand_rot_world_euler_zyx : ', hand_rot_world_euler)
 
@@ -632,11 +633,11 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
 
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
-        self.actions = self.zero_actions()
+        self.actions = self.zero_actions() # action becomes [0, 0, 0, 0, 0, 0]
 
-        self.actions[:,1] = 0.01
-        self.actions[:,2] = 0.01
-        self.actions[:,0] = -0.01
+        # self.actions[:,1] = 0.01
+        # self.actions[:,2] = 0.01
+        # self.actions[:,0] = 0.1
         # print('self.actions',self.actions*self.action_scale*self.dt)
 
         self.gym.refresh_jacobian_tensors(self.sim)
@@ -657,10 +658,16 @@ class DoorHook(VecTask):
         p_world_goal, q_world_goal_euler = transform_hand_to_world_add_action(p_world_t, q_world_t_euler, self.actions)
         q_world_goal = self.quat_from_euler_tensor(q_world_goal_euler)
         ###################################################################
-        q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
+        # q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
         ###################################################################
         
         d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05) # (self.num_envs, 6)
+        ###################################################################
+        # test
+        d_dof = torch.zeros_like(d_dof)
+        d_dof[:,5] = 0.1
+        print('p_prime', d_dof)
+        ################################################################### 
         
         targets = self.dof_targets[:, :self.num_hand_dofs] + d_dof
         # ----------- without clamp limit ----------------------------------

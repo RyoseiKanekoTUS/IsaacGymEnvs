@@ -64,7 +64,7 @@ gym.add_ground(sim, plane_params)
 
 # Load franka asset
 asset_root = "./assets"
-franka_asset_file = "urdf/door_test/hook_test.urdf"
+franka_asset_file = "urdf/door_test/attractor_hand.urdf"
 
 asset_options = gymapi.AssetOptions()
 asset_options.fix_base_link = True

@@ -79,7 +79,11 @@ class DoorHook(VecTask):
         self.depth_min = -3.0 
         self.depth_max = -0.1 # -0.07
 
-        self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
+        self.camera_props.enable_tensors = True # If False, d_img process doesnt work
+
+        # pixel noise factor
+        self.pixel_noise_factor = 0.85
+
 
 
         # set observation space and action space
@@ -103,7 +107,10 @@ class DoorHook(VecTask):
 
         ############################################################################
         # for test
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 0.0, 0.0, 0.0])
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 0.7854, 0.7854, 0.7854])
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 3.141592, 0, 0])
+        self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0])
+
         ############################################################################
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
@@ -242,14 +249,14 @@ class DoorHook(VecTask):
         # hand_start_pose.p = gymapi.Vec3(0.4315, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         # hand_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
 
-        # start pose for learning
+        # origin of the urdf-robot
         hand_start_pose.p = gymapi.Vec3(0.00, 0.00, 0.0) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0)
 
 
         door_start_pose = gymapi.Transform()
         door_start_pose.p = gymapi.Vec3(-0.75, 0.0, 0.0)
-        door_start_pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
+        door_start_pose.r = gymapi.Quat(0, 0, 0, 1)
 
         # compute aggregate size
         num_hand_bodies = self.gym.get_asset_rigid_body_count(hand_asset)
@@ -439,6 +446,11 @@ class DoorHook(VecTask):
         
         # print('cropped, stacked', self.cropped_d_imgs.shape)
 
+    def d_img_pixel_noiser(self):
+
+        noise_filter = self.th_n_d_imgs * torch.rand_like(self.th_n_d_imgs)
+        self.th_n_d_imgs = torch.where(noise_filter > self.pixel_noise_factor, 0, self.th_n_d_imgs)
+
 
     def d_img_process(self):
 
@@ -457,8 +469,12 @@ class DoorHook(VecTask):
         # print('thresh_d_imgs shape', self.thresh_d_imgs.shape)
 
         self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
-        # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
+
+        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > 1.0, 0, self.th_n_d_imgs)
+        print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
+
+        self.d_img_pixel_noiser()
 
         # dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
         # dist_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
@@ -492,7 +508,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -506,8 +522,8 @@ class DoorHook(VecTask):
         self.hand_pose_world = self.rigid_body_states[:, self.hand_handle][:, 0:7]
         # hand_rot_world_euler = self.quat_to_euler(self.hand_rot_world.view(4,1))
         
-        print('hand_pose_world', self.hand_pose_world)
-        print('hand_rot_world_euler', self.quat_to_euler_tensor(self.hand_rot_world))
+        # print('hand_pose_world', self.hand_pose_world)
+        # print('hand_rot_world_euler', self.quat_to_euler_tensor(self.hand_rot_world))
         # print('hand_pos_world : ',self.hand_pos_world )
         # print('hand_rot_world_euler_zyx : ', hand_rot_world_euler)
 
@@ -637,7 +653,7 @@ class DoorHook(VecTask):
 
         # self.actions[:,1] = 0.01
         # self.actions[:,2] = 0.01
-        # self.actions[:,0] = 0.1
+        # self.actions[:,5] = 0.01
         # print('self.actions',self.actions*self.action_scale*self.dt)
 
         self.gym.refresh_jacobian_tensors(self.sim)
@@ -654,27 +670,55 @@ class DoorHook(VecTask):
         q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
 
         # P_hand_goal = P_world_t + A^world_t
-        
+
+        # # ############### test ############################### test ########################
+        # # define p
+        # p_world_t = torch.zeros_like(p_world_t, device=self.device)
+        # p_world_t[:,...] = torch.tensor([7.4760e-08, -7.4746e-11,  5.0001e-01])
+
+        # q_world_t = torch.zeros_like(q_world_t, device=self.device)
+        # q_world_t[:,...] = torch.tensor([1.1155e-04,  9.2377e-01,  2.7060e-01,  2.7096e-01])
+        # q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
+        # # ###################################################################
+
+        # ##### calculate p' in world cordinate
         p_world_goal, q_world_goal_euler = transform_hand_to_world_add_action(p_world_t, q_world_t_euler, self.actions)
         q_world_goal = self.quat_from_euler_tensor(q_world_goal_euler)
-        ###################################################################
+
+        # print(self.actions)
         # q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
-        ###################################################################
+        # -----------------------------------------------------------------
         
-        d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05) # (self.num_envs, 6)
+        # 正しいコード
+        # d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05) # (self.num_envs, 6)
+
+        d_dof_pos_test = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05)
         ###################################################################
-        # test
-        d_dof = torch.zeros_like(d_dof)
-        d_dof[:,5] = 0.1
-        print('p_prime', d_dof)
-        ################################################################### 
-        
-        targets = self.dof_targets[:, :self.num_hand_dofs] + d_dof
+        # # test
+        # d_dof = torch.zeros_like(d_dof)
+        # d_dof[:,5] = 0.1 # u
+        # print('p_prime', d_dof)
+        # # -----------------------------------------------------------------
+        # 正しいコード -----------------------
+        # targets = self.dof_targets[:, :self.num_hand_dofs] + d_dof
+
+        targets = torch.zeros(self.num_envs, 6)
+        targets[:,...] = self.dof_targets[:, :self.num_hand_dofs] + d_dof_pos_test
+        # print('p_prime', targets) ############################
+
+
+        ###################################################################
+
+        # targets = 0.5*torch.ones_like(targets, device=self.device)
+
+
+
+        # -----------------------------------------------------------------
         # ----------- without clamp limit ----------------------------------
         self.dof_targets[:, :self.num_hand_dofs] = targets 
         # ------------------------------------------------------------------
-        self.gym.set_dof_position_target_tensor(self.sim,
-                                                gymtorch.unwrap_tensor(self.dof_targets))
+        # self.gym.set_dof_position_target_tensor(self.sim,
+        #                                         gymtorch.unwrap_tensor(self.dof_targets)) # ハンドを urdf 座標系でp'動かすためのコード
 
 
     def post_physics_step(self):
@@ -712,30 +756,52 @@ def euler_to_rotation_matrix(euler):
 
     return Rz @ Ry @ Rx
 
-def quat_to_euler_batch(quat_tensor):
-    """
-    Convert a batch of quaternions to Euler angles (ZYX order).
-    """
-    euler_tensor = torch.stack([
-        torch.tensor(gymapi.Quat(quat[0], quat[1], quat[2], quat[3]).to_euler_zyx())
-        for quat in quat_tensor.cpu().numpy()
-    ])
-    euler_tensor = torch.nan_to_num(euler_tensor, nan=0.0).to(quat_tensor.device)
+# def quat_to_euler_batch(quat_tensor):
+#     """
+#     Convert a batch of quaternions to Euler angles (ZYX order).
+#     """
+#     euler_tensor = torch.stack([
+#         torch.tensor(gymapi.Quat(quat[0], quat[1], quat[2], quat[3]).to_euler_zyx())
+#         for quat in quat_tensor.cpu().numpy()
+#     ])
+#     euler_tensor = torch.nan_to_num(euler_tensor, nan=0.0).to(quat_tensor.device)
 
-    return euler_tensor
+#     return euler_tensor
+
+
+# def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
+#     """
+#     Transform hand coordinates to world coordinates after applying the action.
+
+#     Parameters:
+#     p_world_t (torch.Tensor): Hand positions in world coordinates at time t (shape: (num_envs, 3)).
+#     q_world_t_euler (torch.Tensor): Hand orientations in world coordinates at time t (shape: (num_envs, 3)).
+#     action (torch.Tensor): Actions in hand coordinates (shape: (num_envs, 6)).
+
+#     Returns:
+#     None: Updates self.p_world_goal and self.q_world_goal.
+#     """
+#     # Compute rotation matrix from Euler angles
+#     R_world_t = euler_to_rotation_matrix(q_world_t_euler)
+
+#     # Extract position and orientation change from action
+#     delta_pos_hand = actions[:, :3]
+#     delta_euler_hand = actions[:, 3:]
+
+#     # Compute new position in world coordinates
+#     p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)
+
+#     # Compute new orientation in world coordinates
+#     # q_world_goal_euler = q_world_t_euler + delta_euler_hand # TODO not proper
+#     q_world_goal_euler = q_world_t_euler + torch.bmm(R_world_t, delta_euler_hand.unsqueeze(-1)).squeeze(0-1)
+
+#     return p_world_goal, q_world_goal_euler
 
 
 def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
     """
-    Transform hand coordinates to world coordinates after applying the action.
 
-    Parameters:
-    p_world_t (torch.Tensor): Hand positions in world coordinates at time t (shape: (num_envs, 3)).
-    q_world_t_euler (torch.Tensor): Hand orientations in world coordinates at time t (shape: (num_envs, 3)).
-    action (torch.Tensor): Actions in hand coordinates (shape: (num_envs, 6)).
-
-    Returns:
-    None: Updates self.p_world_goal and self.q_world_goal.
+    for test, so after finish, delete this.
     """
     # Compute rotation matrix from Euler angles
     R_world_t = euler_to_rotation_matrix(q_world_t_euler)
@@ -746,12 +812,17 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
 
     # Compute new position in world coordinates
     p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)
+    print('in the function : p', p_world_t, p_world_goal)
 
     # Compute new orientation in world coordinates
     # q_world_goal_euler = q_world_t_euler + delta_euler_hand # TODO not proper
     q_world_goal_euler = q_world_t_euler + torch.bmm(R_world_t, delta_euler_hand.unsqueeze(-1)).squeeze(0-1)
+    print('in the function : q', q_world_t_euler, q_world_goal_euler)
 
     return p_world_goal, q_world_goal_euler
+
+
+
 
 
 #####################################################################

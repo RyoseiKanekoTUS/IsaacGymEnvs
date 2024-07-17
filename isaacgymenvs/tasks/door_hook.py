@@ -81,10 +81,6 @@ class DoorHook(VecTask):
 
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work
 
-        # pixel noise factor
-        self.pixel_noise_factor = 0.85
-
-
 
         # set observation space and action space
         self.cfg["env"]["numObservations"] = 6 + self.img_crop_height*self.img_crop_width # TODO to be changed
@@ -109,7 +105,7 @@ class DoorHook(VecTask):
         # for test
         self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 0.7854, 0.7854, 0.7854])
         self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 3.141592, 0, 0])
-        self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0])
+        self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0]) # door
         # self.hand_default_dof_pose_mid = to_torch([0, 0, 1, 0, 0, 0])
 
         ############################################################################
@@ -213,13 +209,6 @@ class DoorHook(VecTask):
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_hand_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
         self.handle_torque_tensor[:,7] = -10
 
-        # print('----------------------------------------------- num properties ----------------------------------------')
-        # print("num hand bodies: ", self.num_hand_bodies)
-        # print("num hand dofs: ", self.num_hand_dofs)
-        # print("num door bodies: ", self.num_door_bodies)
-        # print("num door dofs: ", self.num_door_dofs)
-        # print('----------------------------------------------- num properties ----------------------------------------')
-
         # set hand dof properties
         hand_dof_props = self.gym.get_asset_dof_properties(hand_asset)
         self.hand_dof_lower_limits = []
@@ -245,11 +234,8 @@ class DoorHook(VecTask):
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_1_asset)
     
-        # start pose
+        # start posese
         hand_start_pose = gymapi.Transform()
-        # start pose for hand
-        # hand_start_pose.p = gymapi.Vec3(0.4315, -0.0213, 0.5788) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
-        # hand_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
 
         # origin of the urdf-robot
         hand_start_pose.p = gymapi.Vec3(0.00, 0.00, 0.1) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
@@ -362,7 +348,6 @@ class DoorHook(VecTask):
         jacobian_tensor = self.gym.acquire_jacobian_tensor(self.sim, 'hook_hand')
         self.jacobian = gymtorch.wrap_tensor(jacobian_tensor) # shape : (num_envs, 9, 6, 6)
         self.j_hand_world = self.jacobian[:, self.hand_handle-1, :, :]
-        print(self.j_hand_world.shape)
 
         # time.sleep(10)
                 
@@ -377,25 +362,6 @@ class DoorHook(VecTask):
 
     def debug_camera_imgs(self):
         
-        # ----------------------------------------------------------------------------------------------------------------
-        # import cv2
-        # # combined_img = np.zeros((3, self.camera_props.width, self.camera_props.height))
-        # im_list = []
-
-        # for j in range(self.num_envs):
-        #     d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-        #     np.savetxt(f"./.test_data/d_img_{j}.csv",self.pp_d_imgs[j,...].cpu().reshape(48, 64), delimiter=',')
-        #     rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
-        #     reshape = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-        #     im_list.append(reshape)
-        #     # cv2.imshow(f'rgb{j}', rgb_img)
-        # im_all = cv2.hconcat(im_list)
-        # cv2.namedWindow('hand camera images',cv2.WINDOW_GUI_NORMAL)
-        # cv2.imshow('hand camera images', im_all)
-        # # cv2.waitKey(200)
-        # cv2.waitKey(1)
-        # -----------------------------------------------------------------------------------------------------------------
-        # import cv2
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
         from io import BytesIO
@@ -450,9 +416,7 @@ class DoorHook(VecTask):
 
     def d_img_pixel_noiser(self):
 
-        noise_filter = self.th_n_d_imgs * torch.rand_like(self.th_n_d_imgs)
-        self.th_n_d_imgs = torch.where(noise_filter > self.pixel_noise_factor, 0, self.th_n_d_imgs)
-
+        return None # TODO
 
     def d_img_process(self):
 
@@ -653,8 +617,8 @@ class DoorHook(VecTask):
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
         self.actions = self.zero_actions() # action becomes [0, 0, 0, 0, 0, 0]
 
-        # self.actions[:,3] = 0.1
-        # self.actions[:,4] = 0.1
+        self.actions[:,5] = 0.5
+        self.actions[:,0] = -0.05
         # self.actions[:,2] = 0.1
         # print('self.actions',self.actions*self.action_scale*self.dt)
 
@@ -671,45 +635,14 @@ class DoorHook(VecTask):
         q_world_t = self.hand_pose_world[:, 3:7]
         # q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
 
-        ###################################################################################################
-        # p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
-        ###################################################################################################
+        p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
+            
+        d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal)
 
-        p_world_goal = torch.tensor([0, 0, 1.0], device=self.device).unsqueeze(0)
-        print('p_position : ', p_world_goal)
-        q_world_goal = quat_from_euler_tensor(torch.tensor([1.0, 0, 0], device=self.device).unsqueeze(0))
-        print('p_q : ', q_world_goal)
-        # print(self.actions)
-        # q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
-        # -----------------------------------------------------------------
-        
-        # 正しいコード
-        # d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05) # (self.num_envs, 6)
+        hand_dof_targets = self.dof_targets[:, :self.num_hand_dofs] + d_dof
 
-        d_dof_pos_test = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.1)
-        ###################################################################
-        # # test
-        # d_dof = torch.zeros_like(d_dof)
-        # d_dof[:,5] = 0.1 # u
-        # print('p_prime', d_dof)
-        # # -----------------------------------------------------------------
-        # 正しいコード -----------------------
-        # targets = self.dof_targets[:, :self.num_hand_dofs] + d_dof
-
-        targets = torch.zeros(self.num_envs, 6)
-        targets[:,...] = self.dof_targets[:, :self.num_hand_dofs] + d_dof_pos_test
-        print('p_prime', targets) ############################
-        print('p_2prime :', self.hand_pose_world[:,0:3], quat_to_euler_tensor(self.hand_pose_world[:,3:7]))
-
-        ###################################################################
-
-        # targets = 0.5*torch.ones_like(targets, device=self.device)
-
-
-
-        # -----------------------------------------------------------------
         # ----------- without clamp limit ----------------------------------
-        self.dof_targets[:, :self.num_hand_dofs] = targets 
+        self.dof_targets[:, :self.num_hand_dofs] = hand_dof_targets 
         # ------------------------------------------------------------------
         self.gym.set_dof_position_target_tensor(self.sim,
                                                 gymtorch.unwrap_tensor(self.dof_targets)) # ハンドを urdf 座標系でp'動かすためのコード

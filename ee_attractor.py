@@ -20,7 +20,7 @@ ur3_default_dof_pos = deg2rad_joint_angles([5.55, -71.55, -108.25, -3.83, 84.09,
 gym = gymapi.acquire_gym()
 
 # Parse arguments
-args = gymutil.parse_arguments(description="Fran Attractor Example")
+args = gymutil.parse_arguments(description="Attractor Example")
 
 # configure sim
 sim_params = gymapi.SimParams()
@@ -64,7 +64,7 @@ gym.add_ground(sim, plane_params)
 
 # Load franka asset
 asset_root = "./assets"
-franka_asset_file = "urdf/door_test/attractor_hand.urdf"
+franka_asset_file = "urdf/door_test/hook_test.urdf"
 
 asset_options = gymapi.AssetOptions()
 asset_options.fix_base_link = True
@@ -150,15 +150,16 @@ franka_num_dofs = len(franka_dof_props)
 print('franka num_dof', franka_num_dofs)
 
 # override default stiffness and damping values
-franka_dof_props['stiffness'].fill(1000.0)
-franka_dof_props['damping'].fill(1000.0)
+# franka_dof_props['stiffness'].fill(1000.0)
+franka_dof_props['damping'].fill(1000000.0)
 
 # Give a desired pose for first 2 robot joints to improve stability
-franka_dof_props["driveMode"][0:2] = gymapi.DOF_MODE_POS
+franka_dof_props["driveMode"][:] = gymapi.DOF_MODE_POS
+print(franka_dof_props)
 
-franka_dof_props["driveMode"][7:] = gymapi.DOF_MODE_POS
-franka_dof_props['stiffness'][7:] = 1e10
-franka_dof_props['damping'][7:] = 1e5
+# franka_dof_props["driveMode"][7:] = gymapi.DOF_MODE_POS
+# franka_dof_props['stiffness'][7:] = 1e10
+# franka_dof_props['damping'][7:] = 1e5
 
 for i in range(num_envs):
     gym.set_actor_dof_properties(envs[i], franka_handles[i], franka_dof_props)
@@ -171,9 +172,9 @@ def update_franka(t):
         attractor_properties = gym.get_attractor_properties(envs[i], attractor_handles[i])
         pose = attractor_properties.target
         # print(pose)
-        pose.p.x = 0.2 * math.sin(1.5 * t - math.pi * float(i) / num_envs)
-        pose.p.y = 0.2 * math.cos(2.5 * t - math.pi * float(i) / num_envs)
-        pose.p.z = 0.5 + 0.2 * math.cos(1.5 * t - math.pi * float(i) / num_envs)
+        # pose.p.x = 0.2 * math.sin(1.5 * t - math.pi * float(i) / num_envs)
+        # pose.p.y = 0.2 * math.cos(2.5 * t - math.pi * float(i) / num_envs)
+        # pose.p.z = 0.5 + 0.2 * math.cos(1.5 * t - math.pi * float(i) / num_envs)
 
         # pose.p.x = 0.0
         # pose.p.y = 0.2
@@ -183,10 +184,11 @@ def update_franka(t):
         # print(pose.r.x)
         rot_euler = list(gymapi.Quat.to_euler_zyx(pose.r))
         # rot_euler[2] += 0.02
-        rot_euler[1] += 0.02
-        rot_euler[0] += 0.02
-        pose.r = gymapi.Quat.from_euler_zyx(*rot_euler)
-        # print(rot_euler)
+        # rot_euler[1] += 0.02
+        rot_euler[2] += 0.02
+        # rot_euler[2] += 0.002
+        pose.r = gymapi.Quat.from_euler_zyx(rot_euler[0], rot_euler[1], rot_euler[2])
+        print(rot_euler)
         gym.set_attractor_target(envs[i], attractor_handles[i], pose)
 
         # Draw axes and sphere at attractor location

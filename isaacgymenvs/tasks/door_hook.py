@@ -675,9 +675,9 @@ class DoorHook(VecTask):
         # p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
         ###################################################################################################
 
-        p_world_goal = torch.tensor([0.7, 0.7, 0.7 ], device=self.device).unsqueeze(0)
+        p_world_goal = torch.tensor([0, 0, 1.0], device=self.device).unsqueeze(0)
         print('p_position : ', p_world_goal)
-        q_world_goal = torch.tensor([0, 0.7071068, 0, 0.7071068], device=self.device).unsqueeze(0)
+        q_world_goal = quat_from_euler_tensor(torch.tensor([1.0, 0, 0], device=self.device).unsqueeze(0))
         print('p_q : ', q_world_goal)
         # print(self.actions)
         # q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
@@ -699,7 +699,7 @@ class DoorHook(VecTask):
         targets = torch.zeros(self.num_envs, 6)
         targets[:,...] = self.dof_targets[:, :self.num_hand_dofs] + d_dof_pos_test
         print('p_prime', targets) ############################
-        print('p_2prime :', self.hand_pose_world[:,0:3], self.hand_pose_world[:,3:7])
+        print('p_2prime :', self.hand_pose_world[:,0:3], quat_to_euler_tensor(self.hand_pose_world[:,3:7]))
 
         ###################################################################
 
@@ -851,19 +851,19 @@ def quat_to_euler_tensor(quat_tensor):
     return euler_tensor
 
 def quat_from_euler_tensor(euler_tensor):
-    quat_tensor = torch.stack([
-        torch.tensor([gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).x,
-                    gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).y,
-                    gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).z,
-                    gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).w])
-        for euler in euler_tensor.cpu().numpy()
-    ], dim=0).to(euler_tensor.device)
+    # quat_tensor = torch.stack([
+    #     torch.tensor([gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).x,
+    #                 gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).y,
+    #                 gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).z,
+    #                 gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).w])
+    #     for euler in euler_tensor.cpu().numpy()
+    # ], dim=0).to(euler_tensor.device)
 
-    # quat_tensor = torch.zeros(self.num_envs, 4, device='cuda')
-    # for i in range(self.num_envs):
-    #     quat_i = gymapi.Quat.from_euler_zyx(euler_tensor[i,0], euler_tensor[i,1], euler_tensor[i,2])
-    #     quat = torch.tensor([quat_i.x, quat_i.y, quat_i.z, quat_i.w], device='cuda')
-    #     quat_tensor[i, :] = quat
+    quat_tensor = torch.zeros(euler_tensor.shape[0], 4, device='cuda')
+    for i in range(euler_tensor.shape[0]):
+        quat_i = gymapi.Quat.from_euler_zyx(euler_tensor[i,0], euler_tensor[i,1], euler_tensor[i,2])
+        quat = torch.tensor([quat_i.x, quat_i.y, quat_i.z, quat_i.w], device='cuda')
+        quat_tensor[i, :] = quat
 
     return quat_tensor        
 

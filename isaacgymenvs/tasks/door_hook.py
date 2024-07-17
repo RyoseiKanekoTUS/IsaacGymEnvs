@@ -252,7 +252,7 @@ class DoorHook(VecTask):
         # hand_start_pose.r = gymapi.Quat(0.0315, 0.0032, -0.9995, -0.0031)
 
         # origin of the urdf-robot
-        hand_start_pose.p = gymapi.Vec3(0.00, 0.00, 0.0) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.p = gymapi.Vec3(0.00, 0.00, 0.1) # initial position of the robot # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0)
 
 
@@ -361,8 +361,8 @@ class DoorHook(VecTask):
         # jacobian 
         jacobian_tensor = self.gym.acquire_jacobian_tensor(self.sim, 'hook_hand')
         self.jacobian = gymtorch.wrap_tensor(jacobian_tensor) # shape : (num_envs, 9, 6, 6)
-        self.j_hand_base_link = self.jacobian[:, self.hand_handle-1, :, :]
-        print(self.j_hand_base_link.shape)
+        self.j_hand_world = self.jacobian[:, self.hand_handle-1, :, :]
+        print(self.j_hand_world.shape)
 
         # time.sleep(10)
                 
@@ -473,7 +473,7 @@ class DoorHook(VecTask):
         self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
 
         self.th_n_d_imgs = torch.where(self.th_n_d_imgs > 1.0, 0, self.th_n_d_imgs)
-        print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
+        # print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 
         # self.d_img_pixel_noiser()
@@ -664,29 +664,21 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # get informations to transform and action
-        jacobian = self.j_hand_base_link # J
+        jacobian = self.j_hand_world # J
         # P_world_t = self.hand_pose_world # P^world_t
 
         p_world_t = self.hand_pose_world[:, 0:3]
         q_world_t = self.hand_pose_world[:, 3:7]
-        q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
-
-        # P_hand_goal = P_world_t + A^world_t
-
-        # # ############### test ############################### test ########################
-        # # define p
-        # p_world_t = torch.zeros_like(p_world_t, device=self.device)
-        # p_world_t[:,...] = torch.tensor([7.4760e-08, -7.4746e-11,  5.0001e-01])
-
-        # q_world_t = torch.zeros_like(q_world_t, device=self.device)
-        # q_world_t[:,...] = torch.tensor([1.1155e-04,  9.2377e-01,  2.7060e-01,  2.7096e-01])
         # q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
-        # # ###################################################################
 
-        # ##### calculate p' in world cordinate
-        p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions)
-        # q_world_goal = self.quat_from_euler_tensor(q_world_goal_euler)
+        ###################################################################################################
+        # p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
+        ###################################################################################################
 
+        p_world_goal = torch.tensor([0.7, 0.7, 0.7 ], device=self.device).unsqueeze(0)
+        print('p_position : ', p_world_goal)
+        q_world_goal = torch.tensor([0, 0.7071068, 0, 0.7071068], device=self.device).unsqueeze(0)
+        print('p_q : ', q_world_goal)
         # print(self.actions)
         # q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
         # -----------------------------------------------------------------
@@ -694,7 +686,7 @@ class DoorHook(VecTask):
         # 正しいコード
         # d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05) # (self.num_envs, 6)
 
-        d_dof_pos_test = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.05)
+        d_dof_pos_test = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal, 0.1)
         ###################################################################
         # # test
         # d_dof = torch.zeros_like(d_dof)
@@ -706,8 +698,8 @@ class DoorHook(VecTask):
 
         targets = torch.zeros(self.num_envs, 6)
         targets[:,...] = self.dof_targets[:, :self.num_hand_dofs] + d_dof_pos_test
-        # print('p_prime', targets) ############################
-
+        print('p_prime', targets) ############################
+        print('p_2prime :', self.hand_pose_world[:,0:3], self.hand_pose_world[:,3:7])
 
         ###################################################################
 
@@ -815,12 +807,12 @@ def transform_hand_to_world_add_action_euler(p_world_t, q_world_t_euler, actions
 
     # Compute new position in world coordinates
     p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)
-    print('in the function : p', p_world_t, p_world_goal)
+    # print('in the function : p', p_world_t, p_world_goal)
 
     # Compute new orientation in world coordinates
     q_world_goal_euler = q_world_t_euler + delta_euler_hand # TODO not proper
     # q_world_goal_euler = q_world_t_euler + torch.bmm(R_world_t, delta_euler_hand.unsqueeze(-1)).squeeze(0-1)
-    print('in the function : q', q_world_t_euler, q_world_goal_euler)
+    # print('in the function : q', q_world_t_euler, q_world_goal_euler)
 
     return p_world_goal, q_world_goal_euler
 
@@ -925,15 +917,11 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
     
     # Convert quaternions to rotation matrices
     R_world_t = quaternion_to_rotation_matrix(q_world_t)
-    
-    print('R_world_t.shape', R_world_t.shape)
 
     # Extract position and orientation change from action
     delta_pos_hand = actions[:, :3]
     delta_euler_hand = actions[:, 3:]
     delta_quat_hand = quat_from_euler_tensor(delta_euler_hand)
-    
-    print('delta_quat_hand.shape', delta_quat_hand.shape)
     
     # Compute new position in world coordinates
     p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)

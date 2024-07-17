@@ -109,7 +109,8 @@ class DoorHook(VecTask):
         # for test
         self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 0.7854, 0.7854, 0.7854])
         self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 3.141592, 0, 0])
-        self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0])
+        # self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0])
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 1, 0, 0, 0])
 
         ############################################################################
 
@@ -234,6 +235,7 @@ class DoorHook(VecTask):
             hand_dof_props['damping'][i] = hand_dof_damping[i]
 
             hand_dof_props['effort'][i] = 400
+            
         print(hand_dof_props)
 
         # self.hand_dof_lower_limits = to_torch(self.hand_dof_lower_limits, device=self.device)
@@ -651,7 +653,7 @@ class DoorHook(VecTask):
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
         self.actions = self.zero_actions() # action becomes [0, 0, 0, 0, 0, 0]
 
-        # self.actions[:,1] = 0.01
+        self.actions[:,5] = 0.1
         # self.actions[:,2] = 0.01
         # self.actions[:,5] = 0.01
         # print('self.actions',self.actions*self.action_scale*self.dt)
@@ -717,8 +719,8 @@ class DoorHook(VecTask):
         # ----------- without clamp limit ----------------------------------
         self.dof_targets[:, :self.num_hand_dofs] = targets 
         # ------------------------------------------------------------------
-        # self.gym.set_dof_position_target_tensor(self.sim,
-        #                                         gymtorch.unwrap_tensor(self.dof_targets)) # ハンドを urdf 座標系でp'動かすためのコード
+        self.gym.set_dof_position_target_tensor(self.sim,
+                                                gymtorch.unwrap_tensor(self.dof_targets)) # ハンドを urdf 座標系でp'動かすためのコード
 
 
     def post_physics_step(self):
@@ -807,6 +809,7 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
     R_world_t = euler_to_rotation_matrix(q_world_t_euler)
 
     # Extract position and orientation change from action
+
     delta_pos_hand = actions[:, :3]
     delta_euler_hand = actions[:, 3:]
 
@@ -815,8 +818,8 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
     print('in the function : p', p_world_t, p_world_goal)
 
     # Compute new orientation in world coordinates
-    # q_world_goal_euler = q_world_t_euler + delta_euler_hand # TODO not proper
-    q_world_goal_euler = q_world_t_euler + torch.bmm(R_world_t, delta_euler_hand.unsqueeze(-1)).squeeze(0-1)
+    q_world_goal_euler = q_world_t_euler + delta_euler_hand # TODO not proper
+    # q_world_goal_euler = q_world_t_euler + torch.bmm(R_world_t, delta_euler_hand.unsqueeze(-1)).squeeze(0-1)
     print('in the function : q', q_world_t_euler, q_world_goal_euler)
 
     return p_world_goal, q_world_goal_euler

@@ -418,6 +418,12 @@ class DoorHook(VecTask):
         
         # print('cropped, stacked', self.cropped_d_imgs.shape)
 
+    def d_img_pixel_noiser(self):
+
+        rand_tensor = torch.randn_like(self.th_n_d_imgs) + 4.75
+        # rand_tensor = torch.rand_like(self.th_n_d_imgs)
+        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > rand_tensor, 0, self.th_n_d_imgs)
+
 
     def d_img_process(self):
 
@@ -436,6 +442,11 @@ class DoorHook(VecTask):
         # print('thresh_d_imgs shape', self.thresh_d_imgs.shape)
 
         self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+
+        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > 1.0, 0, self.th_n_d_imgs)
+
+        self.d_img_pixel_noiser()
+
         # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 
@@ -471,7 +482,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -570,9 +581,9 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
         self.actions = actions.clone().to(self.device)
         # print('self.actions',self.actions*self.action_scale*self.dt)
-        # self.actions = self.zero_actions()
+        self.actions = self.zero_actions()
         # print(self.ur3_dof_pos)
-        # self.actions[:,4] = 1.0
+        self.actions[:,0] = 0.5
         # self.actions[:,5] = 1.0
         # self.actions[:,3] = 1.0
         # print('action', self.actions*self.action_scale*self.dt, '\n')

@@ -109,8 +109,8 @@ class DoorHook(VecTask):
         # for test
         self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 0.7854, 0.7854, 0.7854])
         self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 3.141592, 0, 0])
-        # self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0])
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 1, 0, 0, 0])
+        self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0])
+        # self.hand_default_dof_pose_mid = to_torch([0, 0, 1, 0, 0, 0])
 
         ############################################################################
 
@@ -476,7 +476,7 @@ class DoorHook(VecTask):
         print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 
-        self.d_img_pixel_noiser()
+        # self.d_img_pixel_noiser()
 
         # dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
         # dist_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
@@ -510,7 +510,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        self.debug_camera_imgs()
+        # self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -653,9 +653,9 @@ class DoorHook(VecTask):
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
         self.actions = self.zero_actions() # action becomes [0, 0, 0, 0, 0, 0]
 
-        self.actions[:,5] = 0.1
-        # self.actions[:,2] = 0.01
-        # self.actions[:,5] = 0.01
+        # self.actions[:,3] = 0.1
+        # self.actions[:,4] = 0.1
+        # self.actions[:,2] = 0.1
         # print('self.actions',self.actions*self.action_scale*self.dt)
 
         self.gym.refresh_jacobian_tensors(self.sim)
@@ -684,8 +684,8 @@ class DoorHook(VecTask):
         # # ###################################################################
 
         # ##### calculate p' in world cordinate
-        p_world_goal, q_world_goal_euler = transform_hand_to_world_add_action(p_world_t, q_world_t_euler, self.actions)
-        q_world_goal = self.quat_from_euler_tensor(q_world_goal_euler)
+        p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions)
+        # q_world_goal = self.quat_from_euler_tensor(q_world_goal_euler)
 
         # print(self.actions)
         # q_world_goal = torch.zeros_like(q_world_goal, device=self.device) # TODO
@@ -771,7 +771,7 @@ def euler_to_rotation_matrix(euler):
 #     return euler_tensor
 
 
-# def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
+# def transform_hand_to_world_add_action_euler(p_world_t, q_world_t_euler, actions):
 #     """
 #     Transform hand coordinates to world coordinates after applying the action.
 
@@ -800,7 +800,7 @@ def euler_to_rotation_matrix(euler):
 #     return p_world_goal, q_world_goal_euler
 
 
-def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
+def transform_hand_to_world_add_action_euler(p_world_t, q_world_t_euler, actions):
     """
 
     for test, so after finish, delete this.
@@ -823,6 +823,126 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t_euler, actions):
     print('in the function : q', q_world_t_euler, q_world_goal_euler)
 
     return p_world_goal, q_world_goal_euler
+
+#########################################################################################################################
+#########################################################################################################################
+def quaternion_to_rotation_matrix(quat):
+    """
+    Convert quaternions to rotation matrix.
+    """
+    qx, qy, qz, qw = quat[:, 0], quat[:, 1], quat[:, 2], quat[:, 3]
+    xx = qx * qx
+    yy = qy * qy
+    zz = qz * qz
+    xy = qx * qy
+    xz = qx * qz
+    yz = qy * qz
+    wx = qw * qx
+    wy = qw * qy
+    wz = qw * qz
+
+    matrix = torch.stack([
+        1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy),
+        2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx),
+        2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy)
+    ], dim=-1).reshape(-1, 3, 3)
+    return matrix
+
+def quat_to_euler_tensor(quat_tensor):
+    euler_tensor = torch.stack([
+        torch.tensor(gymapi.Quat(quat[0], quat[1], quat[2], quat[3]).to_euler_zyx()).to(quat_tensor.device)
+        for quat in quat_tensor.cpu().numpy()
+    ])
+    # print(euler_tensor)
+    euler_tensor = torch.nan_to_num(euler_tensor, nan=0.0).to(quat_tensor.device)
+
+    return euler_tensor
+
+def quat_from_euler_tensor(euler_tensor):
+    quat_tensor = torch.stack([
+        torch.tensor([gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).x,
+                    gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).y,
+                    gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).z,
+                    gymapi.Quat.from_euler_zyx(euler[0], euler[1], euler[2]).w])
+        for euler in euler_tensor.cpu().numpy()
+    ], dim=0).to(euler_tensor.device)
+
+    # quat_tensor = torch.zeros(self.num_envs, 4, device='cuda')
+    # for i in range(self.num_envs):
+    #     quat_i = gymapi.Quat.from_euler_zyx(euler_tensor[i,0], euler_tensor[i,1], euler_tensor[i,2])
+    #     quat = torch.tensor([quat_i.x, quat_i.y, quat_i.z, quat_i.w], device='cuda')
+    #     quat_tensor[i, :] = quat
+
+    return quat_tensor        
+
+def euler_to_quaternion(euler):
+    """
+    Convert Euler angles to quaternions.
+    """
+    cy = torch.cos(euler[:, 2] * 0.5)
+    sy = torch.sin(euler[:, 2] * 0.5)
+    cp = torch.cos(euler[:, 1] * 0.5)
+    sp = torch.sin(euler[:, 1] * 0.5)
+    cr = torch.cos(euler[:, 0] * 0.5)
+    sr = torch.sin(euler[:, 0] * 0.5)
+
+    qw = cr * cp * cy + sr * sp * sy
+    qx = sr * cp * cy - cr * sp * sy
+    qy = cr * sp * cy + sr * cp * sy
+    qz = cr * cp * sy - sr * sp * cy
+
+    return torch.stack((qx, qy, qz, qw), dim=-1)
+
+def quaternion_multiply(q1, q2):
+    """
+    Multiply two quaternions.
+    q1, q2: (num_envs, 4)
+    """
+    x1, y1, z1, w1 = q1[:, 0], q1[:, 1], q1[:, 2], q1[:, 3]
+    x2, y2, z2, w2 = q2[:, 0], q2[:, 1], q2[:, 2], q2[:, 3]
+    
+    x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
+    z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
+    w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    
+    return torch.stack((x, y, z, w), dim=-1)
+
+def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
+    """
+    Transform hand coordinates to world coordinates after applying the action.
+
+    Parameters:
+    p_world_t (torch.Tensor): Hand positions in world coordinates at time t (shape: (num_envs, 3)).
+    q_world_t (torch.Tensor): Hand orientations in world coordinates as quaternions at time t (shape: (num_envs, 4)).
+    actions (torch.Tensor): Actions in hand coordinates (shape: (num_envs, 6)).
+
+    Returns:
+    p_world_goal (torch.Tensor): Goal positions in world coordinates (shape: (num_envs, 3)).
+    q_world_goal (torch.Tensor): Goal orientations in world coordinates as quaternions (shape: (num_envs, 4)).
+    """
+    num_envs = p_world_t.shape[0]
+    
+    # Convert quaternions to rotation matrices
+    R_world_t = quaternion_to_rotation_matrix(q_world_t)
+    
+    print('R_world_t.shape', R_world_t.shape)
+
+    # Extract position and orientation change from action
+    delta_pos_hand = actions[:, :3]
+    delta_euler_hand = actions[:, 3:]
+    delta_quat_hand = quat_from_euler_tensor(delta_euler_hand)
+    
+    print('delta_quat_hand.shape', delta_quat_hand.shape)
+    
+    # Compute new position in world coordinates
+    p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)
+    
+    # Compute new orientation in world coordinates
+    q_world_goal = quaternion_multiply(q_world_t, delta_quat_hand)
+    
+    return p_world_goal, q_world_goal
+
 
 
 

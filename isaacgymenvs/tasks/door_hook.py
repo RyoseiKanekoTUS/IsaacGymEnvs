@@ -403,7 +403,11 @@ class DoorHook(VecTask):
 
     def d_img_pixel_noiser(self):
 
-        return None # TODO on sim2real branch
+
+        rand_tensor = torch.randn_like(self.th_n_d_imgs) + 4.75
+        # rand_tensor = torch.rand_like(self.th_n_d_imgs)
+        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > rand_tensor, 0, self.th_n_d_imgs)
+
 
     def d_img_process(self):
 
@@ -457,7 +461,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -557,6 +561,7 @@ class DoorHook(VecTask):
         # self.actions[1,1] = -0.01
         # print('self.actions',self.actions*self.action_scale*self.dt)
 
+
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -596,7 +601,7 @@ class DoorHook(VecTask):
         self.hand_pose_world_prev = self.hand_pose_world.detach().clone()
         
         # print('prev_pos:',self.hand_pose_world_prev)
-
+        
     
 def quaternion_to_rotation_matrix(quat):
     """

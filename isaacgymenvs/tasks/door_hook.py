@@ -480,11 +480,16 @@ class DoorHook(VecTask):
 
         q_door_hand_t = quat_to_euler_tensor(q_door_hand_t_quat)# euler STATE_1 3
         q_door_hand_prev = quat_to_euler_tensor(q_door_hand_prev_quat)# euler STATE_2 3
-        d_p_door_hand = self.hand_pose_world[:,0:3] - self.hand_pose_world_prev[:,0:3] # TODO?? もしかしたら 変換必要かもしれない d_p STATE_3_1 3
-        d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
-        # print(d_q_door_hand)
-        
 
+        tR_world_fakedoor = quaternion_to_rotation_matrix(self.door_fake_link_quat).transpose(1,2) # transposed R_world_fakedoor
+
+        p_door_hand = torch.bmm(tR_world_fakedoor, (self.hand_pose_world[:,0:3]).unsqueeze(-1)).squeeze(-1)
+        p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
+        
+        d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
+
+        d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
+        
         # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
         self.hand_dist = torch.norm(door_handle_pos - hook_pos, dim = 1)

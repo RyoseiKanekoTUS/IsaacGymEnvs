@@ -153,9 +153,9 @@ class DoorHookTrainer(PPOnet):
         self.cfg["value_loss_scale"] = 2.0
         self.cfg["kl_threshold"] = 0
         self.cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.01
-        self.cfg["state_preprocessor"] = RunningStandardScaler
+        self.cfg["state_preprocessor"] = None
         self.cfg["state_preprocessor_kwargs"] = {"size": self.env.observation_space, "device": self.device}
-        self.cfg["value_preprocessor"] = RunningStandardScaler
+        self.cfg["value_preprocessor"] = None
         self.cfg["value_preprocessor_kwargs"] = {"size": 1, "device": self.device}
         # # logging to TensorBoard and write checkpoints (in timesteps)
         # self.cfg["experiment"]["write_interval"] = 20

@@ -14,6 +14,8 @@ from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
+import time
+
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
     #     ############################################################################################
@@ -74,7 +76,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 )
         
         
-        self.mlp = nn.Sequential(nn.Linear((6+3072), 1024),
+        self.mlp = nn.Sequential(nn.Linear((12+3072), 1024),
                     nn.ELU(),
                     nn.Linear(1024, 512),
                     nn.ELU(),
@@ -101,19 +103,20 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         
         states = inputs['states']
         # print('$ states shape $$$$$$$$$$$$$$$$$$$$$$$$$$$$$',states.shape)
-        ee_states = states[:, :6]
-        # print('ee_states from inputs', ee_states)
+        hand_states = states[:, :12]
+        # print('hand_states from inputs', hand_states)
 
-        pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
+        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         # print('from inputs', pp_d_imgs)
+        # start = time.time()
         d_feture = self.d_feture_extractor(pp_d_imgs)
         # print("$$$$$$$$$$$$$$$$$$$$$$$$$", d_feture.shape)
 
-        # dist_d_imgs = states[:, 3084:].view(-1, 1, 48, 64)
-        # distance = self.depth_extractor(dist_d_imgs)
-        combined = torch.cat([ee_states, d_feture], dim=-1)
+        combined = torch.cat([hand_states, d_feture], dim=-1)
         if role == 'policy':
-            return self.mean_layer(self.mlp(combined)), self.log_std_parameter, {}
+            actions_from_mlp = self.mean_layer(self.mlp(combined))
+            # print(time.time() - start)
+            return actions_from_mlp, self.log_std_parameter, {}
         elif role == 'value':
             return self.value_layer(self.mlp(combined)), {}
 

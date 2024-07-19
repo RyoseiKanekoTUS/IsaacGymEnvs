@@ -219,6 +219,7 @@ class DoorHook(VecTask):
             
         print(hand_dof_props)
 
+        # ---------------- set dof limits from urdf -----------------------------------------------
         # self.hand_dof_lower_limits = to_torch(self.hand_dof_lower_limits, device=self.device)
         # self.hand_dof_upper_limits = to_torch(self.hand_dof_upper_limits, device=self.device)
         # self.hand_dof_speed_scales = torch.ones_like(self.hand_dof_lower_limits)
@@ -348,7 +349,7 @@ class DoorHook(VecTask):
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
 
-    def debug_camera_imgs(self):
+    def debug_camera_imgs(self): # ------- works with num_envs = 1
         
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
@@ -400,7 +401,6 @@ class DoorHook(VecTask):
                 for i in range(self.num_envs)
             ])            
         
-        # print('cropped, stacked', self.cropped_d_imgs.shape)
 
     def d_img_pixel_noiser(self):
 
@@ -466,9 +466,8 @@ class DoorHook(VecTask):
         # hook finger rigid body states
         hook_pos = self.rigid_body_states[:, self.hook_finger_handle][:, 0:3] # hook finger position
         # hook_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hook finger orientation
-        # hand finger rigid body states
-        # self.hand_pos_world = self.rigid_body_states[:, self.hand_handle][:, 0:3]
-        # self.hand_rot_world = self.rigid_body_states[:, self.hand_handle][:, 3:7]
+
+        # hand rigid body states
         self.hand_pose_world = self.rigid_body_states[:, self.hand_handle][:, 0:7]
         # hand_rot_world_euler = self.quat_to_euler(self.hand_rot_world.view(4,1))
 
@@ -485,10 +484,6 @@ class DoorHook(VecTask):
         d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
         # print(d_q_door_hand)
         
-        # print('hand_pose_world', self.hand_pose_world)
-        # print('hand_rot_world_euler', self.quat_to_euler_tensor(self.hand_rot_world))
-        # print('hand_pos_world : ',self.hand_pos_world )
-        # print('hand_rot_world_euler_zyx : ', hand_rot_world_euler)
 
         # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
@@ -497,7 +492,6 @@ class DoorHook(VecTask):
         # print(self.hand_dof_pos[:,3:])
         self.hand_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # TODO reward for hand rotation
         # print(self.hand_o_dist)
-        dof_pos_dt = self.hand_dof_pos # TODO
 
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
@@ -506,55 +500,20 @@ class DoorHook(VecTask):
 
         return self.obs_buf    
     
-    
-    def quat_to_euler_tensor(self, quat_tensor):
-        euler_tensor = torch.stack([
-            torch.tensor(gymapi.Quat(quat[0], quat[1], quat[2], quat[3]).to_euler_zyx()).to(self.device)
-            for quat in quat_tensor.cpu().numpy()
-        ])
-        # print(euler_tensor)
-        euler_tensor = torch.nan_to_num(euler_tensor, nan=0.0).to(quat_tensor.device)
-
-        return euler_tensor
-    
-    
+        
     def reset_idx(self, env_ids):
-        # print(env_ids)
-        # reset hand ： tensor_clamp from torch_jit utils action dimension limitations
-        # -0.25 - 0.25 noise
-        # with no limit
+
+        # without limit
         rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device) + 0.5
         rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device) + 0.5
-        # rand_rot[:,1] *= 0.5 # smallen pitch rand
         rand_pos = rand_pos * self.start_pos_noise_scale
         rand_rot = rand_rot * self.start_rot_noise_scale
 
         pos = torch.zeros(env_ids.shape[0], 6).to(self.device)
 
-        # # ----------------------- both side 
-        # left_mask = (env_ids % 2 == 0)
-        # right_mask = ~left_mask
-
-        # left_default_pos = self.hand_default_dof_pos_left.unsqueeze(0).expand(len(env_ids), -1)
-        # right_default_pos = self.hand_default_dof_pos_right.unsqueeze(0).expand(len(env_ids), -1)
-
-        # pos[left_mask] = left_default_pos[left_mask] + torch.cat([rand_pos[left_mask], rand_rot[left_mask]], dim=-1)
-        # pos[right_mask] = right_default_pos[right_mask] + torch.cat([rand_pos[right_mask], rand_rot[right_mask]], dim=-1)
-
-        
-        # print(f'Left count: {left_mask.sum().item()}, Right count: {right_mask.sum().item()}')
-
-
         # ------------------------ mid
         pos = self.hand_default_dof_pose_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         
-        # # # ------------------------ left 
-        # pos = self.hand_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
-        # with limit
-        # pos = tensor_clamp(
-        #     self.hand_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_hand_dofs), device=self.device) - 0.5),
-        #     self.hand_dof_lower_limits, self.hand_dof_upper_limits)            
-
         self.hand_dof_pos[env_ids, :] = pos
         self.hand_dof_vel[env_ids, :] = torch.zeros_like(self.hand_dof_vel[env_ids])
         self.dof_targets[env_ids, :self.num_hand_dofs] = pos
@@ -601,7 +560,6 @@ class DoorHook(VecTask):
 
         # get informations to transform and action
         jacobian = self.j_hand_world # J
-        # P_world_t = self.hand_pose_world # P^world_t
 
         p_world_t = self.hand_pose_world[:, 0:3]
         q_world_t = self.hand_pose_world[:, 3:7]
@@ -615,7 +573,8 @@ class DoorHook(VecTask):
 
         # ----------- without clamp limit ----------------------------------
         self.dof_targets[:, :self.num_hand_dofs] = hand_dof_targets 
-        # ------------------------------------------------------------------
+
+        # set robot dof pose target
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.dof_targets))
 
 
@@ -754,7 +713,6 @@ def compute_hand_reward(
     action_penalty_scale, max_episode_length
 ):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
-    # print(open_reward_scale, handle_reward_scale, dist_reward_scale, action_penalty_scale)
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)
@@ -765,11 +723,10 @@ def compute_hand_reward(
 
     hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
 
-    # dist_reward = -1 * hand_dist * dist_reward_scale # no thlesh
+    # dist_reward = -1 * hand_dist * dist_reward_scale # no thresh
     dist_reward = -1 * hand_dist_thresh * dist_reward_scale
 
     # o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
-    # print(o_dist_reward)
 
     # dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
     # dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
@@ -794,13 +751,3 @@ def compute_hand_reward(
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf
-
-@torch.jit.script
-def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val): # wasnt better than normal function
-
-    # type: (Tensor, float, float, float) -> Tensor 
-    condition = torch.logical_or(d_imgs < depth_min, d_imgs > depth_max)
-    dist_d_imgs = (d_imgs - depth_min)/(depth_max - depth_min)
-    dist_d_imgs = torch.where(condition, replace_val, dist_d_imgs)
-    return dist_d_imgs 
-

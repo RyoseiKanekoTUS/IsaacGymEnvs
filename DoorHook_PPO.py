@@ -76,7 +76,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 )
         
         
-        self.mlp = nn.Sequential(nn.Linear((6+3072), 1024),
+        self.mlp = nn.Sequential(nn.Linear((12+3072), 1024),
                     nn.ELU(),
                     nn.Linear(1024, 512),
                     nn.ELU(),
@@ -103,16 +103,16 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         
         states = inputs['states']
         # print('$ states shape $$$$$$$$$$$$$$$$$$$$$$$$$$$$$',states.shape)
-        ee_states = states[:, :6]
-        # print('ee_states from inputs', ee_states)
+        hand_states = states[:, :12]
+        # print('hand_states from inputs', hand_states)
 
-        pp_d_imgs = states[:, 6:].view(-1, 1, 48, 64)
+        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
         # print('from inputs', pp_d_imgs)
         # start = time.time()
         d_feture = self.d_feture_extractor(pp_d_imgs)
         # print("$$$$$$$$$$$$$$$$$$$$$$$$$", d_feture.shape)
 
-        combined = torch.cat([ee_states, d_feture], dim=-1)
+        combined = torch.cat([hand_states, d_feture], dim=-1)
         if role == 'policy':
             actions_from_mlp = self.mean_layer(self.mlp(combined))
             # print(time.time() - start)
@@ -213,8 +213,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/non_vel/24-03-19_13-04-08-617586_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

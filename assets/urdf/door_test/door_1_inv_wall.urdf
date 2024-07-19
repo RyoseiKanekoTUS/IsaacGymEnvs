@@ -7,6 +7,13 @@
     </joint> -->
 
     <link name = 'base_link'/>
+    <joint name = 'base_to_door_fake_link' type = 'fixed'>
+        <parent link = 'base_link'/>
+        <origin xyz = '0.5 0 0.0' rpy = '0 0 3.14159'/>
+        <child link = 'door_fake_link'/>
+    </joint>
+    <link name = 'door_fake_link'/>
+
         
     <joint name = 'base_joint' type = 'fixed'>
         <parent link = 'base_link'/>

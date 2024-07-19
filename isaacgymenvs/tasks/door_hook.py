@@ -14,7 +14,6 @@ from isaacgymenvs.utils.torch_jit_utils import *
 from .base.vec_task import VecTask
 
 from skrl.utils.isaacgym_utils import ik
-from isaacgymenvs.tasks.utils.robot_helpers.robot_helpers.spatial import Transform, Rotation
 
 import torch
 import cv2

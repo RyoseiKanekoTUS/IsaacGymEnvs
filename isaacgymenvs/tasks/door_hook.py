@@ -350,11 +350,6 @@ class DoorHook(VecTask):
 
     def debug_camera_imgs(self): # ------- works with num_envs = 1
         
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import Normalize
-        from io import BytesIO
-        buf = BytesIO()
-
         # --------------------------- RGB in one env ----------------------------------------#
         cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
 
@@ -367,6 +362,28 @@ class DoorHook(VecTask):
             cv2.imshow('rgb', rgb_img)
             cv2.waitKey(1)
         # -----------------------------------------------------------------------------------#
+
+        # --------------------------- DEPTH in one env ----------------------------------------#
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        from io import BytesIO
+        buf = BytesIO()
+
+        plt.axis('off')
+        plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+        # plt.colorbar()
+        plt.savefig(buf, format = 'png')
+        buf.seek(0)
+        img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+        buf.close()
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
+        cv2.imshow('ESDEpth', img)
+        cv2.waitKey(1)
+
+        # plt.colorbar()
+        plt.close()
+        # -------------------------------------------------------------------------------------#
     def d_img_cropper(self):
 
         start_y = (self.camera_props.height - self.img_crop_height) // 2

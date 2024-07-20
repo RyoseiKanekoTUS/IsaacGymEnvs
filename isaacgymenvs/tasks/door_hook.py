@@ -398,7 +398,7 @@ class DoorHook(VecTask):
             ])            
         
 
-    def d_img_pixel_noiser(self):
+    def d_img_pixel_noiser(self): # TODO
 
 
         rand_tensor = torch.randn_like(self.th_n_d_imgs) + 4.75

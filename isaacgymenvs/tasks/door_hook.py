@@ -365,27 +365,7 @@ class DoorHook(VecTask):
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow('rgb', rgb_img)
-            # cv2.waitKey(1)
-
-            # torch.save(self.pp_d_imgs[0, :], f'./.test_data/pp_.d_img')
-            # torch.save(self.silh_d_imgs[0,:], f'./.test_data/shape_.d_img')
-            # torch.save(self.th_n_d_imgs[0,:], f'./.test_data/th_n_.d_img')
-            # np.savetxt(f"./.test_data/48_64_thresh_d_img.csv",self.thresh_d_imgs[j,...].cpu().view(self.camera_props.height, self.camera_props.width), delimiter=',')
-            # print(self.thresh_d_imgs.shape)
-            plt.axis('off')
-            plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-            # plt.colorbar()
-            plt.savefig(buf, format = 'png')
-            buf.seek(0)
-            img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
-            buf.close()
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
-            cv2.imshow('ESDEpth', img)
             cv2.waitKey(1)
-
-            # plt.colorbar()
-            plt.close()
 
     def d_img_cropper(self):
 
@@ -461,7 +441,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
         self.d_img_process()
-        # self.debug_camera_imgs()
+        self.debug_camera_imgs()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

@@ -355,8 +355,8 @@ class DoorHook(VecTask):
         from io import BytesIO
         buf = BytesIO()
 
+        # --------------------------- RGB in one env ----------------------------------------#
         cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
-        # cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
 
         for j in range(self.num_envs):
             # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
@@ -366,7 +366,7 @@ class DoorHook(VecTask):
             rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
             cv2.imshow('rgb', rgb_img)
             cv2.waitKey(1)
-
+        # -----------------------------------------------------------------------------------#
     def d_img_cropper(self):
 
         start_y = (self.camera_props.height - self.img_crop_height) // 2

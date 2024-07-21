@@ -343,7 +343,7 @@ class DoorHook(VecTask):
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
         self.rew_buf[:], self.reset_buf[:] = compute_hand_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hand_dist, self.hand_o_dist,  
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hook_hand_dist, self.hand_o_dist,  
             self.num_envs, 
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
@@ -492,7 +492,7 @@ class DoorHook(VecTask):
         
         # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
-        self.hand_dist = torch.norm(door_handle_pos - hook_pos, dim = 1)
+        self.hook_hand_dist = torch.norm(door_handle_pos - hook_pos, dim = 1)
         # print(self.hand_dof_pos)
         # print(self.hand_dof_pos[:,3:])
         self.hand_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # TODO reward for hand rotation
@@ -715,7 +715,7 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
 
 @torch.jit.script
 def compute_hand_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hand_dist, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hook_hand_dist, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
@@ -727,20 +727,20 @@ def compute_hand_reward(
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 
-    hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
+    hook_hand_dist_thresh = torch.where(hook_hand_dist < 0.15, torch.zeros_like(hook_hand_dist), hook_hand_dist)
 
-    # dist_reward = -1 * hand_dist * dist_reward_scale # no thresh
-    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+    # dist_reward = -1 * hook_hand_dist * dist_reward_scale # no thresh
+    dist_reward = -1 * hook_hand_dist_thresh * dist_reward_scale
 
     # o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
 
-    # dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
-    # dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
-    # print(hand_dist.shape)
+    # dist_reward_no_thresh = -1 * (hook_hand_dist + torch.log(hook_hand_dist + 0.005)) * dist_reward_scale
+    # dist_reward_no_thresh = -1 * hook_hand_dist * dist_reward_scale
+    # print(hook_hand_dist.shape)
     # print('hand_o_dist.shape', hand_o_dist.shape)
     # print('----------------open_reward max:',torch.max(open_reward))
     # print('--------------handle_reward max:', torch.max(handle_reward))
-    # print('----------------dist_min:', torch.min(hand_dist))
+    # print('----------------dist_min:', torch.min(hook_hand_dist))
     # print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty

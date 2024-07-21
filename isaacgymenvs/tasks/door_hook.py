@@ -12,55 +12,68 @@ from isaacgym.gymtorch import *
 
 from isaacgymenvs.utils.torch_jit_utils import *
 from .base.vec_task import VecTask
-# from base.vec_task import VecTask
+
+from skrl.utils.isaacgym_utils import ik
 
 import torch
+import cv2
+import time
 
+
+# Quat : (x, y, z, w)
 
 class DoorHook(VecTask):
 
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
         self.cfg = cfg
-        self.n = 0
         self.max_episode_length = 300 # 300
+        
+        self.timer = None
+        self.n = 0
 
-        self.door_scale_param = 0.1
+        # door size scale for sim2real
+        self.door_scale_param = 0.55
+        self.door_scale_rand_param = 0.1
 
-        self.action_scale = 1.5
-        self.start_pos_noise_scale =  0.5
-        self.start_rot_noise_scale =   0.25
+        # rand param for action scales
+        self.action_scale_base = 0.015 # base # 0.025?
+        self.action_scale_rand = 0.001 # noise
 
-        self.aggregate_mode = 3
+        # rand param for start
+        self.start_pos_noise_scale = 0.25 # 0.5 
+        self.start_rot_noise_scale =  0.2 # 0.25
 
         # reward parameters
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 75.0
         self.dist_reward_scale = 5.0
-        self.o_dist_reward_scale = 1.0
+        self.o_dist_reward_scale = 1.0 # TODO
 
-        self.action_penalty_scale = 0.01
+        self.action_penalty_scale = 0.1 # 0.01
 
         self.debug_viz = False
 
         self.up_axis = "z"
         self.up_axis_idx = 2
-
-        # self.distX_offset = 0.04 # 0.04 default
-        
-        self.dt = 1/20  # edited
+        self.aggregate_mode = 3
 
         # set camera properties for realsense now : 435 [0.18, 3.0] and 405 [0.07, 0.5]
-        self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 64
-        self.camera_props.height = 48
+        self.camera_props = gymapi.CameraProperties() # TODO camera parameters shoud be changed
+        # after cropping
+        self.img_crop_width =  64
+        self.img_crop_height = 48
+        # before cropping 
+        self.camera_props.width = 92
+        self.camera_props.height = 70
         self.depth_min = -3.0 
-        self.depth_max = -0.07
+        self.depth_max = -0.1 # -0.07
 
-        self.camera_props.enable_tensors = True # If False, d_img process doesnt work  
+        self.camera_props.enable_tensors = True # If False, d_img process doesnt work
+
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 6 + self.camera_props.width*self.camera_props.height
+        self.cfg["env"]["numObservations"] = 3 + 3 + 3 + 3 + self.img_crop_height*self.img_crop_width
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -70,41 +83,55 @@ class DoorHook(VecTask):
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         rigid_body_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
 
+        # initialize tensors
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.ur3_default_dof_pos_left = to_torch([0, 0.3, 0, 0, 0, 0], device=self.device) # left
-        self.ur3_default_dof_pos_right = to_torch([0, -0.3, 0, 0, 0, 0], device=self.device) # right
-        self.ur3_default_dof_pos_mid = to_torch([0, 0, 0, 0, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.45, 3.141592653, 0, 0], device=self.device)
+
+        ############################################################################
+        # for test
+        # self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 0.7854, 0.7854, 0.7854])
+        # self.hand_default_dof_pose_mid = to_torch([0, 0, 0.5, 4.6, 0.5, -1.2])
+        # self.hand_default_dof_pose_mid = to_torch([-0.2, -0.1, 0.5, 3.141592, 0, 0]) # to door
+        # self.hand_default_dof_pose_mid = to_torch([0.2, 0.3, 1.0, 0.7, 0.7, 0.7])
+
+        ############################################################################
+
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor) # (num_envs*num_actors, 8, 2)
 
-        self.ur3_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_ur3_dofs]  # (num_envs, 6, 2)
-        # print(self.ur3_dof_state.shape)
-        self.ur3_dof_pos = self.ur3_dof_state[..., 0]
-        self.ur3_dof_pos_prev = torch.zeros_like(self.ur3_dof_pos, device=self.device)
-        self.ur3_dof_vel = self.ur3_dof_state[..., 1]
-        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
+        self.hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_hand_dofs]  # (num_envs, 6, 2)
+        # print(self.hand_dof_state.shape)
+        self.hand_dof_pos = self.hand_dof_state[..., 0]
+        self.hand_pose_world_prev = torch.zeros(self.num_envs, 7, device=self.device)
+        self.hand_dof_vel = self.hand_dof_state[..., 1]
+        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         # print(self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
 
         self.hand_o_dist = None
 
+        self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
+
         self.door_dof_vel = self.door_dof_state[..., 1]
 
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
+        self.hand_pose_world = torch.zeros(self.num_envs, 7, device=self.device)
+        self.door_fake_link_quat = torch.zeros(self.num_envs, 4, device=self.device)
         self.num_bodies = self.rigid_body_states.shape[1]
         # print(self.num_bodies)
         self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(self.num_envs, -1, 13)
 
         self.num_dofs = self.gym.get_sim_dof_count(self.sim) // self.num_envs
-        self.ur3_dof_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
+        self.dof_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
 
         self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
         
+        # for reaching statics
         self.statistics = []
         self.knob_range = 0.01
         self.reaching_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
@@ -131,14 +158,14 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        ur3_asset_file = "urdf/door_test/hook_test.urdf"
+        hand_asset_file = 'urdf/door_test/v2_hook_hand.urdf' # rz ry rx
+        # hand_asset_file = 'urdf/door_test/hook_test.urdf'
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_2.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall_2.urdf'
-
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
         
-        # load ur3 asset
+        # load hand asset
         asset_options = gymapi.AssetOptions()
         vh_options = gymapi.VhacdParams()
 
@@ -152,11 +179,13 @@ class DoorHook(VecTask):
         asset_options.thickness = 0.1
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
         asset_options.use_mesh_materials = True
-        ur3_asset = self.gym.load_asset(self.sim, asset_root, ur3_asset_file, asset_options)
+        hand_asset = self.gym.load_asset(self.sim, asset_root, hand_asset_file, asset_options)
 
         # load door asset
         asset_options.flip_visual_attachments = False
-        asset_options.collapse_fixed_joints = True
+        # asset_options.collapse_fixed_joints = True
+        asset_options.collapse_fixed_joints = False
+
         asset_options.disable_gravity = False
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
         asset_options.armature = 0.005
@@ -166,77 +195,75 @@ class DoorHook(VecTask):
         door_2_inv_asset = self.gym.load_asset(self.sim, asset_root, door_2_inv_asset_file, asset_options)
         door_assets = [door_1_asset, door_2_asset, door_1_inv_asset, door_2_inv_asset]
 
-        ur3_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
-        ur3_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
+        hand_dof_stiffness = to_torch([500, 500, 500, 500, 500, 500], dtype=torch.float, device=self.device)
+        hand_dof_damping = to_torch([10, 10, 10, 10, 10, 10], dtype=torch.float, device=self.device)
 
-        self.num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
-        self.num_ur3_dofs = self.gym.get_asset_dof_count(ur3_asset)
+        self.num_hand_bodies = self.gym.get_asset_rigid_body_count(hand_asset)
+        self.num_hand_dofs = self.gym.get_asset_dof_count(hand_asset)
         self.num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
         self.num_door_dofs = self.gym.get_asset_dof_count(door_1_asset)
 
         # torque tensor for door handle
-        self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_ur3_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
+        self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_hand_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
         self.handle_torque_tensor[:,7] = -10
 
-        # print('----------------------------------------------- num properties ----------------------------------------')
-        # print("num ur3 bodies: ", self.num_ur3_bodies)
-        # print("num ur3 dofs: ", self.num_ur3_dofs)
-        # print("num door bodies: ", self.num_door_bodies)
-        # print("num door dofs: ", self.num_door_dofs)
-        # print('----------------------------------------------- num properties ----------------------------------------')
+        # set hand dof properties
+        hand_dof_props = self.gym.get_asset_dof_properties(hand_asset)
+        self.hand_dof_lower_limits = []
+        self.hand_dof_upper_limits = []
 
-        # set ur3 dof properties
-        ur3_dof_props = self.gym.get_asset_dof_properties(ur3_asset)
-        self.ur3_dof_lower_limits = []
-        self.ur3_dof_upper_limits = []
+        for i in range(self.num_hand_dofs):
+            hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            hand_dof_props['stiffness'][i] = hand_dof_stiffness[i]
+            hand_dof_props['lower'][i] *= 2.0
+            hand_dof_props['upper'][i] *= 2.0
+            hand_dof_props['damping'][i] = hand_dof_damping[i]
 
-        for i in range(self.num_ur3_dofs):
-            ur3_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
-            # ur3_dof_props['hasLimits'][i] = False
-                # print(f'############### feed back ####################\n{ur3_dof_props}')
-            ur3_dof_props['stiffness'][i] = ur3_dof_stiffness[i]
-            ur3_dof_props['lower'][i] = -2
-            ur3_dof_props['upper'][i] = 2
+            hand_dof_props['effort'][i] = 400
+            
+        print(hand_dof_props)
 
-            ur3_dof_props['effort'][i] = 400
-        print(ur3_dof_props)
-
-        # self.ur3_dof_lower_limits = to_torch(self.ur3_dof_lower_limits, device=self.device)
-        # self.ur3_dof_upper_limits = to_torch(self.ur3_dof_upper_limits, device=self.device)
-        # self.ur3_dof_speed_scales = torch.ones_like(self.ur3_dof_lower_limits)
+        # ---------------- set dof limits from urdf -----------------------------------------------
+        # self.hand_dof_lower_limits = to_torch(self.hand_dof_lower_limits, device=self.device)
+        # self.hand_dof_upper_limits = to_torch(self.hand_dof_upper_limits, device=self.device)
+        # self.hand_dof_speed_scales = torch.ones_like(self.hand_dof_lower_limits)
 
         # set door dof properties
         door_dof_props = self.gym.get_asset_dof_properties(door_1_asset)
     
-        # start pose
-        ur3_start_pose = gymapi.Transform()
-        ur3_start_pose.p = gymapi.Vec3(1.0, 0.0, 1.1) # initial position of the robot # 0.5 0.0 1.1 right + left -
-        ur3_start_pose.r = gymapi.Quat.from_euler_zyx(0, 0, 3.14159)
+        # start posese
+        hand_start_pose = gymapi.Transform()
+
+        # origin of the urdf-robot
+        hand_start_pose.p = gymapi.Vec3(0.80, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0) # robot base rotation
+
 
         door_start_pose = gymapi.Transform()
         door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
+        door_start_pose.r = gymapi.Quat(0, 0, 0, 1)
 
         # compute aggregate size
-        num_ur3_bodies = self.gym.get_asset_rigid_body_count(ur3_asset)
-        num_ur3_shapes = self.gym.get_asset_rigid_shape_count(ur3_asset)
+        num_hand_bodies = self.gym.get_asset_rigid_body_count(hand_asset)
+        num_hand_shapes = self.gym.get_asset_rigid_shape_count(hand_asset)
         num_door_bodies = self.gym.get_asset_rigid_body_count(door_1_asset)
         num_door_shapes = self.gym.get_asset_rigid_shape_count(door_1_asset)
 
-        max_agg_bodies = num_ur3_bodies + num_door_bodies
-        max_agg_shapes = num_ur3_shapes + num_door_shapes
+        max_agg_bodies = num_hand_bodies + num_door_bodies
+        max_agg_shapes = num_hand_shapes + num_door_shapes
 
         # camera pose setting
         camera_tf = gymapi.Transform()
         camera_tf.p = gymapi.Vec3(0.1, 0, 0.05)
-        camera_tf.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(0))
+        camera_tf.r = gymapi.Quat.from_euler_zyx(0, 0, 0)
 
         self.camera_props.enable_tensors = True # when Vram larger
 
         print('#############################################################################################################')
-        print(f'num_ur3_bodies : {num_ur3_bodies}, num_ur3_shapes : {num_ur3_shapes}, \nnum_door_bodies : {num_door_bodies}, num_door_shapes : {num_door_shapes}')
+        print(f'num_hand_bodies : {num_hand_bodies}, num_hand_shapes : {num_hand_shapes}, \nnum_door_bodies : {num_door_bodies}, num_door_shapes : {num_door_shapes}')
         print('#############################################################################################################')
 
-        self.ur3s = []
+        self.hands = []
         self.doors = []
         self.envs = []
         self.camera_handles = []
@@ -249,9 +276,9 @@ class DoorHook(VecTask):
             self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             # create robot hand actor name as "robot_hand"
-            ur3_actor = self.gym.create_actor(env_ptr, ur3_asset, ur3_start_pose, "robot_hand", i, 0, 0)
+            hand_actor = self.gym.create_actor(env_ptr, hand_asset, hand_start_pose, "hook_hand", i, 0, 0)
                                                                                                 # ↑self collision ON
-            self.gym.set_actor_dof_properties(env_ptr, ur3_actor, ur3_dof_props)
+            self.gym.set_actor_dof_properties(env_ptr, hand_actor, hand_dof_props)
 
             # create door actors # all doors ------------------------------------------
             if door_asset_count == 3:
@@ -278,7 +305,7 @@ class DoorHook(VecTask):
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
             #door size randomization
-            self.gym.set_actor_scale(env_ptr, door_actor, 1.0 + (torch.rand(1) - 0.5) * self.door_scale_param)
+            self.gym.set_actor_scale(env_ptr, door_actor, self.door_scale_param + (torch.rand(1) - 0.5) * self.door_scale_rand_param)
 
             if self.aggregate_mode == 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -287,54 +314,101 @@ class DoorHook(VecTask):
                 self.gym.end_aggregate(env_ptr)
 
             self.envs.append(env_ptr)
-            self.ur3s.append(ur3_actor)
+            self.hands.append(hand_actor)
             self.doors.append(door_actor)
 
             camera_handle = self.gym.create_camera_sensor(self.envs[i], self.camera_props)
             self.camera_handles.append(camera_handle)
-            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], ur3_actor, "ee_rz_link")
+            # camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], hand_actor, "ee_rz_link")
+            camera_mnt = self.gym.find_actor_rigid_body_handle(self.envs[i], hand_actor, "ee_rx_link")
+
             self.gym.attach_camera_to_body(camera_handle, self.envs[i], camera_mnt, camera_tf, gymapi.FOLLOW_TRANSFORM)
 
-        # handles definition : index
-        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, ur3_actor, "hook_finger")
-        # print(self.hand_handle)
-        # self.hook_pose = self.dof_state
+        # hook_finger handles definition
+        self.hook_finger_handle = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, "hook_finger")
+
+        # rigid body index to get tf
+        self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, 'hand_base')
+
+        self.robot_base = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, 'base_link')
+
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
-        # print('------------self.door_handle',self.door_handle)
+
+        self.door_fake_link = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_fake_link")
         self.init_data()
 
-    def init_data(self): # NOT SURE NEED
-        # ur3 information
-        hand = self.gym.find_actor_rigid_body_handle(self.envs[0], self.ur3s[0], "ee_rz_link")
-        hand_pose = self.gym.get_rigid_transform(self.envs[0], hand) # robot 座標系からの pose (0, 0, 0.5, Quat(0,0,1,0))
+    def init_data(self): 
+        # jacobian 
+        jacobian_tensor = self.gym.acquire_jacobian_tensor(self.sim, 'hook_hand')
+        self.jacobian = gymtorch.wrap_tensor(jacobian_tensor) # shape : (num_envs, 9, 6, 6)
+        self.j_hand_world = self.jacobian[:, self.hand_handle-1, :, :]
+
                 
         
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
-        self.rew_buf[:], self.reset_buf[:] = compute_ur3_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hand_dist, self.hand_o_dist,  
+        self.rew_buf[:], self.reset_buf[:] = compute_hand_reward(
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hook_hand_dist, self.hand_o_dist,  
             self.num_envs, 
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
 
-    def debug_camera_imgs(self):
+    def debug_camera_imgs(self): # ------- works with num_envs = 1
         
-        import cv2
-        # combined_img = np.zeros((3, self.camera_props.width, self.camera_props.height))
-        im_list = []
+        # --------------------------- RGB in one env ----------------------------------------#
+        cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
 
         for j in range(self.num_envs):
-            d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
-            np.savetxt(f"./.test_data/d_img_{j}.csv",self.pp_d_imgs[j,...].cpu().reshape(48, 64), delimiter=',')
+            # d_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_DEPTH)
+            # np.savetxt(f"./.test_data/d_img_{j}.csv",d_img, delimiter=',')
+
             rgb_img = self.gym.get_camera_image(self.sim, self.envs[j], self.camera_handles[j], gymapi.IMAGE_COLOR)
-            reshape = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
-            im_list.append(reshape)
-            # cv2.imshow(f'rgb{j}', rgb_img)
-        im_all = cv2.hconcat(im_list)
-        cv2.namedWindow('hand camera images',cv2.WINDOW_GUI_NORMAL)
-        cv2.imshow('hand camera images', im_all)
-        # cv2.waitKey(200)
+            rgb_img = rgb_img.reshape(rgb_img.shape[0],-1,4)[...,:3]
+            cv2.imshow('rgb', rgb_img)
+            cv2.waitKey(1)
+        # -----------------------------------------------------------------------------------#
+
+        # --------------------------- DEPTH in one env ----------------------------------------#
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        from io import BytesIO
+        buf = BytesIO()
+
+        plt.axis('off')
+        plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+        # plt.colorbar()
+        plt.savefig(buf, format = 'png')
+        buf.seek(0)
+        img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+        buf.close()
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
+        cv2.imshow('ESDEpth', img)
         cv2.waitKey(1)
+
+        # plt.colorbar()
+        plt.close()
+        # -------------------------------------------------------------------------------------#
+    def d_img_cropper(self):
+
+        start_y = (self.camera_props.height - self.img_crop_height) // 2
+        start_x = (self.camera_props.width - self.img_crop_width) // 2
+        # print(start_y, start_x)
+        # print('before cropping', self.d_imgs.shape)
+        self.cropped_d_imgs = torch.stack([
+                self.d_imgs[i, ...]
+                    .view(self.camera_props.height, self.camera_props.width)[start_y:start_y + self.img_crop_height, start_x:start_x + self.img_crop_width]
+                    .reshape(self.img_crop_height * self.img_crop_width)
+                for i in range(self.num_envs)
+            ])            
+        
+
+    def d_img_pixel_noiser(self): # TODO
+
+
+        rand_tensor = torch.randn_like(self.th_n_d_imgs) + 4.75
+        # rand_tensor = torch.rand_like(self.th_n_d_imgs)
+        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > rand_tensor, 0, self.th_n_d_imgs)
 
 
     def d_img_process(self):
@@ -342,21 +416,24 @@ class DoorHook(VecTask):
         self.gym.render_all_camera_sensors(self.sim)
         self.gym.start_access_image_tensors(self.sim)
 
-        d_imgs = torch.stack([
+        self.d_imgs = torch.stack([
             gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
             for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
         # print(torch.max(d_imgs), torch.min(d_imgs))
 
-        thresh_d_imgs = torch.where(torch.logical_or(d_imgs <= self.depth_min, d_imgs >= self.depth_max), 0, d_imgs)
-        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+        self.d_img_cropper()
 
-        self.th_n_d_imgs = (thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
-        # print('thresh_norm', torch.max(self.th_n_d_imgs), torch.min(self.th_n_d_imgs))
+        self.thresh_d_imgs = torch.where(torch.logical_or(self.cropped_d_imgs <= self.depth_min, self.cropped_d_imgs >= self.depth_max), 0, self.cropped_d_imgs)
+        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+        # print('thresh_d_imgs shape', self.thresh_d_imgs.shape)
+
+        self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+
+        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > 1.0, 0, self.th_n_d_imgs) # change replace value after normalization
+        # print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
         # print('thresh_norm all', self.th_n_d_imgs)
 
-        # dist_d_imgs = (self.d_imgs - self.depth_min)/(self.depth_max - self.depth_min + 1e-8)
-        # dist_d_imgs[torch.where(torch.logical_or(self.d_imgs < self.depth_min, self.d_imgs > self.depth_max))] = -1.0 # replaced from -1
-
+        # self.d_img_pixel_noiser()
 
         self.silh_d_imgs = torch.stack([(self.th_n_d_imgs[i,...]  - torch.min(self.th_n_d_imgs[i,...]))/
                                         (torch.max(self.th_n_d_imgs[i,...])-torch.min(self.th_n_d_imgs[i,...]) + 1e-12) 
@@ -370,7 +447,7 @@ class DoorHook(VecTask):
         # self.get_d_img_dataset()
 
         self.gym.end_access_image_tensors(self.sim)
-        
+        # print('pp_d_img', self.pp_d_imgs)
         # print(self.dist_d_imgs[0]) # debug
 
     def get_d_img_dataset(self):
@@ -391,118 +468,126 @@ class DoorHook(VecTask):
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
-        # ur3 rigid body states
-        hand_pos = self.rigid_body_states[:, self.hand_handle][:, 0:3] # hand position
-        # hand_rot = self.rigid_body_states[:, self.hand_handle][:, 3:7] # hand orientation
-        # hand_vel_pos = self.rigid_body_states[:, self.hand_handle][:, 7:10] # hand lin_vel
-        # hand_vel_rot = self.rigid_body_states[:, self.hand_handle][:, 10:13] # hand ang_vel
+        # hook finger rigid body states
+        hook_pos = self.rigid_body_states[:, self.hook_finger_handle][:, 0:3] # hook finger position
+        # hook_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hook finger orientation
 
-        # door handle rigid body states
+        # hand rigid body states
+        self.hand_pose_world = self.rigid_body_states[:, self.hand_handle][:, 0:7]
+        # hand_rot_world_euler = self.quat_to_euler(self.hand_rot_world.view(4,1))
+
+        # get door_fake_link_quat for state
+        self.door_fake_link_quat = self.rigid_body_states[:,self.door_fake_link, 3:7]
+
+        # caluculate q_door_hand_t
+        q_door_hand_t_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world[:,3:7]) # quat
+        q_door_hand_prev_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world_prev[:,3:7]) # quat
+
+        q_door_hand_t = quat_to_euler_tensor(q_door_hand_t_quat)# euler STATE_1 3
+        q_door_hand_prev = quat_to_euler_tensor(q_door_hand_prev_quat)# euler STATE_2 3
+
+        tR_world_fakedoor = quaternion_to_rotation_matrix(self.door_fake_link_quat).transpose(1,2) # transposed R_world_fakedoor
+
+        p_door_hand = torch.bmm(tR_world_fakedoor, (self.hand_pose_world[:,0:3]).unsqueeze(-1)).squeeze(-1)
+        p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
+        
+        d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
+
+        d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
+        
+        # door handle rigid body states 
         door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
-        self.hand_dist = torch.norm(door_handle_pos - hand_pos, dim = 1)
-        # print(self.ur3_dof_pos)
-        # print(self.ur3_dof_pos[:,3:])
-        self.hand_o_dist = torch.norm(self.ur3_dof_pos[:,3:], dim = -1)
+        self.hook_hand_dist = torch.norm(door_handle_pos - hook_pos, dim = 1)
+        # print(self.hand_dof_pos)
+        # print(self.hand_dof_pos[:,3:])
+        self.hand_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # TODO reward for hand rotation
         # print(self.hand_o_dist)
-        dof_pos_dt = self.ur3_dof_pos - self.ur3_dof_pos_prev
-        # print(dof_pos_dt)
-        # print(hand_pos)
-        # print(self.ur3_dof_vel)
-        fake_dof_vel = dof_pos_dt/self.dt
-        # print(fake_dof_vel)
-        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_ur3_dofs:] # (num_envs, 2, 2)
+
+        self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
-        # self.door_dof_vel = self.door_dof_state[..., 1] 
-
-        # self.obs_buf = torch.cat((dof_pos_dt, self.ur3_dof_vel, self.dist_d_imgs), dim = -1)
-
-        self.obs_buf = torch.cat((dof_pos_dt, self.pp_d_imgs), dim = -1)
-        # print(self.dist_d_imgs)
-        # print('observation space size:', self.obs_buf.shape)
+        self.obs_buf = torch.cat((q_door_hand_t, q_door_hand_prev, d_p_door_hand, d_q_door_hand, self.pp_d_imgs), dim = -1) # TODO
 
         return self.obs_buf    
+    
         
     def reset_idx(self, env_ids):
-        # env_ids_int32 = env_ids.to(dtype=torch.int32)
-        # print(env_ids)
-        # reset ur3 ： tensor_clamp from torch_jit utils action dimension limitations
-        # -0.25 - 0.25 noise
-        # with no limit
-        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device) 
-        rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device)
-        rand_pos += 0.5
-        rand_rot += 0.5
-        # rand_rot[:,1] *= 0.5 # smallen pitch rand
+
+        # without limit
+        rand_pos = -1 * torch.rand(len(env_ids), 3, device=self.device) + 0.5
+        rand_rot = -1 * torch.rand(len(env_ids), 3, device=self.device) + 0.5
         rand_pos = rand_pos * self.start_pos_noise_scale
         rand_rot = rand_rot * self.start_rot_noise_scale
 
         pos = torch.zeros(env_ids.shape[0], 6).to(self.device)
 
-        # # ----------------------- both side 
-        # left_mask = (env_ids % 2 == 0)
-        # right_mask = ~left_mask
-
-        # left_default_pos = self.ur3_default_dof_pos_left.unsqueeze(0).expand(len(env_ids), -1)
-        # right_default_pos = self.ur3_default_dof_pos_right.unsqueeze(0).expand(len(env_ids), -1)
-
-        # pos[left_mask] = left_default_pos[left_mask] + torch.cat([rand_pos[left_mask], rand_rot[left_mask]], dim=-1)
-        # pos[right_mask] = right_default_pos[right_mask] + torch.cat([rand_pos[right_mask], rand_rot[right_mask]], dim=-1)
-
-        
-        # print(f'Left count: {left_mask.sum().item()}, Right count: {right_mask.sum().item()}')
-
-
         # ------------------------ mid
-        pos = self.ur3_default_dof_pos_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
+        pos = self.hand_default_dof_pose_mid.unsqueeze(0) + torch.cat([rand_pos , rand_rot], dim=-1)
         
-        # # # ------------------------ left 
-        # pos = self.ur3_default_dof_pos_left.unsqueeze(0) + torch.cat([rand_pos, rand_rot], dim=-1)
-        # with limit
-        # pos = tensor_clamp(
-        #     self.ur3_default_dof_pos_left.unsqueeze(0) + 0.25 * (torch.rand((len(env_ids), self.num_ur3_dofs), device=self.device) - 0.5),
-        #     self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)            
-
-        self.ur3_dof_pos[env_ids, :] = pos
-        self.ur3_dof_vel[env_ids, :] = torch.zeros_like(self.ur3_dof_vel[env_ids])
-        self.ur3_dof_targets[env_ids, :self.num_ur3_dofs] = pos
+        self.hand_dof_pos[env_ids, :] = pos
+        self.hand_dof_vel[env_ids, :] = torch.zeros_like(self.hand_dof_vel[env_ids])
+        self.dof_targets[env_ids, :self.num_hand_dofs] = pos
 
         # reset door dof state
         self.door_dof_state[env_ids, :] = torch.zeros_like(self.door_dof_state[env_ids])
         self.door_dof_pos_prev[env_ids, :] = torch.zeros_like(self.door_dof_pos_prev[env_ids])       
-        self.ur3_dof_pos_prev[env_ids, :] = torch.zeros_like(self.ur3_dof_pos_prev[env_ids])       
+
+        # reset hand_pose_world_prev
+        self.hand_pose_world_prev[env_ids, :] = torch.zeros_like(self.hand_pose_world_prev[env_ids])       
 
         multi_env_ids_int32 = self.global_indices[env_ids, :2].flatten()
         self.gym.set_dof_position_target_tensor_indexed(self.sim,
-                                                        gymtorch.unwrap_tensor(self.ur3_dof_targets),
+                                                        gymtorch.unwrap_tensor(self.dof_targets),
                                                         gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
 
         self.gym.set_dof_state_tensor_indexed(self.sim,
                                               gymtorch.unwrap_tensor(self.dof_state),
                                               gymtorch.unwrap_tensor(multi_env_ids_int32), len(multi_env_ids_int32))
 
+        self.action_scale_vec[env_ids] = self.action_scale_rand * (torch.rand(len(env_ids), 1, device=self.device) - 0.5) + self.action_scale_base
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
 
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
-        self.actions = actions.clone().to(self.device)
-        # print('self.actions',self.actions)
-        # self.actions = self.zero_actions()
-        # self.actions = -1 * self.uni_actions()
-        # print(self.actions)
-        # print('self.actions', self.actions) # for debug
-        targets = self.ur3_dof_targets[:, :self.num_ur3_dofs] +   self.dt * self.actions * self.action_scale
-        # print(targets)
-        # -----------with clamp limit --------------------------------------
-        # self.ur3_dof_targets[:, :self.num_ur3_dofs] = tensor_clamp(
-        #     targets, self.ur3_dof_lower_limits, self.ur3_dof_upper_limits)
-        # ------------------------------------------------------------------
-        # -----------without clamp limit------------------------------------
-        self.ur3_dof_targets[:, :self.num_ur3_dofs] = targets 
-        # ------------------------------------------------------------------
-        self.gym.set_dof_position_target_tensor(self.sim,
-                                                gymtorch.unwrap_tensor(self.ur3_dof_targets))    
+
+        # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
+        # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
+        self.actions = self.action_scale_vec * actions.clone().to(self.device)
+
+        # self.actions[:,5] = 0.5
+        # self.actions[0,3] = 0.05 # rotation
+        # self.actions[0,2] = 0.01 # prismatic
+        # self.actions[0,3] = 0.05
+        # self.actions[0,4] = 0.05
+        # self.actions[1,1] = -0.01
+        # print('self.actions',self.actions*self.action_scale*self.dt)
+
+
+        self.gym.refresh_jacobian_tensors(self.sim)
+        self.gym.refresh_actor_root_state_tensor(self.sim)
+        self.gym.refresh_dof_state_tensor(self.sim)
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
+
+        # get informations to transform and action
+        jacobian = self.j_hand_world # J
+
+        p_world_t = self.hand_pose_world[:, 0:3]
+        q_world_t = self.hand_pose_world[:, 3:7]
+        # q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
+
+        p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
+            
+        d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal)
+
+        hand_dof_targets = self.dof_targets[:, :self.num_hand_dofs] + d_dof
+
+        # ----------- without clamp limit ----------------------------------
+        self.dof_targets[:, :self.num_hand_dofs] = hand_dof_targets 
+
+        # set robot dof pose target
+        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.dof_targets))
+
 
     def statistical_data_acquisition(self,env_ids):
         reaching = self.reaching_swich[env_ids].cpu().tolist()
@@ -532,23 +617,132 @@ class DoorHook(VecTask):
 
         self.compute_observations()
         self.compute_reward(self.actions)
-        self.door_dof_pos_prev = self.door_dof_pos.clone()
-        self.ur3_dof_pos_prev = self.ur3_dof_pos.clone()
+        # self.door_dof_pos_prev = self.door_dof_pos.clone()
         
-        # print('prev_pos:',self.ur3_dof_pos_prev)
+        self.hand_pose_world_prev = self.hand_pose_world.detach().clone()
+        
+        # print('prev_pos:',self.hand_pose_world_prev)
+        
+    
+def quaternion_to_rotation_matrix(quat):
+    """
+    Convert quaternions to rotation matrix.
+    """
+    qx, qy, qz, qw = quat[:, 0], quat[:, 1], quat[:, 2], quat[:, 3]
+    xx = qx * qx
+    yy = qy * qy
+    zz = qz * qz
+    xy = qx * qy
+    xz = qx * qz
+    yz = qy * qz
+    wx = qw * qx
+    wy = qw * qy
+    wz = qw * qz
+
+    matrix = torch.stack([
+        1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy),
+        2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx),
+        2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy)
+    ], dim=-1).reshape(-1, 3, 3)
+    return matrix
+
+def quat_conj(quat_tensor):
+    """
+    Compute the conjugate of a batch of quaternions.
+    Args:
+    - q: tensor of shape (num_envs, 4)
+    
+    Returns:
+    - q_conj: tensor of shape (num_envs, 4)
+    """
+    q_conj = quat_tensor.clone()
+    q_conj[:, 1:] = -q_conj[:, 1:]
+    return q_conj
+
+def quat_to_euler_tensor(quat_tensor):
+    euler_tensor = torch.stack([
+        torch.tensor(gymapi.Quat(quat[0], quat[1], quat[2], quat[3]).to_euler_zyx()).to(quat_tensor.device)
+        for quat in quat_tensor.cpu().numpy()
+    ])
+    # print(euler_tensor)
+    euler_tensor = torch.nan_to_num(euler_tensor, nan=0.0).to(quat_tensor.device)
+
+    return euler_tensor
+
+def euler_to_quaternion(euler):
+    """
+    Convert Euler angles to quaternions.
+    """
+    cy = torch.cos(euler[:, 2] * 0.5)
+    sy = torch.sin(euler[:, 2] * 0.5)
+    cp = torch.cos(euler[:, 1] * 0.5)
+    sp = torch.sin(euler[:, 1] * 0.5)
+    cr = torch.cos(euler[:, 0] * 0.5)
+    sr = torch.sin(euler[:, 0] * 0.5)
+
+    qw = cr * cp * cy + sr * sp * sy
+    qx = sr * cp * cy - cr * sp * sy
+    qy = cr * sp * cy + sr * cp * sy
+    qz = cr * cp * sy - sr * sp * cy
+
+    return torch.stack((qx, qy, qz, qw), dim=-1)
+
+def quaternion_multiply(q1, q2):
+    """
+    Multiply two quaternions.
+    q1, q2: (num_envs, 4)
+    """
+    x1, y1, z1, w1 = q1[:, 0], q1[:, 1], q1[:, 2], q1[:, 3]
+    x2, y2, z2, w2 = q2[:, 0], q2[:, 1], q2[:, 2], q2[:, 3]
+    
+    x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
+    z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
+    w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    
+    return torch.stack((x, y, z, w), dim=-1)
+
+def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
+    """
+    Transform hand coordinates to world coordinates after applying the action.
+
+    Parameters:
+    p_world_t (torch.Tensor): Hand positions in world coordinates at time t (shape: (num_envs, 3)).
+    q_world_t (torch.Tensor): Hand orientations in world coordinates as quaternions at time t (shape: (num_envs, 4)).
+    actions (torch.Tensor): Actions in hand coordinates (shape: (num_envs, 6)).
+
+    Returns:
+    p_world_goal (torch.Tensor): Goal positions in world coordinates (shape: (num_envs, 3)).
+    q_world_goal (torch.Tensor): Goal orientations in world coordinates as quaternions (shape: (num_envs, 4)).
+    """
+
+    # Convert quaternions to rotation matrices
+    R_world_t = quaternion_to_rotation_matrix(q_world_t)
+
+    # Extract position and orientation change from action
+    delta_pos_hand = actions[:, :3]
+    delta_euler_hand = actions[:, 3:]
+    delta_quat_hand = euler_to_quaternion(delta_euler_hand)
+    
+    # Compute new position in world coordinates
+    p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)
+    
+    # Compute new orientation in world coordinates
+    q_world_goal = quaternion_multiply(q_world_t, delta_quat_hand)
+    
+    return p_world_goal, q_world_goal
+
 
 #####################################################################
 ###=========================jit functions=========================###
 #####################################################################
 
-
 @torch.jit.script
-def compute_ur3_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hand_dist, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
+def compute_hand_reward(
+    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hook_hand_dist, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
-    # print(open_reward_scale, handle_reward_scale, dist_reward_scale, action_penalty_scale)
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)
@@ -557,59 +751,34 @@ def compute_ur3_reward(
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 
-    hand_dist_thresh = torch.where(hand_dist < 0.15, torch.zeros_like(hand_dist), hand_dist)
+    hook_hand_dist_thresh = torch.where(hook_hand_dist < 0.15, torch.zeros_like(hook_hand_dist), hook_hand_dist)
 
-    # dist_reward = -1 * hand_dist * dist_reward_scale
-    dist_reward = -1 * hand_dist_thresh * dist_reward_scale
+    # dist_reward = -1 * hook_hand_dist * dist_reward_scale # no thresh
+    dist_reward = -1 * hook_hand_dist_thresh * dist_reward_scale
 
-    o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
-    # print(o_dist_reward)
+    # o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
 
-    # dist_reward_no_thresh = -1 * (hand_dist + torch.log(hand_dist + 0.005)) * dist_reward_scale
-    # dist_reward_no_thresh = -1 * hand_dist * dist_reward_scale
-    # print(hand_dist.shape)
+    # dist_reward_no_thresh = -1 * (hook_hand_dist + torch.log(hook_hand_dist + 0.005)) * dist_reward_scale
+    # dist_reward_no_thresh = -1 * hook_hand_dist * dist_reward_scale
+    # print(hook_hand_dist.shape)
     # print('hand_o_dist.shape', hand_o_dist.shape)
     # print('----------------open_reward max:',torch.max(open_reward))
     # print('--------------handle_reward max:', torch.max(handle_reward))
-    # print('----------------dist_min:', torch.min(hand_dist))
+    # print('----------------dist_min:', torch.min(hook_hand_dist))
     # print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    rewards = open_reward + dist_reward + o_dist_reward + handle_reward + action_penalty
-    # rewards = open_reward + dist_reward + handle_reward + action_penalty
+    # rewards = open_reward + dist_reward + o_dist_reward + handle_reward + action_penalty
+    rewards = open_reward + dist_reward + handle_reward + action_penalty # without rotation reward
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 
-    # print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
-    # print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
 
-    # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
+    print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
+    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)
 
     return rewards, reset_buf
-
-@torch.jit.script
-def compute_d_imgs(d_imgs, depth_min, depth_max, replace_val): # wasnt better than normal function
-
-    # type: (Tensor, float, float, float) -> Tensor 
-    condition = torch.logical_or(d_imgs < depth_min, d_imgs > depth_max)
-    dist_d_imgs = (d_imgs - depth_min)/(depth_max - depth_min)
-    dist_d_imgs = torch.where(condition, replace_val, dist_d_imgs)
-    return dist_d_imgs 
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-

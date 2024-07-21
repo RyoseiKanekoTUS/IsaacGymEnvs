@@ -1,11 +1,11 @@
 # DoorEnv for hook
 
-name: DoorHook
+name: UR3_DoorHook
 
 physics_engine: ${..physics_engine}
 
 env:
-  numEnvs: ${resolve_default:4,${...num_envs}}
+  numEnvs: ${resolve_default:2,${...num_envs}}
   # numEnvs: ${resolve_default:512,${...num_envs}} # for test
   envSpacing: 1.5
   episodeLength: 300
@@ -27,11 +27,8 @@ env:
   enableCameraSensors: False
 
 sim:
-  # dt: 0.0166
-  dt: 0.083
-  # dt: 1.0
+  dt: 0.0166
   substeps: 10
-  # substeps: 20
   up_axis: "z"
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]

@@ -129,10 +129,10 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         ur3_asset_file = "urdf/door_test/hook_test.urdf"
-        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
-        door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        door_1_asset_file = 'urdf/door_test/door_1_wall_shirokuma.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2_wall_shirokuma.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall_shirokuma.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall_shirokuma.urdf'
 
         wood_texture = self.gym.create_texture_from_file(self.sim, './assets/textures/wood_3.jpg')
         # wood_texture  = 'textures/wood_1.png'

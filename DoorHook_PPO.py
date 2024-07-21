@@ -14,6 +14,9 @@ from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
+import datetime
+import csv
+import os
 import time
 
 
@@ -199,10 +202,39 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 120000, "headless": False}
+        self.cfg_trainer = {"timesteps": 1200, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
-
+        print("start")
         self.trainer.eval()
+        
+        print(self.trainer.env.statistics)
+        flattened_data = []
+
+        for sublist in self.env.statistics:
+            for item in sublist:
+                flattened_data.append(item)
+        
+        # 現在の時間を取得してファイル名に使用
+        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"output_{current_time}.csv"
+        
+        # 現在のスクリプトのディレクトリを取得
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, 'statistic_data')
+
+        # 出力ディレクトリが存在しない場合は作成
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        # 完全なパスを作成
+        file_path = os.path.join(output_dir, filename)
+
+        # CSVファイルに書き込み
+        with open(file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(flattened_data)
+
+        print(f"CSVファイルに書き込みが完了しました: {file_path}")
 
 
 if __name__ == '__main__':

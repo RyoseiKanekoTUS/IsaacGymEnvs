@@ -1,6 +1,7 @@
 videos
 
 /recorded_frames
+/statistic_data
 /isaacgymenvs/logs
 *train_dir*
 *wandb*

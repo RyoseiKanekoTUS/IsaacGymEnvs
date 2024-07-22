@@ -18,6 +18,8 @@ from skrl.utils.isaacgym_utils import ik
 import torch
 import cv2
 import time
+import datetime
+import csv
 
 
 # Quat : (x, y, z, w)
@@ -31,6 +33,8 @@ class DoorHook(VecTask):
         
         self.timer = None
         self.env_episodes = None
+        self.begin_datetime = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
         self.n = 0
 
         # door size scale for sim2real
@@ -132,10 +136,14 @@ class DoorHook(VecTask):
         self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
         
-        # for reaching statics
+        # for statics
         self.statistics = []
         self.knob_range = 0.01
+        self.hinge_range = 0.01
+        self.success_range = 1.0472 # opening 60 deg
         self.reaching_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        self.opening_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        self.success_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     
     def create_sim(self):
@@ -344,7 +352,7 @@ class DoorHook(VecTask):
         self.jacobian = gymtorch.wrap_tensor(jacobian_tensor) # shape : (num_envs, 9, 6, 6)
         self.j_hand_world = self.jacobian[:, self.hand_handle-1, :, :]
 
-        self.env_episodes = torch.zeros(self.num_envs, device=self.device)
+        self.env_episodes = torch.zeros(self.num_envs, device=self.device, dtype=torch.int16)
 
                 
         
@@ -595,20 +603,57 @@ class DoorHook(VecTask):
 
     def statistical_data_acquisition(self,env_ids):
         reaching = self.reaching_swich[env_ids].cpu().tolist()
+        opening = self.opening_swich[env_ids].cpu().tolist()
+        success = self.success_swich[env_ids].cpu().tolist()
+
         index_list = env_ids.cpu().tolist()
-        statis = [[index_list[i],reaching[i]] for i in range(len(index_list))]
+        statis = [[index_list[i], self.env_episodes[i].item(), reaching[i], opening[i], success[i]] for i in range(len(index_list))]
         self.statistics.append(statis)
+        # Create the directory if it doesn't exist
+        dir_path = 'statistic_data'
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        
+        # Path to the CSV file
+        file_path = os.path.join(dir_path, f'RL_static_{self.begin_datetime}.csv')
+        
+        # Check if the file exists
+        file_exists = os.path.isfile(file_path)
+        
+        # Open the file in append mode
+        with open(file_path, 'a', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            
+            # Write the header if the file is being created
+            if not file_exists:
+                csvwriter.writerow(['env_ids', 'episode', 'reaching', 'opening', 'success'])
+            
+            # Write the data
+            for row in statis:
+                csvwriter.writerow(row)        
+
         self.reaching_swich[env_ids] = False
+        self.opening_swich[env_ids] = False
+        self.success_swich[env_ids] = False
 
     
     def data_acquisition(self):
         knob_range_tensor = torch.full_like(self.door_dof_pos[:, 1], self.knob_range)
-        abs_knob_tensor = self.door_dof_pos[:, 1]- knob_range_tensor
+        hinge_range_tensor = torch.full_like(self.door_dof_pos[:, 0], self.hinge_range)
+        success_tenros = torch.full_like(self.door_dof_pos[:, 0], self.success_range)
+
+        abs_knob_tensor = self.door_dof_pos[:, 1] - knob_range_tensor
+        abs_hinge_tensor = self.door_dof_pos[:, 0] - hinge_range_tensor
+        abs_success_tensor = self.door_dof_pos[:, 0] - success_tenros
                 
-        indices = (abs_knob_tensor >= 0).nonzero(as_tuple=True)[0]
-        self.reaching_swich[indices] = True
+        reaching_indices = (abs_knob_tensor >= 0).nonzero(as_tuple=True)[0]
+        self.reaching_swich[reaching_indices] = True
 
+        opening_indices = (abs_hinge_tensor >= 0).nonzero(as_tuple=True)[0]
+        self.opening_swich[opening_indices] = True
 
+        success_indices = (abs_success_tensor >= 0).nonzero(as_tuple=True)[0]
+        self.success_swich[success_indices] = True
 
 
     def post_physics_step(self):

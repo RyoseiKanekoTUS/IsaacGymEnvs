@@ -1,7 +1,6 @@
 videos
 
 /recorded_frames
-/statistic_data
 /isaacgymenvs/logs
 *train_dir*
 *wandb*
@@ -33,6 +32,7 @@ skrl_runs/
 outputs/
 *.hydra*
 /isaacgymenvs/wandb
+statistic_data/
 
 .test_data
 

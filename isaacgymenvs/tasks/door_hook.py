@@ -30,6 +30,7 @@ class DoorHook(VecTask):
         self.max_episode_length = 300 # 300
         
         self.timer = None
+        self.env_episodes = None
         self.n = 0
 
         # door size scale for sim2real
@@ -343,6 +344,8 @@ class DoorHook(VecTask):
         self.jacobian = gymtorch.wrap_tensor(jacobian_tensor) # shape : (num_envs, 9, 6, 6)
         self.j_hand_world = self.jacobian[:, self.hand_handle-1, :, :]
 
+        self.env_episodes = torch.zeros(self.num_envs, device=self.device)
+
                 
         
     def compute_reward(self, actions): #if you edit, go to jitscripts
@@ -547,6 +550,7 @@ class DoorHook(VecTask):
         self.action_scale_vec[env_ids] = self.action_scale_rand * (torch.rand(len(env_ids), 1, device=self.device) - 0.5) + self.action_scale_base
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
+        self.env_episodes[env_ids] += 1
 
         
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()

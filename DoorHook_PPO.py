@@ -14,6 +14,9 @@ from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
+import datetime
+import csv
+import os
 import time
 
 
@@ -199,10 +202,33 @@ class DoorHookTrainer(PPOnet):
         else:
             pass
 
-        self.cfg_trainer = {"timesteps": 120000, "headless": False}
+        self.cfg_trainer = {"timesteps": 1200, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
-
+        print("start")
         self.trainer.eval()
+        
+        print(self.trainer.env.statistics)
+        flattened_data = []
+
+        for sublist in self.env.statistics:
+            for item in sublist:
+                flattened_data.append(item)
+        
+        filename = f"output_{self.trainer.env.begin_datetime}.csv"
+        
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, 'statistic_data')
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        file_path = os.path.join(output_dir, filename)
+
+        with open(file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(flattened_data)
+
+        print(f"writing done: {file_path}")
 
 
 if __name__ == '__main__':
@@ -213,8 +239,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/non_vel/24-03-19_13-04-08-617586_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    # DoorHookTrainer.eval(path)
-    DoorHookTrainer.train(path)
+    DoorHookTrainer.eval(path)
+    # DoorHookTrainer.train(path)
 
 
 

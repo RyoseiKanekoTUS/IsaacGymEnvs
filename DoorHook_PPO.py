@@ -214,27 +214,21 @@ class DoorHookTrainer(PPOnet):
             for item in sublist:
                 flattened_data.append(item)
         
-        # 現在の時間を取得してファイル名に使用
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"output_{current_time}.csv"
+        filename = f"output_{self.trainer.env.begin_datetime}.csv"
         
-        # 現在のスクリプトのディレクトリを取得
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, 'statistic_data')
 
-        # 出力ディレクトリが存在しない場合は作成
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        # 完全なパスを作成
         file_path = os.path.join(output_dir, filename)
 
-        # CSVファイルに書き込み
         with open(file_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerows(flattened_data)
 
-        print(f"CSVファイルに書き込みが完了しました: {file_path}")
+        print(f"writing done: {file_path}")
 
 
 if __name__ == '__main__':

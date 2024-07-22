@@ -214,7 +214,7 @@ class DoorHook(VecTask):
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_hand_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,7] = -10
+        self.handle_torque_tensor[:,7] = -7.5
 
         # set hand dof properties
         hand_dof_props = self.gym.get_asset_dof_properties(hand_asset)

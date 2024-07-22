@@ -94,7 +94,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.45, 3.141592653, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.53, 3.141592653, 0, 0], device=self.device)
 
         ############################################################################
         # for test

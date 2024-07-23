@@ -42,7 +42,7 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.1
 
         # rand param for action scales
-        self.action_scale_base = 0.0225 # base # 0.025?
+        self.action_scale_base = 0.020 # base # 0.025?
         self.action_scale_rand = 0.001 # noise
 
         # rand param for start
@@ -99,7 +99,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.53, 3.141592653, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.50, 3.141592653, 0, 0], device=self.device)
 
         ############################################################################
         # for test

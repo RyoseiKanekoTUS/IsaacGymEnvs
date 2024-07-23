@@ -57,6 +57,11 @@ class DoorHook(VecTask):
 
         self.action_penalty_scale = 0.1 # 0.01
 
+        self.distance_thresh = 0.10
+
+        # door handle torque
+        self.handle_torque = 7.5
+
         self.debug_viz = False
 
         self.up_axis = "z"
@@ -214,7 +219,7 @@ class DoorHook(VecTask):
 
         # torque tensor for door handle
         self.handle_torque_tensor = torch.zeros([self.num_envs, self.num_hand_dofs+self.num_door_dofs], dtype=torch.float, device=self.device)
-        self.handle_torque_tensor[:,7] = -7.5
+        self.handle_torque_tensor[:,7] = -1 * self.handle_torque
 
         # set hand dof properties
         hand_dof_props = self.gym.get_asset_dof_properties(hand_asset)
@@ -359,7 +364,7 @@ class DoorHook(VecTask):
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
         self.rew_buf[:], self.reset_buf[:] = compute_hand_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hook_hand_dist, self.hand_o_dist,  
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hook_hand_dist, self.distance_thresh, self.hand_o_dist,  
             self.num_envs, 
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
@@ -788,10 +793,10 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
 
 @torch.jit.script
 def compute_hand_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hook_hand_dist, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hook_hand_dist, distance_thresh, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
     # regularization on the actions (summed for each environment)
     action_penalty = torch.sum(-1*actions ** 2, dim=-1) * action_penalty_scale
     # handle_reward=torch.zeros(1,num_envs)
@@ -800,7 +805,7 @@ def compute_hand_reward(
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 
-    hook_hand_dist_thresh = torch.where(hook_hand_dist < 0.15, torch.zeros_like(hook_hand_dist), hook_hand_dist)
+    hook_hand_dist_thresh = torch.where(hook_hand_dist < distance_thresh, torch.zeros_like(hook_hand_dist), hook_hand_dist)
 
     # dist_reward = -1 * hook_hand_dist * dist_reward_scale # no thresh
     dist_reward = -1 * hook_hand_dist_thresh * dist_reward_scale

@@ -55,7 +55,7 @@ class DoorHook(VecTask):
         self.dist_reward_scale = 5.0
         self.o_dist_reward_scale = 1.0 # TODO
 
-        self.action_penalty_scale = 0.1 # 0.01
+        self.action_penalty_scale = 0.05 # 0.01
 
         self.distance_thresh = 0.10
 
@@ -506,14 +506,12 @@ class DoorHook(VecTask):
         p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
         
         d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
-        print(d_p_door_hand)
-        print(torch.norm(d_p_door_hand, dim = 1))
 
         d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
         
         # compute pose diffs for reward
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
-        print(self.hook_handle_dist)
+        # print(self.hook_handle_dist)
         
         self.hook_handle_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # rot diff TODO
         # print(self.hook_handle_o_dist)
@@ -806,8 +804,8 @@ def compute_hand_reward(
 
     hook_handle_dist_thresh = torch.where(hook_handle_dist < distance_thresh, torch.zeros_like(hook_handle_dist), hook_handle_dist)
 
-    # dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
-    dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
+    dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
+    # dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
 
     # o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale
 

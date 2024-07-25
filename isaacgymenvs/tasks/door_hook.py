@@ -42,7 +42,7 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.1
 
         # rand param for action scales
-        self.action_scale_base = 0.020 # base # 0.025?
+        self.action_scale_base = 0.03 # base # 0.025?
         self.action_scale_rand = 0.001 # noise
 
         # rand param for start
@@ -122,7 +122,7 @@ class DoorHook(VecTask):
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
 
-        self.hand_o_dist = None
+        self.hook_handle_o_dist = None
 
         self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
 
@@ -343,12 +343,11 @@ class DoorHook(VecTask):
 
         # rigid body index to get tf
         self.hand_handle = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, 'hand_base')
-
         self.robot_base = self.gym.find_actor_rigid_body_handle(env_ptr, hand_actor, 'base_link')
-
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
-
         self.door_fake_link = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_fake_link")
+        self.hook_finger_dsr_pose = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "dsr_pose")
+
         self.init_data()
 
     def init_data(self): 
@@ -364,7 +363,7 @@ class DoorHook(VecTask):
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
         self.rew_buf[:], self.reset_buf[:] = compute_hand_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hook_hand_dist, self.distance_thresh, self.hand_o_dist,  
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.door_dof_pos_prev, self.hook_handle_dist, self.distance_thresh, self.hook_handle_o_dist,  
             self.num_envs, 
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
@@ -484,13 +483,12 @@ class DoorHook(VecTask):
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
 
-        # hook finger rigid body states
-        hook_pos = self.rigid_body_states[:, self.hook_finger_handle][:, 0:3] # hook finger position
-        # hook_rot = self.rigid_body_states[:, self.hook_finger_handle][:, 3:7] # hook finger orientation
-
+        # hook finger and hook finger dsr_pose rigid body states
+        hook_pose = self.rigid_body_states[:, self.hook_finger_handle][:, 0:7] # hook finger pose
+        hook_dsr_pose = self.rigid_body_states[:, self.hook_finger_dsr_pose][:, 0:7] # hook finger dsr pose
+        
         # hand rigid body states
         self.hand_pose_world = self.rigid_body_states[:, self.hand_handle][:, 0:7]
-        # hand_rot_world_euler = self.quat_to_euler(self.hand_rot_world.view(4,1))
 
         # get door_fake_link_quat for state
         self.door_fake_link_quat = self.rigid_body_states[:,self.door_fake_link, 3:7]
@@ -508,16 +506,17 @@ class DoorHook(VecTask):
         p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
         
         d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
+        print(d_p_door_hand)
+        print(torch.norm(d_p_door_hand, dim = 1))
 
         d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
         
-        # door handle rigid body states 
-        door_handle_pos = self.rigid_body_states[:, self.door_handle][:, 0:3]
-        self.hook_hand_dist = torch.norm(door_handle_pos - hook_pos, dim = 1)
-        # print(self.hand_dof_pos)
-        # print(self.hand_dof_pos[:,3:])
-        self.hand_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # TODO reward for hand rotation
-        # print(self.hand_o_dist)
+        # compute pose diffs for reward
+        self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
+        print(self.hook_handle_dist)
+        
+        self.hook_handle_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # rot diff TODO
+        # print(self.hook_handle_o_dist)
 
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
@@ -569,12 +568,12 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
 
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
-        # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
+        actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
 
         # self.actions[:,5] = 0.5
         # self.actions[0,3] = 0.05 # rotation
-        # self.actions[0,2] = 0.01 # prismatic
+        self.actions[0,2] = self.action_scale_base + 0.001 # prismatic
         # self.actions[0,3] = 0.05
         # self.actions[0,4] = 0.05
         # self.actions[1,1] = -0.01
@@ -793,7 +792,7 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
 
 @torch.jit.script
 def compute_hand_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hook_hand_dist, distance_thresh, hand_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, door_dof_pos_prev, hook_handle_dist, distance_thresh, hook_handle_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
@@ -805,20 +804,20 @@ def compute_hand_reward(
     open_reward = door_dof_pos[:,0] * open_reward_scale    # additional reward to open
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 
-    hook_hand_dist_thresh = torch.where(hook_hand_dist < distance_thresh, torch.zeros_like(hook_hand_dist), hook_hand_dist)
+    hook_handle_dist_thresh = torch.where(hook_handle_dist < distance_thresh, torch.zeros_like(hook_handle_dist), hook_handle_dist)
 
-    # dist_reward = -1 * hook_hand_dist * dist_reward_scale # no thresh
-    dist_reward = -1 * hook_hand_dist_thresh * dist_reward_scale
+    # dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
+    dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
 
-    # o_dist_reward = -1 * hand_o_dist * o_dist_reward_scale
+    # o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale
 
-    # dist_reward_no_thresh = -1 * (hook_hand_dist + torch.log(hook_hand_dist + 0.005)) * dist_reward_scale
-    # dist_reward_no_thresh = -1 * hook_hand_dist * dist_reward_scale
-    # print(hook_hand_dist.shape)
-    # print('hand_o_dist.shape', hand_o_dist.shape)
+    # dist_reward_no_thresh = -1 * (hook_handle_dist + torch.log(hook_handle_dist + 0.005)) * dist_reward_scale
+    # dist_reward_no_thresh = -1 * hook_handle_dist * dist_reward_scale
+    # print(hook_handle_dist.shape)
+    # print('hook_handle_o_dist.shape', hook_handle_o_dist.shape)
     # print('----------------open_reward max:',torch.max(open_reward))
     # print('--------------handle_reward max:', torch.max(handle_reward))
-    # print('----------------dist_min:', torch.min(hook_hand_dist))
+    # print('----------------dist_min:', torch.min(hook_handle_dist))
     # print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty

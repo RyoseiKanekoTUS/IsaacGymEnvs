@@ -566,12 +566,12 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
 
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
-        actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
+        # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
 
         # self.actions[:,5] = 0.5
         # self.actions[0,3] = 0.05 # rotation
-        self.actions[0,2] = self.action_scale_base + 0.001 # prismatic
+        # self.actions[0,2] = self.action_scale_base + 0.001 # prismatic
         # self.actions[0,3] = 0.05
         # self.actions[0,4] = 0.05
         # self.actions[1,1] = -0.01

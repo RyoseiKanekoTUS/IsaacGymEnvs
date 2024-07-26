@@ -513,13 +513,13 @@ class DoorHook(VecTask):
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
         # print(self.hook_handle_dist)
         
-        self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff TODO
+        self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
         print(self.hook_handle_o_dist)
 
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
-        self.obs_buf = torch.cat((q_door_hand_t, q_door_hand_prev, d_p_door_hand, d_q_door_hand, self.pp_d_imgs), dim = -1) # TODO
+        self.obs_buf = torch.cat((q_door_hand_t, q_door_hand_prev, d_p_door_hand, d_q_door_hand, self.pp_d_imgs), dim = -1) 
 
         return self.obs_buf    
     

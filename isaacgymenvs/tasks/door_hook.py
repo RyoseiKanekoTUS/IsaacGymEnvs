@@ -800,7 +800,7 @@ def compute_hand_reward(
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0] * open_reward_scale
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
     open_reward = door_dof_pos[:,0] * open_reward_scale    # reward to open
-    open_reward = torch.where(door_dof_pos[:,0] < 0.01745, 0, door_dof_pos[:,0]) # 1 deg thresh
+    open_reward = torch.where(door_dof_pos[:,0] < 0.01745, 0, open_reward) # 1 deg thresh
     
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 

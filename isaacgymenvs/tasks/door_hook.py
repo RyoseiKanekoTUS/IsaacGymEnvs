@@ -42,7 +42,7 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.1
 
         # rand param for action scales
-        self.action_scale_base = 0.03 # base # 0.025?
+        self.action_scale_base = 0.025 # base # 0.025?
         self.action_scale_rand = 0.001 # noise
 
         # rand param for start
@@ -711,11 +711,28 @@ def quat_conj(quat_tensor):
     return q_conj
 
 def quat_to_euler_tensor(quat_tensor):
-    euler_tensor = torch.stack([
-        torch.tensor(gymapi.Quat(quat[0], quat[1], quat[2], quat[3]).to_euler_zyx()).to(quat_tensor.device)
-        for quat in quat_tensor.cpu().numpy()
-    ])
-    # print(euler_tensor)
+
+    # Extract individual components of the quaternions
+    qx, qy, qz, qw = quat_tensor[:, 0], quat_tensor[:, 1], quat_tensor[:, 2], quat_tensor[:, 3]
+
+    # Compute the Euler angles in z, y, x order
+    # yaw (z-axis rotation)
+    siny_cosp = 2.0 * (qw * qz + qx * qy)
+    cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+    yaw_z = torch.atan2(siny_cosp, cosy_cosp)
+
+    # pitch (y-axis rotation)
+    sinp = 2.0 * (qw * qy - qz * qx)
+    pitch_y = torch.asin(torch.clamp(sinp, -1.0, 1.0))
+
+    # roll (x-axis rotation)
+    sinx_cosp = 2.0 * (qw * qx + qy * qz)
+    cosx_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+    roll_x = torch.atan2(sinx_cosp, cosx_cosp)
+
+    euler_tensor = torch.stack((roll_x, pitch_y, yaw_z), dim=-1)
+
+    # Handle NaNs if necessary
     euler_tensor = torch.nan_to_num(euler_tensor, nan=0.0).to(quat_tensor.device)
 
     return euler_tensor

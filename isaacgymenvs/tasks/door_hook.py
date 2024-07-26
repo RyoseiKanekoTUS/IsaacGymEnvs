@@ -122,7 +122,7 @@ class DoorHook(VecTask):
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
 
-        self.hook_handle_o_dist = None
+        self.hook_handle_o_dist = torch.zeros(self.num_envs, 1, device=self.device)
 
         self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
 
@@ -249,7 +249,7 @@ class DoorHook(VecTask):
         hand_start_pose = gymapi.Transform()
 
         # origin of the urdf-robot
-        hand_start_pose.p = gymapi.Vec3(1.2, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.p = gymapi.Vec3(1.0, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0) # robot base rotation
 
 

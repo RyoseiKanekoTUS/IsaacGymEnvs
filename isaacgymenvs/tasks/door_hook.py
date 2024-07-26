@@ -513,8 +513,8 @@ class DoorHook(VecTask):
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
         # print(self.hook_handle_dist)
         
-        self.hook_handle_o_dist = torch.norm(self.hand_dof_pos[:,3:], dim = -1) # rot diff TODO
-        # print(self.hook_handle_o_dist)
+        self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff TODO
+        print(self.hook_handle_o_dist)
 
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
@@ -807,7 +807,7 @@ def compute_hand_reward(
     dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
     # dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
 
-    # o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale
+    o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale
 
     # dist_reward_no_thresh = -1 * (hook_handle_dist + torch.log(hook_handle_dist + 0.005)) * dist_reward_scale
     # dist_reward_no_thresh = -1 * hook_handle_dist * dist_reward_scale
@@ -819,8 +819,8 @@ def compute_hand_reward(
     # print('-------------action_penalty max:', torch.min(action_penalty))
 
     # rewards = open_reward + dist_reward_no_thresh + handle_reward + action_penalty
-    # rewards = open_reward + dist_reward + o_dist_reward + handle_reward + action_penalty
-    rewards = open_reward + dist_reward + handle_reward + action_penalty # without rotation reward
+    rewards = open_reward + dist_reward + o_dist_reward + handle_reward + action_penalty
+    # rewards = open_reward + dist_reward + handle_reward + action_penalty # without rotation reward
     # success reward
     # rewards = torch.where(door_dof_pos[:,0] > 1.55, rewards + 1000, rewards)
 

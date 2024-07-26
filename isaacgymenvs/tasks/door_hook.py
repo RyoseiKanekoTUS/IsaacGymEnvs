@@ -821,7 +821,7 @@ def compute_hand_reward(
     
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 
-    hook_handle_dist_thresh = torch.where(hook_handle_dist < distance_thresh, torch.zeros_like(hook_handle_dist), hook_handle_dist)
+    # hook_handle_dist_thresh = torch.where(hook_handle_dist < distance_thresh, torch.zeros_like(hook_handle_dist), hook_handle_dist)
 
     dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
     # dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale

@@ -174,11 +174,20 @@ class DoorHook(VecTask):
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         hand_asset_file = 'urdf/door_test/v2_hook_hand.urdf' # rz ry rx
         # hand_asset_file = 'urdf/door_test/hook_test.urdf'
-        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
-        door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        # # # door_v2 ----------------------------------------------------
+        # door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
+        # door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
+        # door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
+        # door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        # # # ------------------------------------------------------------
         
+        # # prev_door ----------------------------------------------------
+        door_1_asset_file = 'urdf/door_test/prev_door_1_wall.urdf'
+        door_2_asset_file = 'urdf/door_test/prev_door_2_wall.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/prev_door_1_inv_wall.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/prev_door_2_inv_wall.urdf'
+        # # ------------------------------------------------------------
+
         # load hand asset
         asset_options = gymapi.AssetOptions()
         vh_options = gymapi.VhacdParams()

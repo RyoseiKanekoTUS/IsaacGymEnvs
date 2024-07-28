@@ -42,8 +42,8 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.2
 
         # rand param for action scales
-        self.action_scale_base = 0.0249 # based on levorg_devel
-        self.action_scale_rand = 0.00 # noise
+        self.action_scale_base = 0.05 # based on levorg_devel
+        self.action_scale_rand = 0.001 # noise
 
         # rand param for start
         self.start_pos_noise_scale = 0.5 # 0.5 
@@ -516,6 +516,7 @@ class DoorHook(VecTask):
         p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
         
         d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
+        print(d_p_door_hand)
 
         d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
         
@@ -577,16 +578,10 @@ class DoorHook(VecTask):
 
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
         # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
+
+        # actions[:,1] = 1.0
+
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
-
-        # self.actions[:,5] = 0.5
-        # self.actions[0,3] = 0.05 # rotation
-        # self.actions[0,2] = self.action_scale_base + 0.001 # prismatic
-        # self.actions[0,3] = 0.05
-        # self.actions[0,4] = 0.05
-        # self.actions[1,1] = -0.01
-        # print('self.actions',self.actions*self.action_scale*self.dt)
-
 
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)

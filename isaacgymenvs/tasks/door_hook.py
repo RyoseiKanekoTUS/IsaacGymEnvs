@@ -516,7 +516,6 @@ class DoorHook(VecTask):
         p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
         
         d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
-        print(d_p_door_hand)
 
         d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
         

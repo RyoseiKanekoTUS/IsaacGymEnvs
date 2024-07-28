@@ -356,6 +356,7 @@ class DoorHook(VecTask):
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
         self.door_fake_link = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_fake_link")
         self.hook_finger_dsr_pose = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "dsr_pose")
+        print(self.hook_finger_dsr_pose)
 
         self.init_data()
 

@@ -38,8 +38,8 @@ class DoorHook(VecTask):
         self.n = 0
 
         # door size scale for sim2real
-        self.door_scale_param = 0.55
-        self.door_scale_rand_param = 0.1
+        self.door_scale_param = 1.0
+        self.door_scale_rand_param = 0.2
 
         # rand param for action scales
         self.action_scale_base = 0.03 # base # 0.025?

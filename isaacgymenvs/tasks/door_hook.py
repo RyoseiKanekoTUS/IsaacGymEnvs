@@ -42,16 +42,16 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.2
 
         # rand param for action scales
-        self.action_scale_base = 0.03 # base # 0.025?
-        self.action_scale_rand = 0.001 # noise
+        self.action_scale_base = 0.0249 # based on levorg_devel
+        self.action_scale_rand = 0.00 # noise
 
         # rand param for start
-        self.start_pos_noise_scale = 0.25 # 0.5 
-        self.start_rot_noise_scale =  0.2 # 0.25
+        self.start_pos_noise_scale = 0.5 # 0.5 
+        self.start_rot_noise_scale =  0.25 # 0.25
 
         # reward parameters
         self.open_reward_scale = 100.0
-        self.handle_reward_scale = 75.0
+        self.handle_reward_scale = 50.0
         self.dist_reward_scale = 5.0
         self.o_dist_reward_scale = 1.0 # TODO
 
@@ -99,7 +99,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.53, 3.141592653, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0, 3.141592653, 0, 0], device=self.device)
 
         ############################################################################
         # for test
@@ -258,7 +258,7 @@ class DoorHook(VecTask):
         hand_start_pose = gymapi.Transform()
 
         # origin of the urdf-robot
-        hand_start_pose.p = gymapi.Vec3(1.0, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.p = gymapi.Vec3(1.0, 0.00, 1.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0) # robot base rotation
 
 
@@ -827,7 +827,7 @@ def compute_hand_reward(
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0] * open_reward_scale
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
     open_reward = door_dof_pos[:,0] * open_reward_scale    # reward to open
-    open_reward = torch.where(door_dof_pos[:,0] < 0.01745, 0, open_reward) # 1 deg thresh
+    # open_reward = torch.where(door_dof_pos[:,0] < 0.01745, 0, open_reward) # 1 deg thresh
     
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 

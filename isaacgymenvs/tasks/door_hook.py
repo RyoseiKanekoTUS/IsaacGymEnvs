@@ -42,7 +42,8 @@ class DoorHook(VecTask):
         self.door_scale_rand_param = 0.1
 
         # rand param for action scales
-        self.action_scale_base = 0.05 # base # 0.025?
+        self.action_scale_base = 0.045 # base # 0.025?
+        self.action_scale_rot_ratio = 0.5
         self.action_scale_rand = 0.001 # noise
 
         # rand param for start
@@ -172,8 +173,7 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        hand_asset_file = 'urdf/door_test/v2_hook_hand.urdf' # rz ry rx
-        # hand_asset_file = 'urdf/door_test/hook_test.urdf'
+        hand_asset_file = 'urdf/door_test/v3_hook_hand.urdf' 
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
@@ -568,6 +568,9 @@ class DoorHook(VecTask):
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
         # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
+
+        # scaling rot action
+        self.actions[:,3:] = self.actions[:,3:] * self.action_scale_rot_ratio
 
         # self.actions[:,5] = 0.5
         # self.actions[0,3] = 0.05 # rotation

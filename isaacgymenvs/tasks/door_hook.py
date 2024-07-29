@@ -43,6 +43,7 @@ class DoorHook(VecTask):
 
         # rand param for action scales
         self.action_scale_base = 0.05 # base # 0.025?
+        self.action_scale_rot_ratio = 0.5
         self.action_scale_rand = 0.001 # noise
 
         # rand param for start
@@ -567,6 +568,9 @@ class DoorHook(VecTask):
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
         # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
+
+        # scaling rot action
+        self.actions[:,3:] = self.actions[:,3:] * self.action_scale_rot_ratio
 
         # self.actions[:,5] = 0.5
         # self.actions[0,3] = 0.05 # rotation

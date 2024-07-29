@@ -172,8 +172,7 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        hand_asset_file = 'urdf/door_test/v2_hook_hand.urdf' # rz ry rx
-        # hand_asset_file = 'urdf/door_test/hook_test.urdf'
+        hand_asset_file = 'urdf/door_test/v3_hook_hand.urdf' 
         door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
@@ -513,6 +512,8 @@ class DoorHook(VecTask):
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
         # print(self.hook_handle_dist)
         
+
+        print(quat_to_euler_tensor(hook_pose[:,3:]))
         self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
         # print(self.hook_handle_o_dist)
 

@@ -1,0 +1,99 @@
+<?xml version="1.0" ?>
+<robot name="hook_hand">
+    <link name = 'base_link'/>
+    <joint name="ee_x" type="prismatic">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="ee_x_link"/>
+        <axis xyz="1 0 0"/>
+        <limit effort="100.0" lower="-2.0" upper="2.0" velocity="0.1"/>
+    </joint>
+    <link name = 'ee_x_link'/>
+    <joint name="ee_y" type="prismatic">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="ee_x_link"/>
+        <child link="ee_y_link"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="100.0" lower="-2.0" upper="2.0" velocity="0.1"/>
+    </joint>
+    <link name = 'ee_y_link'/>
+    <joint name="ee_z" type="prismatic">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="ee_y_link"/>
+        <child link="ee_z_link"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="100.0" lower="-2.0" upper="2.0" velocity="0.1"/>
+    </joint>
+    <link name = 'ee_z_link'/>
+    <joint name="ee_rz" type="revolute">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="ee_z_link"/>
+        <child link="ee_rz_link"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="100.0" lower="-6.28" upper="6.28" velocity="0.1"/>
+    </joint>
+    <link name = 'ee_rz_link'/>
+    <joint name="ee_ry" type="revolute">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="ee_rz_link"/>
+        <child link="ee_ry_link"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="100.0" lower="-6.28" upper="6.28" velocity="0.1"/>
+    </joint>
+    <link name = 'ee_ry_link'/>
+    <joint name="ee_rx" type="revolute">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="ee_ry_link"/>
+        <child link="ee_rx_link"/>
+        <axis xyz="1 0 0"/>
+        <limit effort="100.0" lower="-6.28" upper="6.28" velocity="0.1"/>
+    </joint>
+    <link name="ee_rx_link"/>
+    <joint name="ee2hand_joint" type="fixed">
+        <origin rpy="0 1.57 0" xyz="0 0 0"/>
+        <parent link="ee_rx_link"/>
+        <child link="hand_base"/>
+    </joint>
+    <link name="hand_base">
+        <visual>
+            <geometry>
+                <cylinder length="0.065" radius="0.02"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder length="0.065" radius="0.031"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="hand2hook" type="fixed">
+        <origin rpy="-1.57 0 -1.57" xyz="-0.031 0.031 0.0425"/>
+        <parent link="hand_base"/>
+        <child link="hook"/>
+    </joint>
+    <link name="hook">
+        <visual>
+          <origin xyz="0.031 0.01 0.031" rpy="3.14159265 0 1.57"/>
+          <geometry>
+              <mesh filename="./meshes/ur3/visual/hook4door_sagano_san.dae" scale="0.001 0.001 0.001" />
+          </geometry>
+      </visual>        <collision>
+            <geometry>
+                <mesh filename="./meshes/ur3/visual/hook4door_v3.obj"/>
+            </geometry>
+            <origin rpy="1.57 0 0" xyz="0 0 0"/>
+        </collision>
+    </link>
+    <joint name='hook_finger' type='fixed'>
+        <origin rpy="0 1.57 3.14159265" xyz="0.08 0 0.17"/>
+        <parent link='hand_base'/>
+        <child link='hook_finger'/>
+    </joint >
+    <link name='hook_finger'>
+        <visual>
+            <geometry>
+                <sphere radius='0.007'/>
+            </geometry>
+        </visual>
+    </link>
+</robot>

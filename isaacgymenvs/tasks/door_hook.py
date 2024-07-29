@@ -512,8 +512,6 @@ class DoorHook(VecTask):
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
         # print(self.hook_handle_dist)
         
-
-        print(quat_to_euler_tensor(hook_pose[:,3:]))
         self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
         # print(self.hook_handle_o_dist)
 

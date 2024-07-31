@@ -38,7 +38,7 @@ class DoorHook(VecTask):
         self.n = 0
 
         # door size scale for sim2real
-        self.door_scale_param = 0.55
+        self.door_scale_param = 0.8
         self.door_scale_rand_param = 0.1
 
         # rand param for action scales
@@ -100,7 +100,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.53, 3.141592653, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.8, 3.141592653, 0, 0], device=self.device)
 
         ############################################################################
         # for test
@@ -233,7 +233,7 @@ class DoorHook(VecTask):
             hand_dof_props['upper'][i] *= 2.0
             hand_dof_props['damping'][i] = hand_dof_damping[i]
 
-            hand_dof_props['effort'][i] = 1000
+            hand_dof_props['effort'][i] = 750
             
         print(hand_dof_props)
 
@@ -318,6 +318,12 @@ class DoorHook(VecTask):
             # # -------------------------------------------------------------------------
                 
             self.gym.set_actor_dof_properties(env_ptr, door_actor, door_dof_props)
+
+            # setting for friction
+            hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, hand_actor)
+            hand_shape_props[3].friction = 0.1 # index of hook body
+            self.gym.set_actor_rigid_shape_properties(env_ptr, hand_actor, hand_shape_props)
+
             #door size randomization
             self.gym.set_actor_scale(env_ptr, door_actor, self.door_scale_param + (torch.rand(1) - 0.5) * self.door_scale_rand_param)
 
@@ -347,6 +353,7 @@ class DoorHook(VecTask):
         self.door_handle = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_handles")
         self.door_fake_link = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "door_fake_link")
         self.hook_finger_dsr_pose = self.gym.find_actor_rigid_body_handle(env_ptr, door_actor, "dsr_pose")
+
 
         self.init_data()
 

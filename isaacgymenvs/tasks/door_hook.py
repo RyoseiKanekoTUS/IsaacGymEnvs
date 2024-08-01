@@ -498,8 +498,8 @@ class DoorHook(VecTask):
         q_door_hand_t_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world[:,3:7]) # quat
         q_door_hand_prev_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world_prev[:,3:7]) # quat
 
-        q_door_hand_t = quat_to_euler_tensor(q_door_hand_t_quat)# euler STATE_1 3
-        q_door_hand_prev = quat_to_euler_tensor(q_door_hand_prev_quat)# euler STATE_2 3
+        q_door_hand_t = quat_to_euler_tensor(q_door_hand_t_quat)# euler STATE_1 3 # TODO to rotation matrix vec
+        q_door_hand_prev = quat_to_euler_tensor(q_door_hand_prev_quat)# euler STATE_2 3 # TODO to rotation matrix vec
 
         tR_world_fakedoor = quaternion_to_rotation_matrix(self.door_fake_link_quat).transpose(1,2) # transposed R_world_fakedoor
 
@@ -508,7 +508,7 @@ class DoorHook(VecTask):
         
         d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
 
-        d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3
+        d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3 # TODO to rotation matrix vec
         
         # compute pose diffs for reward
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff

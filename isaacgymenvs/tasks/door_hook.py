@@ -38,7 +38,7 @@ class DoorHook(VecTask):
         self.n = 0
 
         # door size scale for sim2real
-        self.door_scale_param = 0.55
+        self.door_scale_param = 0.8
         self.door_scale_rand_param = 0.1
 
         # rand param for action scales
@@ -52,7 +52,7 @@ class DoorHook(VecTask):
 
         # reward parameters
         self.open_reward_scale = 100.0
-        self.handle_reward_scale = 75.0
+        self.handle_reward_scale = 50.0
         self.dist_reward_scale = 5.0
         self.o_dist_reward_scale = 1.0 # TODO
 
@@ -78,7 +78,7 @@ class DoorHook(VecTask):
         self.camera_props.width = 92
         self.camera_props.height = 70
         self.depth_min = -3.0 
-        self.depth_max = -0.1 # -0.07
+        self.depth_max = 0.0 # -0.07
 
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work
 
@@ -294,21 +294,21 @@ class DoorHook(VecTask):
                                                                                                 # ↑self collision ON
             self.gym.set_actor_dof_properties(env_ptr, hand_actor, hand_dof_props)
 
-            # create door actors # all doors ------------------------------------------
-            if door_asset_count == 3:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-                door_asset_count = 0
-            else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-                door_asset_count += 1
-            # -------------------------------------------------------------------------
-                
-            # # only pull door ---------------------------------------------------------
-            # if i % 2 == 0:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # # create door actors # all doors ------------------------------------------
+            # if door_asset_count == 3:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+            #     door_asset_count = 0
             # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+            #     door_asset_count += 1
             # # -------------------------------------------------------------------------
+                
+            # only pull door ---------------------------------------------------------
+            if i % 2 == 0:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            else:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
+            # -------------------------------------------------------------------------
                 
             # # only rihgt hinge ---------------------------------------------------------
             # if i % 2 == 0:
@@ -820,7 +820,7 @@ def compute_hand_reward(
     # open_reward = door_dof_pos[:,0] * door_dof_pos[:,0] * open_reward_scale
     # open_reward = (door_dof_pos[:,0] - door_dof_pos_prev[:,0]) * open_reward_scale
     open_reward = door_dof_pos[:,0] * open_reward_scale    # reward to open
-    open_reward = torch.where(door_dof_pos[:,0] < 0.01745, 0, open_reward) # 1 deg thresh
+    # open_reward = torch.where(door_dof_pos[:,0] < 0.01745, 0, open_reward) # 1 deg thresh
     
     handle_reward = door_dof_pos[:,1] * handle_reward_scale
 

@@ -498,8 +498,17 @@ class DoorHook(VecTask):
         q_door_hand_t_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world[:,3:7]) # quat
         q_door_hand_prev_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world_prev[:,3:7]) # quat
 
-        q_door_hand_t = quat_to_euler_tensor(q_door_hand_t_quat)# euler STATE_1 3 # TODO to rotation matrix vec
-        q_door_hand_prev = quat_to_euler_tensor(q_door_hand_prev_quat)# euler STATE_2 3 # TODO to rotation matrix vec
+        q_door_hand_t = quaternion_to_rotation_matrix(q_door_hand_t_quat)# euler STATE_1 3 3*3
+        print(q_door_hand_t.shape)
+        q_door_hand_prev = quaternion_to_rotation_matrix(q_door_hand_prev_quat)# euler STATE_2 3*3
+        print(q_door_hand_prev.shape)
+
+
+        ################################## fake
+        FAKE_q_door_hand_t = torch.zeros(self.num_envs, 3, device=self.device)
+        FAKE_q_door_hand_prev = torch.zeros(self.num_envs,3, device=self.device)
+        FAKE_d_q_door_hand = FAKE_q_door_hand_t - FAKE_q_door_hand_prev 
+        #######################################
 
         tR_world_fakedoor = quaternion_to_rotation_matrix(self.door_fake_link_quat).transpose(1,2) # transposed R_world_fakedoor
 
@@ -520,7 +529,7 @@ class DoorHook(VecTask):
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
-        self.obs_buf = torch.cat((q_door_hand_t, q_door_hand_prev, d_p_door_hand, d_q_door_hand, self.pp_d_imgs), dim = -1) 
+        self.obs_buf = torch.cat((FAKE_q_door_hand_t, FAKE_q_door_hand_prev, FAKE_d_q_door_hand, d_p_door_hand,  self.pp_d_imgs), dim = -1) 
 
         return self.obs_buf    
     

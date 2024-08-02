@@ -85,7 +85,7 @@ class DoorHook(VecTask):
 
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 3 + 3 + 3 + 3 + self.img_crop_height*self.img_crop_width
+        self.cfg["env"]["numObservations"] = 9 + 9 + 9 + 3 + self.img_crop_height*self.img_crop_width
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -357,6 +357,9 @@ class DoorHook(VecTask):
         self.jacobian = gymtorch.wrap_tensor(jacobian_tensor) # shape : (num_envs, 9, 6, 6)
         self.j_hand_world = self.jacobian[:, self.hand_handle-1, :, :]
 
+        # used for rotation matrix
+        self.batch_eye = torch.stack([torch.eye(3,3) for i in range(self.num_envs)]).to(self.device)
+
         self.env_episodes = torch.zeros(self.num_envs, device=self.device, dtype=torch.int16)
 
                 
@@ -499,10 +502,8 @@ class DoorHook(VecTask):
         q_door_hand_prev_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world_prev[:,3:7]) # quat
 
         q_door_hand_t = quaternion_to_rotation_matrix(q_door_hand_t_quat)# euler STATE_1 3 3*3
-        print(q_door_hand_t.shape)
-        q_door_hand_prev = quaternion_to_rotation_matrix(q_door_hand_prev_quat)# euler STATE_2 3*3
-        print(q_door_hand_prev.shape)
 
+        q_door_hand_prev = quaternion_to_rotation_matrix(q_door_hand_prev_quat)# euler STATE_2 3*3
 
         ################################## fake
         FAKE_q_door_hand_t = torch.zeros(self.num_envs, 3, device=self.device)
@@ -517,8 +518,8 @@ class DoorHook(VecTask):
         
         d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
 
-        d_q_door_hand = q_door_hand_t - q_door_hand_prev # d_euler STATE_3_2 3 # TODO to rotation matrix vec
-        
+        d_q_door_hand = torch.bmm(q_door_hand_t, q_door_hand_prev.clone().transpose(1,2)) - self.batch_eye # d_euler STATE_3_2 3*3
+
         # compute pose diffs for reward
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
         # print(self.hook_handle_dist)
@@ -529,9 +530,12 @@ class DoorHook(VecTask):
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
-        self.obs_buf = torch.cat((FAKE_q_door_hand_t, FAKE_q_door_hand_prev, FAKE_d_q_door_hand, d_p_door_hand,  self.pp_d_imgs), dim = -1) 
+        self.obs_buf = torch.cat((q_door_hand_t.view(-1, 9), q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9), d_p_door_hand,  self.pp_d_imgs), dim = -1) 
 
-        return self.obs_buf    
+        ################################3
+        # self.obs_buf = torch.cat((torch.full_like(q_door_hand_t.view(-1, 9), 0.2), torch.full_like(q_door_hand_prev.view(-1, 9), 0.4), torch.full_like(d_q_door_hand.view(-1, 9), 0.5), d_p_door_hand, torch.full_like(self.pp_d_imgs, 0.9)), dim = -1)
+        ################################
+        return self.obs_buf
     
         
     def reset_idx(self, env_ids):

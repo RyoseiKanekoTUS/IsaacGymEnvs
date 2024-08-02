@@ -77,7 +77,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 nn.ReLU(),
                                 nn.Flatten(), # 3072
                                 nn.Sigmoid(),
-                                nn.BatchNorm1d(3072)
+                                nn.LayerNorm(3072)
                                 )
         
         
@@ -243,8 +243,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/non_vel/24-03-19_13-04-08-617586_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

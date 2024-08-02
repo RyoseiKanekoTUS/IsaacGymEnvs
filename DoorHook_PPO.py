@@ -75,13 +75,15 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 nn.MaxPool2d(2, stride=2, padding=1), # 16, 10, 14
                                 nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
                                 nn.ReLU(),
-                                nn.Flatten() # 3072
+                                nn.Flatten(), # 3072
+                                nn.Sigmoid(),
+                                nn.BatchNorm1d(3072)
                                 )
         
         
-        self.mlp = nn.Sequential(nn.Linear((12+3072), 1024),
+        self.mlp = nn.Sequential(nn.Linear((30+3072), 1256),
                     nn.ELU(),
-                    nn.Linear(1024, 512),
+                    nn.Linear(1256, 512),
                     nn.ELU(),
                     nn.Linear(512, 256),
                     nn.ELU(),
@@ -95,6 +97,10 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
         self.value_layer = nn.Linear(64, 1)
 
+        self.rot_norm_layer = nn.LayerNorm(27)
+
+        self.pos_norm_layer = nn.LayerNorm(3)
+
 
     def act(self, inputs, role):
         if role == 'policy':
@@ -105,17 +111,15 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
     def compute(self, inputs, role):
         
         states = inputs['states']
-        # print('$ states shape $$$$$$$$$$$$$$$$$$$$$$$$$$$$$',states.shape)
-        hand_states = states[:, :12]
-        # print('hand_states from inputs', hand_states)
+        # print('states', states[:,:27])
+        hand_rot_states = self.rot_norm_layer(states[:, :27])
+        # print('hand_rot_states', hand_rot_states)
+        hand_pos_states = self.pos_norm_layer(states[:,27:30])
+        # print('hand_pos_states', hand_pos_states)
+        pp_d_imgs = states[:, 30:].view(-1, 1, 48, 64)
+        batch_norm_d_feture = self.d_feture_extractor(pp_d_imgs)
 
-        pp_d_imgs = states[:, 12:].view(-1, 1, 48, 64)
-        # print('from inputs', pp_d_imgs)
-        # start = time.time()
-        d_feture = self.d_feture_extractor(pp_d_imgs)
-        # print("$$$$$$$$$$$$$$$$$$$$$$$$$", d_feture.shape)
-
-        combined = torch.cat([hand_states, d_feture], dim=-1)
+        combined = torch.cat([hand_rot_states, hand_pos_states, batch_norm_d_feture], dim=-1)
         if role == 'policy':
             actions_from_mlp = self.mean_layer(self.mlp(combined))
             # print(time.time() - start)

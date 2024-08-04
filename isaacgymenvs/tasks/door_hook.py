@@ -525,13 +525,17 @@ class DoorHook(VecTask):
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff        
         self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
 
-        # compute normalized rotation state vector # TODO
+        # compute normalized state vectors # TODO
+        hand_rot_state_vector = torch.cat((q_door_hand_t.view(-1, 9), q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9)), dim=-1)
+        norm_hand_rot_state_vector = hand_rot_state_vector / (torch.norm(hand_rot_state_vector, dim=1, keepdim=True) + 1e-8)
+
+        norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
 
         # compute door_dof states
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
-        self.obs_buf = torch.cat((q_door_hand_t.view(-1, 9), q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9), d_p_door_hand,  self.pp_d_imgs), dim = -1) 
+        self.obs_buf = torch.cat((norm_hand_rot_state_vector, norm_d_p_door_hand,  self.pp_d_imgs), dim = -1)
 
         return self.obs_buf
     

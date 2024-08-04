@@ -512,12 +512,6 @@ class DoorHook(VecTask):
 
         q_door_hand_prev = quaternion_to_rotation_matrix(q_door_hand_prev_quat)# euler STATE_2 3*3
 
-        ################################## fake
-        FAKE_q_door_hand_t = torch.zeros(self.num_envs, 3, device=self.device)
-        FAKE_q_door_hand_prev = torch.zeros(self.num_envs,3, device=self.device)
-        FAKE_d_q_door_hand = FAKE_q_door_hand_t - FAKE_q_door_hand_prev 
-        #######################################
-
         tR_world_fakedoor = quaternion_to_rotation_matrix(self.door_fake_link_quat).transpose(1,2) # transposed R_world_fakedoor
 
         p_door_hand = torch.bmm(tR_world_fakedoor, (self.hand_pose_world[:,0:3]).unsqueeze(-1)).squeeze(-1)
@@ -528,20 +522,17 @@ class DoorHook(VecTask):
         d_q_door_hand = torch.bmm(q_door_hand_t, q_door_hand_prev.clone().transpose(1,2)) - self.batch_eye # d_euler STATE_3_2 3*3
 
         # compute pose diffs for reward
-        self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff
-        # print(self.hook_handle_dist)
-        
+        self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff        
         self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
-        # print(self.hook_handle_o_dist)
 
+        # compute normalized rotation state vector # TODO
+
+        # compute door_dof states
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         
         self.obs_buf = torch.cat((q_door_hand_t.view(-1, 9), q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9), d_p_door_hand,  self.pp_d_imgs), dim = -1) 
 
-        ################################3
-        # self.obs_buf = torch.cat((torch.full_like(q_door_hand_t.view(-1, 9), 0.2), torch.full_like(q_door_hand_prev.view(-1, 9), 0.4), torch.full_like(d_q_door_hand.view(-1, 9), 0.5), d_p_door_hand, torch.full_like(self.pp_d_imgs, 0.9)), dim = -1)
-        ################################
         return self.obs_buf
     
         

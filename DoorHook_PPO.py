@@ -77,7 +77,6 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 nn.ReLU(),
                                 nn.Flatten(), # 3072
                                 nn.Sigmoid(),
-                                nn.LayerNorm(3072)
                                 )
         
         
@@ -97,10 +96,6 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
 
         self.value_layer = nn.Linear(64, 1)
 
-        self.rot_norm_layer = nn.LayerNorm(27)
-
-        self.pos_norm_layer = nn.LayerNorm(3)
-
 
     def act(self, inputs, role):
         if role == 'policy':
@@ -112,14 +107,14 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         
         states = inputs['states']
         # print('states', states[:,:27])
-        hand_rot_states = self.rot_norm_layer(states[:, :27])
-        # print('hand_rot_states', hand_rot_states)
-        hand_pos_states = self.pos_norm_layer(states[:,27:30])
+        norm_hand_rot_states = states[:, :27]
+        # print('norm_hand_rot_states', norm_hand_rot_states)
+        norm_hand_pos_states = states[:,27:30]
         # print('hand_pos_states', hand_pos_states)
         pp_d_imgs = states[:, 30:].view(-1, 1, 48, 64)
-        batch_norm_d_feture = self.d_feture_extractor(pp_d_imgs)
+        norm_d_feture = self.d_feture_extractor(pp_d_imgs)
 
-        combined = torch.cat([hand_rot_states, hand_pos_states, batch_norm_d_feture], dim=-1)
+        combined = torch.cat([norm_hand_rot_states, norm_hand_pos_states, norm_d_feture], dim=-1)
         if role == 'policy':
             actions_from_mlp = self.mean_layer(self.mlp(combined))
             # print(time.time() - start)

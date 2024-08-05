@@ -107,7 +107,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         
         # get state from inputs
         states = inputs['states']
-        # get hand rot,pos states 0:27 <- norm_hand_rot_state_vector, 27:30 <-norm_d_p_door_hand
+        # get hand rot,pos states 0:27 <- hand_rot_state_vector, 27:30 <-norm_d_p_door_hand
         norm_hand_states = states[:, :30]
         # get normalized d_img fetures 
         pp_d_imgs = states[:, 30:].view(-1, 1, 48, 64) # input to CNN

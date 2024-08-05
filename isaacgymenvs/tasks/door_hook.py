@@ -526,8 +526,8 @@ class DoorHook(VecTask):
         self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
 
         # compute normalized state vectors # TODO
-        norm_q_door_hand_t = q_door_hand_t / torch.sqrt(3)
-        norm_q_door_hand_prev = q_door_hand_prev / torch.sqrt(3)
+        norm_q_door_hand_t = q_door_hand_t / torch.sqrt(torch.tensor(3))
+        norm_q_door_hand_prev = q_door_hand_prev / torch.sqrt(torch.tensor(3))
         hand_rot_state_vector = torch.cat((norm_q_door_hand_t.view(-1, 9), norm_q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9)), dim=-1)
         norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
 

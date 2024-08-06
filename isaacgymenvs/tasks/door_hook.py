@@ -56,7 +56,7 @@ class DoorHook(VecTask):
         self.dist_reward_scale = 5.0
         self.o_dist_reward_scale = 1.0 # TODO
 
-        self.action_penalty_scale = 0.05 # 0.01
+        self.action_penalty_scale = 0.01 # 0.01
 
         self.distance_thresh = 0.10
         self.hook_handle_reset_dist = 2.0
@@ -847,10 +847,11 @@ def compute_hand_reward(
 
     # hook_handle_dist_thresh = torch.where(hook_handle_dist < distance_thresh, torch.zeros_like(hook_handle_dist), hook_handle_dist)
 
-    dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
+    # dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
     # dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
+    dist_reward = torch.exp(-20*hook_handle_dist) -1 - hook_handle_dist # add exp
 
-    o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale
+    o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale 
 
     # dist_reward_no_thresh = -1 * (hook_handle_dist + torch.log(hook_handle_dist + 0.005)) * dist_reward_scale
     # dist_reward_no_thresh = -1 * hook_handle_dist * dist_reward_scale

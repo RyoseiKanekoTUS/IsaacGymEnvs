@@ -849,7 +849,7 @@ def compute_hand_reward(
 
     # dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
     # dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
-    dist_reward = torch.exp(-20*hook_handle_dist) -1 - hook_handle_dist # add exp
+    dist_reward = (torch.exp(-20*hook_handle_dist) -1 - hook_handle_dist) * dist_reward_scale # add exp
 
     o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale 
 

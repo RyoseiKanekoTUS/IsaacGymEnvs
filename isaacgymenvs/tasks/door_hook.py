@@ -124,7 +124,7 @@ class DoorHook(VecTask):
         self.door_dof_pos = self.door_dof_state[..., 0]
         self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
 
-        self.hook_handle_o_dist = torch.zeros(self.num_envs, 1, device=self.device)
+        self.R_diff_norm = torch.zeros(4, device=self.device)
 
         self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
 
@@ -378,7 +378,7 @@ class DoorHook(VecTask):
     def compute_reward(self, actions): #if you edit, go to jitscripts
 
         self.rew_buf[:], self.reset_buf[:] = compute_hand_reward(
-            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.hook_handle_reset_dist, self.hook_handle_dist, self.distance_thresh, self.hook_handle_o_dist,  
+            self.reset_buf, self.progress_buf, self.actions, self.door_dof_pos, self.hook_handle_reset_dist, self.hook_handle_dist, self.distance_thresh, self.R_diff_norm,  
             self.num_envs, 
             self.open_reward_scale, self.handle_reward_scale, self.dist_reward_scale, self.o_dist_reward_scale, self.action_penalty_scale, self.max_episode_length)
         
@@ -527,7 +527,6 @@ class DoorHook(VecTask):
 
         # compute pose diffs for reward
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff        
-        self.hook_handle_o_dist = torch.norm(quat_to_euler_tensor(hook_dsr_pose[:,3:]) - quat_to_euler_tensor(hook_pose[:,3:]), dim = 1) # rot diff
 
         # compute normalized state vectors # TODO
         norm_q_door_hand_t = q_door_hand_t / torch.sqrt(torch.tensor(3))
@@ -535,9 +534,14 @@ class DoorHook(VecTask):
         hand_rot_state_vector = torch.cat((norm_q_door_hand_t.view(-1, 9), norm_q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9)), dim=-1)
         norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
 
-        # compute door_dof states
+        # compute values for reward : door_dof states, hand_rot
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
+
+        R_hook_t = quaternion_to_rotation_matrix(hook_pose[:,3:7])
+        R_dsr = quaternion_to_rotation_matrix(hook_dsr_pose[:,3:7])
+        R_diff = torch.bmm(R_hook_t.clone().transpose(1,2), R_dsr) - self.batch_eye
+        self.R_diff_norm = torch.linalg.matrix_norm(R_diff)
         
         self.obs_buf = torch.cat((hand_rot_state_vector, norm_d_p_door_hand,  self.pp_d_imgs), dim = -1)
 
@@ -831,7 +835,7 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
 
 @torch.jit.script
 def compute_hand_reward(
-    reset_buf, progress_buf, actions, door_dof_pos, hook_handle_reset_dist, hook_handle_dist, distance_thresh, hook_handle_o_dist, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
+    reset_buf, progress_buf, actions, door_dof_pos, hook_handle_reset_dist, hook_handle_dist, distance_thresh, R_diff_norm, num_envs, open_reward_scale, handle_reward_scale, dist_reward_scale, o_dist_reward_scale,
     action_penalty_scale, max_episode_length
 ):
     # type: (Tensor, Tensor, Tensor, Tensor, float, Tensor, float, Tensor, int, float, float, float, float, float, float) -> Tuple[Tensor, Tensor]
@@ -852,12 +856,12 @@ def compute_hand_reward(
     # dist_reward = (torch.exp(-20*hook_handle_dist) -1 - hook_handle_dist) * dist_reward_scale # add exp
     dist_reward = (1/((1 + hook_handle_dist**2)**2) * (1+torch.where(hook_handle_dist <= distance_thresh, 1, 0))) * dist_reward_scale # RLAfford
 
-    o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale 
+    o_dist_reward = -1 * R_diff_norm * o_dist_reward_scale 
 
     # dist_reward_no_thresh = -1 * (hook_handle_dist + torch.log(hook_handle_dist + 0.005)) * dist_reward_scale
     # dist_reward_no_thresh = -1 * hook_handle_dist * dist_reward_scale
     # print(hook_handle_dist.shape)
-    # print('hook_handle_o_dist.shape', hook_handle_o_dist.shape)
+    # print('R_diff_norm.shape', R_diff_norm.shape)
     # print('----------------open_reward max:',torch.max(open_reward))
     # print('--------------handle_reward max:', torch.max(handle_reward))
     # print('----------------dist_min:', torch.min(hook_handle_dist))

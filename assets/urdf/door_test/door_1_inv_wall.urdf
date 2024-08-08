@@ -148,6 +148,7 @@
     <joint name = 'handle2latch' type = 'fixed'>
         <parent link = 'door_handles'/>
         <child link = 'door_latch'/>
+        <origin xyz = '-0.014 0.2 0.9' rpy = '0 0 0'/>
     </joint>
 
     <link name='door_latch'>
@@ -155,7 +156,6 @@
             <geometry>
                 <box size='0.001 0.5 0.01'/>
             </geometry>
-            <origin xyz = '-0.014 0.2 0.9' rpy = '0 0 0'/>
         </collision>
     </link>
     

@@ -7,7 +7,7 @@
         <origin xyz = '0.5 0 0.0' rpy = '0 0 3.14159'/>
         <child link = 'door_fake_link'/>
     </joint>
-
+    
     <link name = 'door_fake_link'/>
 
     <joint name = 'base_joint' type = 'fixed'>
@@ -111,39 +111,40 @@
     <link name = 'door_handles'>
         <visual>
             <geometry>
-                <mesh filename = './meshes/shirokuma_scaled.stl'/> 
+                <mesh filename = './meshes/door_handle.dae'/>
             </geometry>
-            <origin xyz = '-0.0225 0 0' rpy = '0 0 3.14'/>
+            <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>
             <color rgba = '0.55 0.5 0.5 1.0'/>
         </visual>
         <visual>
             <geometry>
-                <mesh filename = './meshes/shirokuma_scaled.stl'/>
+                <mesh filename = './meshes/door_handle.dae'/>
             </geometry>
-            <origin xyz = '0.055 0 0' rpy = '3.14 0 0'/>
+            <origin xyz = '0.04 0 0' rpy = '0 0 -1.57'/>
              <color rgba = '0.5 0.5 0.5 1.0'/>
         </visual>
-        <collision>
+        <collision name="door_handles_collision">
             <geometry>
-                <mesh filename='./meshes/shirokuma_scaled_collision.stl'/>
+                <mesh filename="./meshes/door_handle_collision.dae"/>
             </geometry>
-            <origin xyz = '-0.0225 0 0' rpy = '0 0 3.14'/>
+            <origin xyz = '0 0 0' rpy = '0 3.141592 1.57'/>
         </collision>
-        <collision>
+        <collision name="door_handles_collision">
             <geometry>
-                <mesh filename="./meshes/shirokuma_scaled_collision.stl"/>
+                <mesh filename="./meshes/door_handle_collision.dae"/>
             </geometry>
-            <origin xyz = '0.055 0 0' rpy = '3.14 0 0'/>
+            <origin xyz = '0.045 0 0' rpy = '0 0 -1.57'/>
         </collision>
         <inertial>
             <origin xyz="0.0 0.0 0.0" rpy="3.14159 0 1.57"/>
             <mass value="1.0"/>
+            <!-- <inertia ixx="14.2053" ixy="0.0004" ixz="0.0000" iyy="17.1997" iyz="0.0000" izz="3.0298"/> -->
         </inertial>
     </link>
+    
     <joint name = 'handle2latch' type = 'fixed'>
         <parent link = 'door_handles'/>
         <child link = 'door_latch'/>
-        <origin xyz = '-0.018 0.2 -0.9' rpy = '0 0 0'/> 
     </joint>
 
     <link name='door_latch'>
@@ -151,6 +152,7 @@
             <geometry>
                 <box size='0.001 0.5 0.01'/>
             </geometry>
+            <origin xyz = '-0.0178 0.2 -0.9' rpy = '0 0 0'/>
         </collision>
     </link>
 

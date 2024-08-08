@@ -175,10 +175,10 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         hand_asset_file = 'urdf/door_test/v3_hook_hand.urdf' 
-        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
-        door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
-        door_1_inv_asset_file = 'urdf/door_test/door_1_inv_wall.urdf'
-        door_2_inv_asset_file = 'urdf/door_test/door_2_inv_wall.urdf'
+        door_1_asset_file = 'urdf/door_test/prev_door_1_wall.urdf'
+        door_2_asset_file = 'urdf/door_test/prev_door_2_wall.urdf'
+        door_1_inv_asset_file = 'urdf/door_test/door_1_wall.urdf'
+        door_2_inv_asset_file = 'urdf/door_test/door_2_wall.urdf'
         
         # load hand asset
         asset_options = gymapi.AssetOptions()
@@ -295,21 +295,21 @@ class DoorHook(VecTask):
                                                                                                 # ↑self collision ON
             self.gym.set_actor_dof_properties(env_ptr, hand_actor, hand_dof_props)
 
-            # # create door actors # all doors ------------------------------------------
-            # if door_asset_count == 3:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-            #     door_asset_count = 0
-            # else:
-            #     door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
-            #     door_asset_count += 1
-            # # -------------------------------------------------------------------------
-                
-            # only pull door ---------------------------------------------------------
-            if i % 2 == 0:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # create door actors # all doors ------------------------------------------
+            if door_asset_count == 3:
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count = 0
             else:
-                door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
+                door_actor = self.gym.create_actor(env_ptr, door_assets[door_asset_count], door_start_pose, "door", i, 0, 0)
+                door_asset_count += 1
             # -------------------------------------------------------------------------
+                
+            # # only pull door ---------------------------------------------------------
+            # if i % 2 == 0:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[0], door_start_pose, "door", i, 0, 0)
+            # else:
+            #     door_actor = self.gym.create_actor(env_ptr, door_assets[1], door_start_pose, "door", i, 0, 0)
+            # # -------------------------------------------------------------------------
                 
             # # only rihgt hinge ---------------------------------------------------------
             # if i % 2 == 0:

@@ -65,6 +65,7 @@
             </geometry>
             <origin xyz = '-0.04 0.532 2.67' rpy = '0 0 0'/>
         </collision>
+        
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <mass value="10000.0"/>

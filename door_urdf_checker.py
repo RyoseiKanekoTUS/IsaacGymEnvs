@@ -64,7 +64,7 @@ if viewer is None:
 
 # load ball asset
 asset_root = "./assets"
-asset_file = "urdf/door_test/door_2_inv_wall.urdf"
+asset_file = "urdf/door_test/prev_door_2_wall.urdf"
 
 asset_options = gymapi.AssetOptions()
 asset_options.fix_base_link = True
@@ -117,7 +117,7 @@ for i in range(num_envs):
     print(door_handle_idx)
 
     handles.append(ahandle)
-    gym.set_rigid_body_color(env, ahandle, 0, gymapi.MESH_VISUAL_AND_COLLISION, color)
+    # gym.set_rigid_body_color(env, ahandle, 0, gymapi.MESH_VISUAL_AND_COLLISION, color)
 
 gym.viewer_camera_look_at(viewer, None, gymapi.Vec3(20, 20, 5), gymapi.Vec3(0, 0, 1))
 

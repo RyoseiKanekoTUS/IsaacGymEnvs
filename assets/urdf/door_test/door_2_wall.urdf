@@ -1,10 +1,4 @@
 <robot name = 'door_test' xmlns:xacro="http://ros.org/wiki/xacro">
-    <!-- <link name = 'world'/> -->
-    
-    <!-- <joint name = 'world2base' type = 'fixed'>
-        <parent link = 'world'/>
-        <child link = 'base_link'/>
-    </joint> -->
 
     <link name = 'base_link'/>
     <joint name = 'base_to_door_fake_link' type = 'fixed'>
@@ -12,6 +6,7 @@
         <origin xyz = '0.5 0 0.0' rpy = '0 0 3.14159'/>
         <child link = 'door_fake_link'/>
     </joint>
+
     <link name = 'door_fake_link'/>
 
     <joint name = 'base_joint' type = 'fixed'>
@@ -163,7 +158,6 @@
         <parent link = 'door_handles'/>
         <child link = 'dsr_pose'/>
         <origin xyz = '-0.03 -0.13 0.0' rpy = '3.14159265 0 3.14159265'/>
-
     </joint>
 
     <link name="dsr_pose"/>

@@ -14,48 +14,48 @@
         <child link = 'door_wall'/>
     </joint>
     <link name = 'door_wall'>
-        <visual>
+        <visual name = 'side_1_:hinge_side'>
             <geometry>
-                <box size='0.08 1.5 2.04'/>
+                <box size='0.08 2.0 3.0'/>
             </geometry>
-            <origin xyz = '0 -0.67 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 -0.92 1.5' rpy = '0 0 0'/>
         </visual>
-        <visual>
+        <visual name='side_2 wall'>
             <geometry>
-                <box size='0.08 1.5 2.04'/>
+                <box size='0.08 2.0 3.0'/>
             </geometry>
-            <origin xyz = '0 1.74 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 1.99 1.5' rpy = '0 0 0'/>
         </visual>
-        <visual>
+        <visual name = 'top'>
             <geometry>
-                <box size='0.08 3.91 0.3'/>
+                <box size='0.08 4.91 1.26'/>
             </geometry>
-            <origin xyz = '0 0.532 2.19' rpy = '0 0 0'/>
+            <origin xyz = '0 0.532 2.67' rpy = '0 0 0'/>
         </visual>
 
         <collision name="side_1_:hinge_side">
             <geometry>
-                <box size='0.08 1.5 2.04'/>
+                <box size='0.08 2.0 3.0'/>
             </geometry>
-            <origin xyz = '0 -0.67 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 -0.92 1.5' rpy = '0 0 0'/>
         </collision>
-        <collision name="side_2">
+        <collision name="side_2_frame">
             <geometry>
                 <box size = '0.05029 0.06858 2.10820'/>
             </geometry>
             <origin xyz="-0.02 1.02 1.05" rpy="0 0 0"/>
         </collision>
-        <collision>
+        <collision name = 'side_2_wall'>
             <geometry>
-                <box size='0.08 1.5 2.04'/>
+                <box size='0.08 2.0 3.0'/>
             </geometry>
-            <origin xyz = '0 1.8 1.02' rpy = '0 0 0'/>
+            <origin xyz = '0 2.02 1.5' rpy = '0 0 0'/>
         </collision>
         <collision name="top">
             <geometry>
-                <box size='0.08 3.91 0.3'/>
+                <box size='0.08 4.91 1.26'/>
             </geometry>
-            <origin xyz = '0 0.532 2.19' rpy = '0 0 0'/>
+            <origin xyz = '0 0.532 2.67' rpy = '0 0 0'/>
         </collision>
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>

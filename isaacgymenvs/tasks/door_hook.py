@@ -849,7 +849,8 @@ def compute_hand_reward(
 
     # dist_reward = -1 * hook_handle_dist * dist_reward_scale # no thresh
     # dist_reward = -1 * hook_handle_dist_thresh * dist_reward_scale
-    dist_reward = (torch.exp(-20*hook_handle_dist) -1 - hook_handle_dist) * dist_reward_scale # add exp
+    # dist_reward = (torch.exp(-20*hook_handle_dist) -1 - hook_handle_dist) * dist_reward_scale # add exp
+    dist_reward = (1/((1 + hook_handle_dist**2)**2) * (1+torch.where(hook_handle_dist <= distance_thresh, 1, 0))) * dist_reward_scale # RLAfford
 
     o_dist_reward = -1 * hook_handle_o_dist * o_dist_reward_scale 
 
@@ -871,7 +872,7 @@ def compute_hand_reward(
 
     print('-------------------door_hinge_max :', torch.max(door_dof_pos[:,0]), 'door_hinge_min :', torch.min(door_dof_pos[:,0]))
     print('-------------------door_handle_max :', torch.max(door_dof_pos[:,1]), 'door_handle_min :', torch.min(door_dof_pos[:,1]))
-    print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
+    # print('----------------------rewards_max :', torch.max(rewards), 'rewards_min :',torch.min(rewards))
 
     reset_buf = torch.where(door_dof_pos[:, 0] >= 1.56, torch.ones_like(reset_buf), reset_buf)
     reset_buf = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset_buf)

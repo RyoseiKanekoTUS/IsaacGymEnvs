@@ -64,7 +64,7 @@ if viewer is None:
 
 # load ball asset
 asset_root = "./assets"
-asset_file = "urdf/door_test/door_1_inv_wall.urdf"
+asset_file = "urdf/door_test/door_1_wall.urdf"
 
 asset_options = gymapi.AssetOptions()
 asset_options.fix_base_link = True
@@ -92,7 +92,7 @@ pose.p.z = 0.0
 # set up the env grid
 num_envs = 10
 num_per_row = int(np.sqrt(num_envs))
-env_spacing = 2.0
+env_spacing = 3.0
 env_lower = gymapi.Vec3(-env_spacing, -env_spacing, 0.0)
 env_upper = gymapi.Vec3(env_spacing, env_spacing, env_spacing)
 
@@ -138,7 +138,7 @@ while not gym.query_viewer_has_closed(viewer):
         # indexes = gymapi.DOMAIN_ACTOR
         print('indexex',indexes)
         # forces[:, 0, 2] = 300
-        # torques[:,1] = 500 # turning handle if on, doors open, elif off, doors do not open
+        torques[:,1] = 500 # turning handle if on, doors open, elif off, doors do not open
         torques[:,0] = 50
         print(torques)
         # gym.apply_rigid_body_force_tensors(sim, gymtorch.unwrap_tensor(forces), gymtorch.unwrap_tensor(torques), gymapi.ENV_SPACE)

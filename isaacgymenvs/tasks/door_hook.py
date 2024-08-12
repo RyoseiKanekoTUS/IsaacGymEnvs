@@ -43,7 +43,7 @@ class DoorHook(VecTask):
 
         # rand param for action scales
         self.action_scale_base = 0.045 # base # 0.025?
-        self.action_scale_rot_ratio = 0.5
+        self.action_scale_rot_ratio = 1.0
         self.action_scale_rand = 0.001 # noise
 
         # rand param for start
@@ -62,7 +62,7 @@ class DoorHook(VecTask):
         self.hook_handle_reset_dist = 2.0
 
         # door handle torque
-        self.handle_torque = 7.5
+        self.handle_torque = 10
 
         self.debug_viz = False
 
@@ -79,7 +79,7 @@ class DoorHook(VecTask):
         self.camera_props.width = 92
         self.camera_props.height = 70
         self.depth_min = -3.0 
-        self.depth_max = 0.0 # -0.07
+        self.depth_max = -0.07 # -0.07
 
         self.camera_props.enable_tensors = True # If False, d_img process doesnt work
 
@@ -234,7 +234,7 @@ class DoorHook(VecTask):
             hand_dof_props['upper'][i] *= 2.0
             hand_dof_props['damping'][i] = hand_dof_damping[i]
 
-            hand_dof_props['effort'][i] = 750
+            hand_dof_props['effort'][i] = 500
             
         print(hand_dof_props)
 

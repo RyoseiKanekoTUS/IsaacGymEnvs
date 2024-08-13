@@ -76,7 +76,7 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
                                 nn.Conv2d(16, 32, kernel_size=5, padding=1), # 32, 8, 12
                                 nn.ReLU(),
                                 nn.Flatten(), # 3072
-                                nn.Sigmoid(),
+                                # nn.Sigmoid(),
                                 )
         
         
@@ -109,13 +109,13 @@ class PPOnet(GaussianMixin, DeterministicMixin, Model):
         states = inputs['states']
         # get hand rot,pos states 0:27 <- hand_rot_state_vector, 27:30 <-norm_d_p_door_hand
         norm_hand_states = states[:, :30]
-        # get normalized d_img fetures 
+        # get d_img fetures 
         pp_d_imgs = states[:, 30:].view(-1, 1, 48, 64) # input to CNN
         d_fetures = self.d_feture_extractor(pp_d_imgs) # output from CNN
-        norm_d_fetures = d_fetures / (torch.norm(d_fetures, dim=1, keepdim=True) + 1e-8)
+        # norm_d_fetures = d_fetures / (torch.norm(d_fetures, dim=1, keepdim=True) + 1e-8)
 
         # re-concat state vectors : input to mlp
-        states_vectors = torch.cat([norm_hand_states, norm_d_fetures], dim=-1)
+        states_vectors = torch.cat([norm_hand_states, d_fetures], dim=-1)
 
         if role == 'policy':
             actions_from_mlp = self.mean_layer(self.mlp(states_vectors))

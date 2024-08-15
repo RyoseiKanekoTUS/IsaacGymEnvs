@@ -62,7 +62,7 @@ class DoorHook(VecTask):
         self.hook_handle_reset_dist = 2.0
 
         # door handle torque
-        self.handle_torque = 10
+        self.handle_torque = 20
 
         self.debug_viz = False
 

@@ -122,9 +122,10 @@ class DoorHook(VecTask):
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         # print(self.door_dof_state.shape)
         self.door_dof_pos = self.door_dof_state[..., 0]
-        self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)     
+        self.door_dof_pos_prev = torch.zeros_like(self.door_dof_pos, device=self.device)
 
-        self.R_diff_norm = torch.zeros(4, device=self.device)
+        self.hook_handle_dist = torch.zeros(self.num_envs, 1, device=self.device)
+        self.R_diff_norm = torch.zeros(self.num_envs, 1, device=self.device)
 
         self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
 
@@ -255,7 +256,7 @@ class DoorHook(VecTask):
 
 
         door_start_pose = gymapi.Transform()
-        door_start_pose.p = gymapi.Vec3(0.0, 0.0, 0.0)
+        door_start_pose.p = gymapi.Vec3(-0.1, 0.0, 0.0)
         door_start_pose.r = gymapi.Quat(0, 0, 0, 1)
 
         # compute aggregate size
@@ -324,7 +325,9 @@ class DoorHook(VecTask):
             hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, hand_actor)
             door_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, door_actor)
             hand_shape_props[3].friction = 0.1 # index of hook body
+            hand_shape_props[3].torsion_friction = 0.1
             door_shape_props[13].friction = 0.1 # index of door handle
+            door_shape_props[13].torsion_friction = 0.1
 
             self.gym.set_actor_rigid_shape_properties(env_ptr, hand_actor, hand_shape_props)
             self.gym.set_actor_rigid_shape_properties(env_ptr, door_actor, door_shape_props)
@@ -508,42 +511,36 @@ class DoorHook(VecTask):
         # get door_fake_link_quat for state
         self.door_fake_link_quat = self.rigid_body_states[:,self.door_fake_link, 3:7]
 
-        # caluculate q_door_hand_t
-        q_door_hand_t_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world[:,3:7]) # quat
-        q_door_hand_prev_quat = quaternion_multiply(quat_conj(self.door_fake_link_quat), self.hand_pose_world_prev[:,3:7]) # quat
+        # hand poses
+        # at t
+        q_door_hand_t_quat = self.hand_pose_world[:,3:7]
+        q_door_hand_t_rmat = quaternion_to_rotation_matrix(q_door_hand_t_quat)# rot_mat STATE_1 3 3*3
+        # at t-1
+        q_door_hand_prev_quat = self.hand_pose_world_prev[:,3:7]
+        q_door_hand_prev_rmat = quaternion_to_rotation_matrix(q_door_hand_prev_quat)# rot_mat STATE_2 3*3
+        d_q_door_hand_mat = torch.bmm(q_door_hand_t_rmat.clone(), q_door_hand_prev_rmat.clone().transpose(1,2)) - self.batch_eye # d_rot STATE_3_2 3*3
+        # position
+        p_door_hand_t = self.hand_pose_world[:,:3]
+        p_door_hand_prev = self.hand_pose_world[:,:3]
+        d_p_door_hand = p_door_hand_t - p_door_hand_prev # pos diff STATE_3_1 3
+        # norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
 
-        q_door_hand_t = quaternion_to_rotation_matrix(q_door_hand_t_quat)# euler STATE_1 3 3*3
+        # # normalized rot state vectors
+        # norm_q_door_hand_t = q_door_hand_t / torch.sqrt(torch.tensor(3))
+        # norm_q_door_hand_prev = q_door_hand_prev / torch.sqrt(torch.tensor(3))
+        hand_rot_state_vector = torch.cat((q_door_hand_t_rmat.view(-1, 9), q_door_hand_prev_rmat.view(-1, 9), d_q_door_hand_mat.view(-1, 9)), dim=-1)
 
-        q_door_hand_prev = quaternion_to_rotation_matrix(q_door_hand_prev_quat)# euler STATE_2 3*3
-
-        tR_world_fakedoor = quaternion_to_rotation_matrix(self.door_fake_link_quat).transpose(1,2) # transposed R_world_fakedoor
-
-        p_door_hand = torch.bmm(tR_world_fakedoor, (self.hand_pose_world[:,0:3]).unsqueeze(-1)).squeeze(-1)
-        p_door_hand_prev = torch.bmm(tR_world_fakedoor, (self.hand_pose_world_prev[:,0:3]).unsqueeze(-1)).squeeze(-1)
-        
-        d_p_door_hand = p_door_hand - p_door_hand_prev # d_p_door_hand STATE_3_1 3
-
-        d_q_door_hand = torch.bmm(q_door_hand_t, q_door_hand_prev.clone().transpose(1,2)) - self.batch_eye # d_euler STATE_3_2 3*3
-
-        # compute pose diffs for reward
-        self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # pos diff        
-
-        # compute normalized state vectors # TODO
-        norm_q_door_hand_t = q_door_hand_t / torch.sqrt(torch.tensor(3))
-        norm_q_door_hand_prev = q_door_hand_prev / torch.sqrt(torch.tensor(3))
-        hand_rot_state_vector = torch.cat((norm_q_door_hand_t.view(-1, 9), norm_q_door_hand_prev.view(-1, 9), d_q_door_hand.view(-1, 9)), dim=-1)
-        norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
-
-        # compute values for reward : door_dof states, hand_rot
+        # values for reward : door_dof states, hook pose diffs
         self.door_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_dofs:] # (num_envs, 2, 2)
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
-
+        self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # hook handle distance
         R_hook_t = quaternion_to_rotation_matrix(hook_pose[:,3:7])
         R_dsr = quaternion_to_rotation_matrix(hook_dsr_pose[:,3:7])
         R_diff = torch.bmm(R_hook_t.clone().transpose(1,2), R_dsr) - self.batch_eye
         self.R_diff_norm = torch.linalg.matrix_norm(R_diff)
         
-        self.obs_buf = torch.cat((hand_rot_state_vector, norm_d_p_door_hand,  self.pp_d_imgs), dim = -1)
+        # compute state vector
+        self.obs_buf = torch.cat((hand_rot_state_vector, d_p_door_hand,  self.pp_d_imgs), dim = -1)
 
         return self.obs_buf
     
@@ -587,24 +584,16 @@ class DoorHook(VecTask):
         self.env_episodes[env_ids] += 1
 
         
-    def pre_physics_step(self, actions): # self.gym.set_dof_target_tensor()
+    def pre_physics_step(self, actions): # apply action here by self.gym.set_dof_target_tensor()
 
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
         # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
-        # actions[:,2] = -1.0
+        # actions[:,5] = 1.0
+        # actions[:,4] = 1.0
+        
         self.actions = self.action_scale_vec * actions.clone().to(self.device)
-
         # scaling rot action
         self.actions[:,3:] = self.actions[:,3:] * self.action_scale_rot_ratio
-
-        # self.actions[:,5] = 0.5
-        # self.actions[0,3] = 0.05 # rotation
-        # self.actions[0,2] = self.action_scale_base + 0.001 # prismatic
-        # self.actions[0,3] = 0.05
-        # self.actions[0,4] = 0.05
-        # self.actions[1,1] = -0.01
-        # print('self.actions',self.actions*self.action_scale*self.dt)
-
 
         self.gym.refresh_jacobian_tensors(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -617,8 +606,12 @@ class DoorHook(VecTask):
         p_world_t = self.hand_pose_world[:, 0:3]
         q_world_t = self.hand_pose_world[:, 3:7]
         # q_world_t_euler = self.quat_to_euler_tensor(q_world_t)
+        
+        p_world_goal = p_world_t + self.actions[:,0:3]
+        q_world_goal = quaternion_multiply(euler_to_quaternion_tensor(self.actions[:,3:]), q_world_t) # dq @ qt
+        #+ quat_to_euler_tensor(self.actions[:,3:]) # TODO
 
-        p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
+        # p_world_goal, q_world_goal = transform_hand_to_world_add_action(p_world_t, q_world_t, self.actions) 
             
         d_dof = ik(jacobian, p_world_t, q_world_t, p_world_goal, q_world_goal)
 
@@ -765,7 +758,7 @@ def quat_to_euler_tensor(quat_tensor):
 
     return euler_tensor
 
-def euler_to_quaternion(euler):
+def euler_to_quaternion_tensor(euler):
     """
     Convert Euler angles to quaternions.
     """
@@ -818,7 +811,7 @@ def transform_hand_to_world_add_action(p_world_t, q_world_t, actions):
     # Extract position and orientation change from action
     delta_pos_hand = actions[:, :3]
     delta_euler_hand = actions[:, 3:]
-    delta_quat_hand = euler_to_quaternion(delta_euler_hand)
+    delta_quat_hand = euler_to_quaternion_tensor(delta_euler_hand)
     
     # Compute new position in world coordinates
     p_world_goal = p_world_t + torch.bmm(R_world_t, delta_pos_hand.unsqueeze(-1)).squeeze(-1)

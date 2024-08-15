@@ -158,7 +158,7 @@
     <joint name = 'handle2dsr_pose' type = 'fixed'>
         <parent link = 'door_handles'/>
         <child link = 'dsr_pose'/>
-        <origin xyz = '-0.03 -0.13 0.0' rpy = '0 0 3.14159265'/>
+        <origin xyz = '-0.03 -0.11 0.0' rpy = '0 0 3.14159265'/>
     </joint>
 
     <link name="dsr_pose"/>

@@ -58,7 +58,7 @@ class DoorHook(VecTask):
 
         self.action_penalty_scale = 0.01 # 0.01
 
-        self.distance_thresh = 0.10
+        self.distance_thresh = 0.04
         self.hook_handle_reset_dist = 2.0
 
         # door handle torque

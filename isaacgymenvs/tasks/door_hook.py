@@ -44,7 +44,7 @@ class DoorHook(VecTask):
         # rand param for action scales
         self.action_scale_base = 0.045 # base # 0.025?
         self.action_scale_rot_ratio = 1.0
-        self.action_scale_rand = 0.001 # noise
+        self.action_scale_rand = 0.0005 # noise
 
         # rand param for start
         self.start_pos_noise_scale = 0.25 # 0.5 
@@ -53,7 +53,7 @@ class DoorHook(VecTask):
         # reward parameters
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 50.0
-        self.dist_reward_scale = 5.0
+        self.dist_reward_scale = 7.5
         self.o_dist_reward_scale = 1.0 # TODO
 
         self.action_penalty_scale = 0.01 # 0.01
@@ -62,7 +62,7 @@ class DoorHook(VecTask):
         self.hook_handle_reset_dist = 2.0
 
         # door handle torque
-        self.handle_torque = 20
+        self.handle_torque = 15
 
         self.debug_viz = False
 

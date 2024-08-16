@@ -521,7 +521,7 @@ class DoorHook(VecTask):
         d_q_door_hand_mat = torch.bmm(q_door_hand_t_rmat.clone(), q_door_hand_prev_rmat.clone().transpose(1,2)) - self.batch_eye # d_rot STATE_3_2 3*3
         # position
         p_door_hand_t = self.hand_pose_world[:,:3]
-        p_door_hand_prev = self.hand_pose_world[:,:3]
+        p_door_hand_prev = self.hand_pose_world_prev[:,:3]
         d_p_door_hand = p_door_hand_t - p_door_hand_prev # pos diff STATE_3_1 3
         # norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
 

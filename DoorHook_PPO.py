@@ -18,6 +18,7 @@ import datetime
 import csv
 import os
 import time
+import shutil
 
 
 class PPOnet(GaussianMixin, DeterministicMixin, Model):
@@ -186,6 +187,17 @@ class DoorHookTrainer(PPOnet):
         self.cfg_trainer = {"timesteps": 500000, "headless": False}
         self.trainer = SequentialTrainer(cfg=self.cfg_trainer, env=self.env, agents=self.agent)
 
+        door_hook_py_path = './isaacgymenvs/tasks/door_hook.py'
+        dest_dir = './skrl_runs/DoorHook/cfg'
+        if not os.path.exists(dest_dir):
+            os.makedirs(dest_dir)
+
+        cfg_file_name = f'door_hook_{self.env.begin_datetime}.py'
+        dest_file = os.path.join(dest_dir, cfg_file_name)
+
+        shutil.copy2(door_hook_py_path, dest_file)
+
+
         self.trainer.train()
     
     def eval(self, load_path=None):
@@ -239,8 +251,8 @@ if __name__ == '__main__':
     # path = 'skrl_runs/DoorHook/non_vel/24-03-19_13-04-08-617586_PPO/checkpoints/best_agent.pt'
     
     DoorHookTrainer = DoorHookTrainer()
-    DoorHookTrainer.eval(path)
-    # DoorHookTrainer.train(path)
+    # DoorHookTrainer.eval(path)
+    DoorHookTrainer.train(path)
 
 
 

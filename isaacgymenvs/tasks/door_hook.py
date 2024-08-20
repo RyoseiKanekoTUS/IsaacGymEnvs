@@ -126,6 +126,8 @@ class DoorHook(VecTask):
 
         self.hook_handle_dist = torch.zeros(self.num_envs, 1, device=self.device)
         self.R_diff_norm = torch.zeros(self.num_envs, 1, device=self.device)
+        self.hook_dsr_init_rot = torch.zeros(self.num_envs, 4, device=self.device)
+        self.hook_dsr_init_rmat = torch.zeros(self.num_envs, 3, 3, device=self.device)
 
         self.action_scale_vec = torch.zeros(self.num_envs, 1, device=self.device)
 
@@ -144,6 +146,8 @@ class DoorHook(VecTask):
         self.global_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).view(self.num_envs, -1)
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
         
+        self.hook_dsr_init_rmat = quaternion_to_rotation_matrix(self.rigid_body_states.clone().detach()[:, self.hook_finger_dsr_pose][:, 3:7])
+
         # for statics
         self.statistics = []
         self.knob_range = 0.01
@@ -535,7 +539,7 @@ class DoorHook(VecTask):
         self.door_dof_pos = self.door_dof_state[..., 0] # shape : (num_envs, 2)
         self.hook_handle_dist = torch.norm(hook_dsr_pose[:, 0:3] - hook_pose[:, 0:3], dim = 1) # hook handle distance
         R_hook_t = quaternion_to_rotation_matrix(hook_pose[:,3:7])
-        R_dsr = quaternion_to_rotation_matrix(hook_dsr_pose[:,3:7])
+        R_dsr = self.hook_dsr_init_rmat
         R_diff = torch.bmm(R_hook_t.clone().transpose(1,2), R_dsr) - self.batch_eye
         self.R_diff_norm = torch.linalg.matrix_norm(R_diff)
         

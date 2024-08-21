@@ -54,7 +54,7 @@ class DoorHook(VecTask):
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 50.0
         self.dist_reward_scale = 5.0
-        self.o_dist_reward_scale = 2.0 # TODO
+        self.o_dist_reward_scale = 1.0 # TODO
 
         self.action_penalty_scale = 0.01 # 0.01
 
@@ -62,7 +62,7 @@ class DoorHook(VecTask):
         self.hook_handle_reset_dist = 2.0
 
         # door handle torque
-        self.handle_torque = 15
+        self.handle_torque = 12.5
 
         self.debug_viz = False
 
@@ -179,9 +179,9 @@ class DoorHook(VecTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        hand_asset_file = 'urdf/door_test/v3_hook_hand.urdf' 
-        door_1_asset_file = 'urdf/door_test/prev_door_1_wall.urdf'
-        door_2_asset_file = 'urdf/door_test/prev_door_2_wall.urdf'
+        hand_asset_file = 'urdf/door_test/v4_hook_hand.urdf' 
+        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_inv_asset_file = 'urdf/door_test/door_2_wall.urdf'
         
@@ -527,7 +527,7 @@ class DoorHook(VecTask):
         p_door_hand_t = self.hand_pose_world[:,:3]
         p_door_hand_prev = self.hand_pose_world_prev[:,:3]
         d_p_door_hand = p_door_hand_t - p_door_hand_prev # pos diff STATE_3_1 3
-        # norm_d_p_door_hand = d_p_door_hand / (torch.norm(d_p_door_hand, dim=1, keepdim=True) + 1e-8)
+        # norm_d_p_door_hand = d_p_door_hand / torch.sqrt(3 * self.action_scale_vec**2)
 
         # # normalized rot state vectors
         # norm_q_door_hand_t = q_door_hand_t / torch.sqrt(torch.tensor(3))

@@ -54,9 +54,9 @@ class DoorHook(VecTask):
         self.open_reward_scale = 100.0
         self.handle_reward_scale = 50.0
         self.dist_reward_scale = 5.0
-        self.o_dist_reward_scale = 2.0 # TODO
+        self.o_dist_reward_scale = 1.0 # TODO
 
-        self.action_penalty_scale = 0.01 # 0.01
+        self.action_penalty_scale = 0.05 # 0.01 # TODO
 
         self.distance_thresh = 0.04
         self.hook_handle_reset_dist = 2.0
@@ -180,8 +180,8 @@ class DoorHook(VecTask):
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
         hand_asset_file = 'urdf/door_test/v3_hook_hand.urdf' 
-        door_1_asset_file = 'urdf/door_test/prev_door_1_wall.urdf'
-        door_2_asset_file = 'urdf/door_test/prev_door_2_wall.urdf'
+        door_1_asset_file = 'urdf/door_test/door_1_wall.urdf'
+        door_2_asset_file = 'urdf/door_test/door_2_wall.urdf'
         door_1_inv_asset_file = 'urdf/door_test/door_1_wall.urdf'
         door_2_inv_asset_file = 'urdf/door_test/door_2_wall.urdf'
         

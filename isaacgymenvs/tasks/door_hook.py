@@ -47,7 +47,7 @@ class DoorHook(VecTask):
         self.action_scale_rand = 0.0005 # noise
 
         # rand param for start
-        self.start_pos_noise_scale = 0.25 # 0.5 
+        self.start_pos_noise_scale = 0.4 # 0.5 
         self.start_rot_noise_scale =  0.2 # 0.25
 
         # reward parameters
@@ -101,7 +101,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.8, 3.141592653, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.87, 3.141592653, 0, 0], device=self.device)
 
         ############################################################################
         # for test
@@ -255,7 +255,7 @@ class DoorHook(VecTask):
         hand_start_pose = gymapi.Transform()
 
         # origin of the urdf-robot
-        hand_start_pose.p = gymapi.Vec3(1.0, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.p = gymapi.Vec3(1.25, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0) # robot base rotation
 
 

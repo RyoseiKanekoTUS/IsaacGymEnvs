@@ -328,15 +328,18 @@ class DoorHook(VecTask):
             # setting for friction
             hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, hand_actor)
             door_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, door_actor)
-            hand_shape_props[3].friction = 0.1 # index of hook body
-            hand_shape_props[3].torsion_friction = 0.1
-            door_shape_props[13].friction = 0.1 # index of door handle
-            door_shape_props[13].torsion_friction = 0.1
-
+            for j in range(num_hand_shapes - 1):
+                hand_shape_props[j].friction = 0.1 # index of hook body
+                hand_shape_props[j].torsion_friction = 0.1
+                hand_shape_props[j].rolling_friction = 0.1
+            for j in range(num_door_shapes - 1):
+                door_shape_props[j].friction = 0.1 # index of door handle
+                door_shape_props[j].torsion_friction = 0.1
+                door_shape_props[j].rolling_friction = 0.1
             self.gym.set_actor_rigid_shape_properties(env_ptr, hand_actor, hand_shape_props)
             self.gym.set_actor_rigid_shape_properties(env_ptr, door_actor, door_shape_props)
 
-            #door size randomization
+            # door size randomization
             self.gym.set_actor_scale(env_ptr, door_actor, self.door_scale_param + (torch.rand(1) - 0.5) * self.door_scale_rand_param)
 
             if self.aggregate_mode == 1:

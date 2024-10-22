@@ -3,7 +3,9 @@
 
 import numpy as np
 import os
-# import torch
+import sys
+
+# import torch after import isaacgym
 
 from isaacgym import gymtorch
 from isaacgym import gymapi
@@ -21,6 +23,8 @@ import time
 import datetime
 import csv
 
+from depthestimation.Depth_Anything_V2.depth_anything_v2.dpt import DepthAnythingV2
+import torch.nn.functional as F
 
 # Quat : (x, y, z, w)
 
@@ -156,6 +160,19 @@ class DoorHook(VecTask):
         self.reaching_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.opening_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.success_swich = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+        ############ depth estimation #####################################################
+        self.da_v2_config = {
+            'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
+            'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
+            }
+        da_v2_encoder = 'vits'
+        self.da_v2_model = DepthAnythingV2(**self.da_v2_config[da_v2_encoder])
+        self.da_v2_model.load_state_dict(torch.load(f'./depthestimation/Depth_Anything_V2/checkpoints/depth_anything_v2_{da_v2_encoder}.pth', map_location='cpu'))
+
+        self.da_v2_model = self.da_v2_model.to(self.device).eval()
+        ###################################################################################
+
 
     
     def create_sim(self):
@@ -429,6 +446,19 @@ class DoorHook(VecTask):
         # plt.colorbar()
         plt.close()
         # -------------------------------------------------------------------------------------#
+
+    def depth_anything_v2(self):
+        
+        # TODO
+        self.rgb_imgs = torch.permute(torch.stack([
+            gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_COLOR))[...,:3] 
+            for env, camera_handle in zip(self.envs, self.camera_handles)
+        ]), (0,3,1,2)).to(self.device)
+
+        estimated_depth = self.da_v2_model.forward(self.rgb_imgs) # error
+        # infer_image を改造した関数が必要そうforward関数のみではなくてリサイズ等が必要そう
+        
+
     def d_img_cropper(self):
 
         start_y = (self.camera_props.height - self.img_crop_height) // 2
@@ -504,6 +534,7 @@ class DoorHook(VecTask):
         
         self.d_img_process()
         # self.debug_camera_imgs()
+        self.depth_anything_v2()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))

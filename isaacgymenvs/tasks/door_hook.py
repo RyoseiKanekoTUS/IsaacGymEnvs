@@ -89,7 +89,8 @@ class DoorHook(VecTask):
 
 
         # set observation space and action space
-        self.cfg["env"]["numObservations"] = 9 + 9 + 9 + 3 + self.img_crop_height*self.img_crop_width
+        # self.cfg["env"]["numObservations"] = 9 + 9 + 9 + 3 + self.img_crop_height*self.img_crop_width
+        self.cfg["env"]["numObservations"] = 9 + 9 + 9 + 3
         self.cfg["env"]["numActions"] = 6
 
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
@@ -534,7 +535,7 @@ class DoorHook(VecTask):
         
         self.d_img_process()
         # self.debug_camera_imgs()
-        self.depth_anything_v2()
+        # self.depth_anything_v2()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -578,7 +579,7 @@ class DoorHook(VecTask):
         self.R_diff_norm = torch.linalg.matrix_norm(R_diff)
         
         # compute state vector
-        self.obs_buf = torch.cat((hand_rot_state_vector, d_p_door_hand,  self.pp_d_imgs), dim = -1)
+        self.obs_buf = torch.cat((hand_rot_state_vector, d_p_door_hand), dim = -1)
 
         return self.obs_buf
     

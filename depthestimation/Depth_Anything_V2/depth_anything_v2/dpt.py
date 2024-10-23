@@ -153,6 +153,7 @@ class DPTHead(nn.Module):
 class DepthAnythingV2(nn.Module):
     def __init__(
         self, 
+        device,
         encoder='vitl', 
         features=256, 
         out_channels=[256, 512, 1024, 1024], 
@@ -167,7 +168,7 @@ class DepthAnythingV2(nn.Module):
             'vitl': [4, 11, 17, 23], 
             'vitg': [9, 19, 29, 39]
         }
-        
+        self.device = device
         self.encoder = encoder
         self.pretrained = DINOv2(model_name=encoder)
         
@@ -194,8 +195,14 @@ class DepthAnythingV2(nn.Module):
         return depth.cpu().numpy()
     
     @torch.no_grad()
-    def infer_tensor_image(self, raw_image, input_size=518):
-        image, (h, w) = None # TODO
+    def infer_tensor_image(self, raw_image_batch, input_size=518):
+        image, (h, w) = self.tensor_image_preprocess(raw_image_batch, input_size)
+        
+        depth = self.forward(image)
+        
+        depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)
+        
+        return depth
     
     def image2tensor(self, raw_image, input_size=518):        
         transform = Compose([
@@ -224,10 +231,38 @@ class DepthAnythingV2(nn.Module):
         
         return image, (h, w)
     
-    def tensor_image_preprocess(self, raw_image, input_size=518):
+    def tensor_image_preprocess(self, raw_image_batch, input_size=518):
+        """
+        raw_image_batch: Tensor of shape (batch_size, height, width, channels)
+        Processes a batch of images and returns the preprocessed tensor on the appropriate device.
+        """
 
-        h, w = raw_image.shape[2], raw_image.shape[3]
+        # h, wを元画像のサイズから取得
+        h, w = raw_image_batch.shape[2], raw_image_batch.shape[3]
 
+        # Normalize the image tensor (assuming the values are in range [0, 255])
+        image_batch = (raw_image_batch / 255.0).to(self.device)
 
+        # Permute the tensor from (batch_size, height, width, channels) to (batch_size, channels, height, width)
+        # image_batch = image_batch.permute(0, 3, 1, 2).to(self.device)
+
+        # Resize images to the input size while keeping aspect ratio
+        aspect_ratio = min(input_size / h, input_size / w)
+        new_h = int(h * aspect_ratio)
+        new_w = int(w * aspect_ratio)
+
+        # 14の倍数にするための調整
+        new_h = (new_h // 14) * 14
+        new_w = (new_w // 14) * 14
+
+        # Resize the batch of images using bilinear interpolation
+        resized_images = F.interpolate(image_batch, size=(new_h, new_w), mode='bilinear', align_corners=False)
+
+        # Normalize the images with mean and std
+        mean = torch.tensor([0.485, 0.456, 0.406], device=self.device).view(1, 3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225], device=self.device).view(1, 3, 1, 1)
+        normalized_images = (resized_images - mean) / std
+
+        return normalized_images, (h, w)
 
 

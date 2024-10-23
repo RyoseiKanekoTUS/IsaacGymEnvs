@@ -33,7 +33,7 @@ class DoorHook(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
 
         self.cfg = cfg
-        self.max_episode_length = 300 # 300
+        self.max_episode_length = 10 # 300
         
         self.timer = None
         self.env_episodes = None
@@ -80,8 +80,8 @@ class DoorHook(VecTask):
         self.img_crop_width =  64
         self.img_crop_height = 48
         # before cropping 
-        self.camera_props.width = 92
-        self.camera_props.height = 70
+        self.camera_props.width = 640
+        self.camera_props.height = 480
         self.depth_min = -3.0 
         self.depth_max = -0.07 # -0.07
 
@@ -106,7 +106,7 @@ class DoorHook(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.hand_default_dof_pose_mid = to_torch([0, 0, 0.87, 3.141592653, 0, 0], device=self.device)
+        self.hand_default_dof_pose_mid = to_torch([0.5, 0, 0.87, 3.141592653, 0, 0], device=self.device)
 
         ############################################################################
         # for test
@@ -168,7 +168,7 @@ class DoorHook(VecTask):
             'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
             }
         da_v2_encoder = 'vits'
-        self.da_v2_model = DepthAnythingV2(**self.da_v2_config[da_v2_encoder])
+        self.da_v2_model = DepthAnythingV2(self.device, **self.da_v2_config[da_v2_encoder])
         self.da_v2_model.load_state_dict(torch.load(f'./depthestimation/Depth_Anything_V2/checkpoints/depth_anything_v2_{da_v2_encoder}.pth', map_location='cpu'))
 
         self.da_v2_model = self.da_v2_model.to(self.device).eval()
@@ -273,7 +273,7 @@ class DoorHook(VecTask):
         hand_start_pose = gymapi.Transform()
 
         # origin of the urdf-robot
-        hand_start_pose.p = gymapi.Vec3(1.25, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
+        hand_start_pose.p = gymapi.Vec3(0.00, 0.00, 0.1) # robot base position  # (0.4315, -0.0213, 0.5788) on UR3 in this branch
         hand_start_pose.r = gymapi.Quat.from_euler_zyx(0.0, 0.0, 0.0) # robot base rotation
 
 
@@ -426,29 +426,29 @@ class DoorHook(VecTask):
             cv2.waitKey(1)
         # -----------------------------------------------------------------------------------#
 
-        # --------------------------- DEPTH in one env ----------------------------------------#
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import Normalize
-        from io import BytesIO
-        buf = BytesIO()
+        # # --------------------------- DEPTH in one env ----------------------------------------#
+        # import matplotlib.pyplot as plt
+        # from matplotlib.colors import Normalize
+        # from io import BytesIO
+        # buf = BytesIO()
 
-        plt.axis('off')
-        plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
-        # plt.colorbar()
-        plt.savefig(buf, format = 'png')
-        buf.seek(0)
-        img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
-        buf.close()
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
-        cv2.imshow('ESDEpth', img)
-        cv2.waitKey(1)
+        # plt.axis('off')
+        # plt.imshow(self.pp_d_imgs[0].view(self.img_crop_height, self.img_crop_width).to('cpu').detach().numpy().copy(), cmap='coolwarm_r', norm=Normalize(vmin=0, vmax=1))
+        # # plt.colorbar()
+        # plt.savefig(buf, format = 'png')
+        # buf.seek(0)
+        # img = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), 1)
+        # buf.close()
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # cv2.namedWindow("ESDEpth", cv2.WINDOW_GUI_EXPANDED)
+        # cv2.imshow('ESDEpth', img)
+        # cv2.waitKey(1)
 
-        # plt.colorbar()
-        plt.close()
-        # -------------------------------------------------------------------------------------#
+        # # plt.colorbar()
+        # plt.close()
+        # # -------------------------------------------------------------------------------------#
 
-    def depth_anything_v2(self):
+    def depth_anything_v2(self): # output : torch.tensor, raw_depthmap
         
         # TODO
         self.rgb_imgs = torch.permute(torch.stack([
@@ -456,9 +456,17 @@ class DoorHook(VecTask):
             for env, camera_handle in zip(self.envs, self.camera_handles)
         ]), (0,3,1,2)).to(self.device)
 
-        estimated_depth = self.da_v2_model.forward(self.rgb_imgs) # error
-        # infer_image を改造した関数が必要そうforward関数のみではなくてリサイズ等が必要そう
-        
+        self.estimated_depth = self.da_v2_model.infer_tensor_image(self.rgb_imgs) # max, min = 7.0114, 0.0819??
+
+    def vis_estimated_depth(self):
+
+        depth = torch.permute(self.estimated_depth[0,...], (1, 2, 0)).cpu().numpy()
+        print(type(depth))
+        depth = ((depth - depth.min()) / (depth.max() - depth.min()) * 255.0).astype(np.uint8)
+        cv2.namedWindow('DepthAnythingV2', cv2.WINDOW_KEEPRATIO)
+        cv2.imshow('DepthAnythingV2', depth)
+        cv2.waitKey(1)
+
 
     def d_img_cropper(self):
 
@@ -482,44 +490,42 @@ class DoorHook(VecTask):
         self.th_n_d_imgs = torch.where(self.th_n_d_imgs > rand_tensor, 0, self.th_n_d_imgs)
 
 
-    def d_img_process(self):
+    def get_img_process(self):
 
         self.gym.render_all_camera_sensors(self.sim)
         self.gym.start_access_image_tensors(self.sim)
 
-        self.d_imgs = torch.stack([
-            gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
-            for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
-        # print(torch.max(d_imgs), torch.min(d_imgs))
+        # self.d_imgs = torch.stack([
+        #     gymtorch.wrap_tensor(self.gym.get_camera_image_gpu_tensor(self.sim, env, camera_handle, gymapi.IMAGE_DEPTH)).view(self.camera_props.height * self.camera_props.width)
+        #     for env, camera_handle in zip(self.envs, self.camera_handles)]).to(self.device)
+        # # print(torch.max(d_imgs), torch.min(d_imgs))
 
-        self.d_img_cropper()
+        # self.d_img_cropper()
 
-        self.thresh_d_imgs = torch.where(torch.logical_or(self.cropped_d_imgs <= self.depth_min, self.cropped_d_imgs >= self.depth_max), 0, self.cropped_d_imgs)
-        # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
-        # print('thresh_d_imgs shape', self.thresh_d_imgs.shape)
+        # self.thresh_d_imgs = torch.where(torch.logical_or(self.cropped_d_imgs <= self.depth_min, self.cropped_d_imgs >= self.depth_max), 0, self.cropped_d_imgs)
+        # # print('thresh_raw', torch.max(thresh_d_imgs), torch.min(thresh_d_imgs))
+        # # print('thresh_d_imgs shape', self.thresh_d_imgs.shape)
 
-        self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
+        # self.th_n_d_imgs = (self.thresh_d_imgs - self.depth_min)/(self.depth_max - self.depth_min)
 
-        self.th_n_d_imgs = torch.where(self.th_n_d_imgs > 1.0, 0, self.th_n_d_imgs) # change replace value after normalization
-        # print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
-        # print('thresh_norm all', self.th_n_d_imgs)
+        # self.th_n_d_imgs = torch.where(self.th_n_d_imgs > 1.0, 0, self.th_n_d_imgs) # change replace value after normalization
+        # # print('thresh_norm', 'max', torch.max(self.th_n_d_imgs), 'min', torch.min(self.th_n_d_imgs))
+        # # print('thresh_norm all', self.th_n_d_imgs)
 
-        # self.d_img_pixel_noiser()
+        # # self.d_img_pixel_noiser()
 
-        self.silh_d_imgs = torch.stack([(self.th_n_d_imgs[i,...]  - torch.min(self.th_n_d_imgs[i,...]))/
-                                        (torch.max(self.th_n_d_imgs[i,...])-torch.min(self.th_n_d_imgs[i,...]) + 1e-12) 
-                                        for i in range(self.num_envs)])
-        # print('silh',torch.max(self.silh_d_imgs), torch.min(self.silh_d_imgs))
-        # print('silh all', self.silh_d_imgs)
+        # self.silh_d_imgs = torch.stack([(self.th_n_d_imgs[i,...]  - torch.min(self.th_n_d_imgs[i,...]))/
+        #                                 (torch.max(self.th_n_d_imgs[i,...])-torch.min(self.th_n_d_imgs[i,...]) + 1e-12) 
+        #                                 for i in range(self.num_envs)])
+        # # print('silh',torch.max(self.silh_d_imgs), torch.min(self.silh_d_imgs))
+        # # print('silh all', self.silh_d_imgs)
 
-        self.pp_d_imgs = 0.5*(self.th_n_d_imgs + self.silh_d_imgs)
-        # print('pp',torch.max(self.pp_d_imgs), torch.min(self.pp_d_imgs))
+        # self.pp_d_imgs = 0.5*(self.th_n_d_imgs + self.silh_d_imgs)
+        # # print('pp',torch.max(self.pp_d_imgs), torch.min(self.pp_d_imgs))
 
-        # self.get_d_img_dataset()
+        # # self.get_d_img_dataset()
 
         self.gym.end_access_image_tensors(self.sim)
-        # print('pp_d_img', self.pp_d_imgs)
-        # print(self.dist_d_imgs[0]) # debug
 
     def get_d_img_dataset(self):
 
@@ -533,9 +539,10 @@ class DoorHook(VecTask):
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         
-        self.d_img_process()
-        # self.debug_camera_imgs()
-        # self.depth_anything_v2()
+        self.get_img_process()
+        self.debug_camera_imgs()
+        self.depth_anything_v2()
+        self.vis_estimated_depth()
 
         #apply door handle torque_tensor as spring actuation
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.handle_torque_tensor))
@@ -626,7 +633,7 @@ class DoorHook(VecTask):
     def pre_physics_step(self, actions): # apply action here by self.gym.set_dof_target_tensor()
 
         # actions = self.uni_actions() # action becomes [1, 1, 1, 1, 1, 1]
-        # actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
+        actions = self.zero_actions() # action [0, 0, 0, 0, 0, 0]
         # actions[:,5] = 1.0
         # actions[:,4] = 1.0
         
